@@ -49,6 +49,7 @@ import org.totschnig.myexpenses.provider.KEY_SUM_EXPENSES
 import org.totschnig.myexpenses.provider.KEY_SUM_INCOME
 import org.totschnig.myexpenses.provider.KEY_TYPE
 import org.totschnig.myexpenses.provider.KEY_YEAR
+import org.totschnig.myexpenses.provider.SplitStrategy
 import org.totschnig.myexpenses.provider.TransactionProvider
 import org.totschnig.myexpenses.provider.filter.Criterion
 import org.totschnig.myexpenses.provider.getLongIfExistsOr0
@@ -280,6 +281,11 @@ abstract class DistributionViewModelBase<T : DistributionAccountInfo>(
                 builder.appendQueryParameter(
                     TransactionProvider.QUERY_PARAMETER_AGGREGATE_NEUTRAL,
                     aggregateNeutral.toString()
+                )
+                // Category sums are always based on the split parts; keep the total consistent with them.
+                builder.appendQueryParameter(
+                    TransactionProvider.QUERY_PARAMETER_SPLIT_STRATEGY,
+                    SplitStrategy.PARTS.name
                 )
 
                 //if we have no income or expense, there is no row in the cursor

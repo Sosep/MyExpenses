@@ -474,6 +474,7 @@ fun accountQueryCTEV1(
     date: String,
     dynamicExpression: String,
     aggregateInvisible: Boolean,
+    splitStrategy: SplitStrategy,
 ): String {
     val dateCriterion =
         if (endOfDay) "'$date', 'localtime', 'start of day', '+1 day', '-1 second', 'utc'" else "'$date'"
@@ -574,7 +575,7 @@ WITH now as (
           END AS $KEY_EQUIVALENT_AMOUNT,
         $KEY_ACCOUNTID
     FROM base
-    WHERE $WHERE_NOT_SPLIT AND $WHERE_NOT_ARCHIVED AND $KEY_CR_STATUS != '${CrStatus.VOID.name}'
+    WHERE ${splitStrategy.rowClause} AND $WHERE_NOT_ARCHIVED AND $KEY_CR_STATUS != '${CrStatus.VOID.name}'
 ), aggregates AS (
     SELECT
         $KEY_ACCOUNTID,
@@ -608,6 +609,7 @@ fun accountQueryCTE(
     date: String,
     dynamicExpression: String,
     aggregateInvisible: Boolean,
+    splitStrategy: SplitStrategy,
 ): String {
     val dateCriterion =
         if (endOfDay) "'$date', 'localtime', 'start of day', '+1 day', '-1 second', 'utc'" else "'$date'"
@@ -693,7 +695,7 @@ WITH now as (
           END AS $KEY_EQUIVALENT_AMOUNT,
         $KEY_ACCOUNTID
     FROM base
-    WHERE $WHERE_NOT_SPLIT AND $WHERE_NOT_ARCHIVED AND $KEY_CR_STATUS != '${CrStatus.VOID.name}'
+    WHERE ${splitStrategy.rowClause} AND $WHERE_NOT_ARCHIVED AND $KEY_CR_STATUS != '${CrStatus.VOID.name}'
 ), aggregates AS (
     SELECT
         $KEY_ACCOUNTID,
@@ -860,6 +862,7 @@ fun buildTransactionGroupCte(
     group: Grouping,
     includeTransfers: Boolean,
     aggregateFunction: String,
+    splitStrategy: SplitStrategy,
 ): String {
     // If a filter is applied to the transaction list, we need to calculate with the contents
     // of the archive otherwise we just take the archive itself into account
@@ -937,9 +940,32 @@ fun buildTransactionGroupCte(
             append(",${periodEndExpression(group)} as $KEY_PERIOD_END")
         }
         //For the moment, we report only categories that are not defined as transfers
-        append(",count(CASE WHEN  $KEY_CATID > 0 AND $WHERE_NOT_VOID  AND effective_type != $FLAG_TRANSFER THEN 1 ELSE null END) as $KEY_MAPPED_CATEGORIES")
+        //When split transactions are counted with their total, the categories are attached to the parts.
+        val mappedCategoriesCondition = if (splitStrategy == SplitStrategy.TOTAL) {
+            "(($KEY_CATID > 0 AND $WHERE_NOT_VOID AND effective_type != $FLAG_TRANSFER) OR " +
+                "($KEY_CATID = $SPLIT_CATID AND EXISTS (" +
+                "SELECT 1 FROM $TABLE_TRANSACTIONS child " +
+                "WHERE child.$KEY_PARENTID = $CTE_SEARCH.$KEY_ROWID " +
+                "AND child.$KEY_CATID > 0 " +
+                "AND child.$KEY_CR_STATUS != '${CrStatus.VOID.name}' " +
+                "AND coalesce((SELECT type FROM $TABLE_CATEGORIES split_cat " +
+                "WHERE split_cat.$KEY_ROWID = child.$KEY_CATID), $FLAG_NEUTRAL) != $FLAG_TRANSFER)))"
+        } else {
+            "$KEY_CATID > 0 AND $WHERE_NOT_VOID AND effective_type != $FLAG_TRANSFER"
+        }
+        append(",count(CASE WHEN $mappedCategoriesCondition THEN 1 ELSE null END) as $KEY_MAPPED_CATEGORIES")
         append(" FROM $CTE_SEARCH ")
-        append(" WHERE $WHERE_NOT_SPLIT AND ${if (withFilter) WHERE_NOT_ARCHIVE else WHERE_NOT_ARCHIVED} AND $selection")
+        val rowClause = if (splitStrategy == SplitStrategy.TOTAL && withFilter) {
+            // With a filter, archived transactions are counted individually instead of through
+            // their archive. Their parent is the archive (STATUS_ARCHIVE), while the parts of an
+            // archived split transaction have the split parent (STATUS_ARCHIVED) as parent.
+            "($KEY_PARENTID IS NULL OR ($KEY_STATUS = $STATUS_ARCHIVED " +
+                "AND (SELECT archive.$KEY_STATUS FROM $TABLE_TRANSACTIONS archive " +
+                "WHERE archive.$KEY_ROWID = $CTE_SEARCH.$KEY_PARENTID) = $STATUS_ARCHIVE))"
+        } else {
+            splitStrategy.rowClause
+        }
+        append(" WHERE $rowClause AND ${if (withFilter) WHERE_NOT_ARCHIVE else WHERE_NOT_ARCHIVED} AND $selection")
         val groupBy = when (group) {
             Grouping.NONE -> if (breakdownByAccount) KEY_ACCOUNTID else null
             Grouping.YEAR -> if (breakdownByAccount) "$KEY_YEAR, $KEY_ACCOUNTID" else KEY_YEAR
@@ -973,6 +999,7 @@ fun transactionSumQuery(
     typeWithFallBack: String,
     aggregateFunction: String,
     homeCurrency: String,
+    splitStrategy: SplitStrategy,
 ): String {
 
     val accountSelector = "$CTE_SEARCH.${uri.accountSelector}"
@@ -981,6 +1008,8 @@ fun transactionSumQuery(
     val aggregateNeutral = uri.getBooleanQueryParameter(QUERY_PARAMETER_AGGREGATE_NEUTRAL, false)
     val forHome =
         uri.getQueryParameter(KEY_ACCOUNTID) == null && uri.getQueryParameter(KEY_CURRENCY) == null
+    val rowClause = "${splitStrategy.rowClause} AND $WHERE_NOT_VOID AND $selection"
+    val baseCte = buildSearchCte(VIEW_WITH_ACCOUNT, homeCurrency, forHome)
 
     return if (aggregateNeutral) {
         require(projection.size == 1)
@@ -990,9 +1019,9 @@ fun transactionSumQuery(
             KEY_SUM_EXPENSES -> FLAG_EXPENSE
             else -> throw IllegalArgumentException()
         }
-        //@formatter:off
-        "WITH ${buildSearchCte(VIEW_WITH_ACCOUNT, homeCurrency, forHome)} SELECT $aggregateFunction($KEY_DISPLAY_AMOUNT) AS $column FROM $CTE_SEARCH WHERE $typeWithFallBack IN ($type, $FLAG_NEUTRAL) AND ($WHERE_NOT_SPLIT AND $WHERE_NOT_VOID AND $selection)"
-        //@formatter:on
+        "WITH $baseCte SELECT $aggregateFunction($KEY_DISPLAY_AMOUNT) AS $column " +
+            "FROM $CTE_SEARCH WHERE $typeWithFallBack IN ($type, $FLAG_NEUTRAL) " +
+            "AND ($rowClause)"
     } else {
         val sumExpression = "$aggregateFunction($KEY_DISPLAY_AMOUNT)"
         val columns = projection.map {
@@ -1007,8 +1036,9 @@ fun transactionSumQuery(
             add("${effectiveTypeExpression(typeWithFallBack)} AS $KEY_TYPE")
             add(KEY_DISPLAY_AMOUNT)
         }
-        """WITH ${buildSearchCte(VIEW_WITH_ACCOUNT, homeCurrency, forHome)},
-            | $CTE_TRANSACTION_AMOUNTS AS (SELECT ${cteColumns.joinToString()} FROM $CTE_SEARCH WHERE ($WHERE_NOT_SPLIT AND $WHERE_NOT_VOID AND $selection))
+        """WITH $baseCte,
+            | $CTE_TRANSACTION_AMOUNTS AS (SELECT ${cteColumns.joinToString()} FROM $CTE_SEARCH
+            | WHERE ($rowClause))
             | SELECT ${columns.joinToString()}""".trimMargin()
     }
 }
@@ -1016,6 +1046,7 @@ fun transactionSumQuery(
 fun archiveSumCTE(
     archiveId: Long,
     typeWithFallBack: String,
+    splitStrategy: SplitStrategy,
 ): String {
     return buildString {
         append("WITH $CTE_TRANSACTION_AMOUNTS AS (SELECT ")
@@ -1024,7 +1055,18 @@ fun archiveSumCTE(
         append(KEY_AMOUNT)
         append(" END AS integer) AS $KEY_DISPLAY_AMOUNT")
         append(" FROM $VIEW_WITH_ACCOUNT")
-        append(" WHERE $WHERE_NOT_SPLIT AND ($KEY_PARENTID = $archiveId OR (SELECT $KEY_PARENTID FROM $TABLE_TRANSACTIONS parents WHERE $KEY_ROWID = $VIEW_WITH_ACCOUNT.$KEY_PARENTID) = $archiveId))")
+        append(
+            when (splitStrategy) {
+                // the split parent is a direct child of the archive, its parts are grandchildren
+                SplitStrategy.TOTAL -> " WHERE $KEY_PARENTID = $archiveId"
+                // parts of split transactions are direct children or grandchildren of the archive
+                SplitStrategy.PARTS ->
+                    " WHERE $WHERE_NOT_SPLIT AND ($KEY_PARENTID = $archiveId OR " +
+                        "(SELECT $KEY_PARENTID FROM $TABLE_TRANSACTIONS parents " +
+                        "WHERE $KEY_ROWID = $VIEW_WITH_ACCOUNT.$KEY_PARENTID) = $archiveId)"
+            }
+        )
+        append(")")
     }
 }
 

@@ -72,6 +72,7 @@
     <string name="pref_grouping_start_key">grouping_start</string>
     <string name="pref_group_week_starts_key">group_week_start</string>
     <string name="pref_group_month_starts_key">group_month_start</string>
+    <string name="pref_split_transactions_as_total_key">split_transactions_as_total</string>
     <string name="pref_sync_frequency_key">sync_frequency</string>
     <string name="pref_manage_sync_backends_key">manage_sync_backends</string>
     <string name="pref_tracking_key">tracking</string>

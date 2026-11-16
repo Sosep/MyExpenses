@@ -759,6 +759,7 @@ abstract class BaseActivity : AppCompatActivity(), MessageDialogFragment.Message
                 PrefKey.DB_SAFE_MODE,
                 PrefKey.GROUP_MONTH_STARTS,
                 PrefKey.GROUP_WEEK_STARTS,
+                PrefKey.SPLIT_TRANSACTIONS_AS_TOTAL,
                 PrefKey.HOME_CURRENCY,
                 PrefKey.PROTECTION_ALLOW_SCREENSHOT,
                 PrefKey.PROTECTION_DEVICE_LOCK_SCREEN,

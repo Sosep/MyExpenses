@@ -463,6 +463,9 @@
     <string name="preferences_month_start_date_title">Month starts on</string>
     <!-- this is the title of the section in the preferences, where user can set start day for weekly and monthly groups -->
     <string name="pref_grouping_periods">Grouping periods</string>
+    <string name="pref_split_transactions_as_total_title">Split transactions in totals</string>
+    <string name="pref_split_transactions_as_total_summary_off">Count each split part separately as income or expense</string>
+    <string name="pref_split_transactions_as_total_summary_on">Count the split total, as expense if negative and as income if positive</string>
     <string name="exchange_rate">Exchange rate</string>
     <string name="date_format_hour">Hour</string>
     <string name="date_format_minute">Minute</string>

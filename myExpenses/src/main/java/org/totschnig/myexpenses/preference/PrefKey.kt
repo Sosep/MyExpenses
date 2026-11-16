@@ -94,6 +94,7 @@ enum class PrefKey(internal val resId: Int, internal val _key: String?) {
     AUTO_BACKUP_CLOUD_SETUP(R.string.pref_auto_backup_cloud_setup_key),
     GROUP_WEEK_STARTS(R.string.pref_group_week_starts_key),
     GROUP_MONTH_STARTS(R.string.pref_group_month_starts_key),
+    SPLIT_TRANSACTIONS_AS_TOTAL(R.string.pref_split_transactions_as_total_key),
     NEW_PLAN_ENABLED("new_plan_enabled"),
     NEW_ACCOUNT_ENABLED("new_account_enabled"),
     NEW_SPLIT_TEMPLATE_ENABLED("new_split_template_enabled"),

@@ -335,6 +335,8 @@ public class TransactionProvider extends BaseTransactionProvider {
   public static final String QUERY_PARAMETER_EXTENDED = "extended";
   public static final String QUERY_PARAMETER_DISTINCT = "distinct";
   public static final String QUERY_PARAMETER_GROUP_BY = "groupBy";
+  // overrides the preference for a single query, values are the names of SplitStrategy
+  public static final String QUERY_PARAMETER_SPLIT_STRATEGY = "splitStrategy";
   public static final String QUERY_PARAMETER_MARK_VOID = "markVoid";
   //"1" from production, "2" from test
   public static final String QUERY_PARAMETER_WITH_PLAN_INFO = "withPlanInfo";
@@ -519,7 +521,8 @@ public class TransactionProvider extends BaseTransactionProvider {
                 selection,
                 getTypeWithFallBack(),
                 aggregateFunction,
-                getHomeCurrency()
+                getHomeCurrency(),
+                resolveSplitStrategy(uri)
         );
         c = measureAndLogQuery(db, uri, sql, selection, selectionArgs);
         return c;
