@@ -95,6 +95,114 @@ export ANDROID_HOME={sdk-dir}
 ./gradlew myExpenses:packageExternReleaseUniversalApk
 ```
 
+### Build a signed APK with Docker
+
+This is the easiest way to get an installable APK if you do not have Java and the Android SDK on
+your computer. Docker does the build; the only things you need outside Docker are Docker itself and
+a signing key that stays on your computer.
+
+What you need:
+
+- Docker Engine with Compose (Docker Desktop on Windows/macOS).
+- About 15 GB of free disk and an internet connection for the first build.
+- On Apple Silicon/ARM, Docker runs the Android tools in emulation. It works, but it is slower.
+
+A few words used below:
+
+| Word | Meaning |
+| --- | --- |
+| Image | The box with Java and the Android tools. Docker builds it once. |
+| Container | The build running inside that box. |
+| Signing key | The file that proves the app comes from you. Android needs it to install and update the app. |
+
+**1. Create your signing key (only once)**
+
+```sh
+mkdir -p .secrets
+docker compose --profile setup run --rm keystore-init
+```
+
+This creates `.secrets/release.jks` (the key that signs the app) and `.secrets/keystore.env` (a
+generated password). Back up the whole `.secrets/` folder and do not commit it. Android only accepts
+updates signed with the same key; if you lose it, you will have to uninstall the app before you can
+install a new build.
+
+**2. Build the production APK**
+
+```sh
+docker compose run --rm android-build
+```
+
+The signed file is written to:
+
+```
+myExpenses/build/outputs/apk_from_bundle/externRelease/myExpenses-extern-release-universal-signed.apk
+```
+
+It is one universal APK that already includes all the app's features. It is a little larger than a
+Play Store install, because the Play Store only sends each phone what it needs, but this is the
+simplest file to install yourself.
+
+**3. Install it on your phone**
+
+Copy the APK to the phone and open it, or use:
+
+```sh
+adb install myExpenses/build/outputs/apk_from_bundle/externRelease/myExpenses-extern-release-universal-signed.apk
+```
+
+**Optional: debug build**
+
+```sh
+BUILD_VARIANT=debug docker compose run --rm android-build
+```
+
+Debug builds are for testing. They are not signed with your release key.
+
+**Speed and memory**
+
+By default the build processes the modules one at a time, uses 2 workers, and has a 12 GB memory
+limit. The limit is a safety cap, not what the build normally uses.
+
+What we measured on a Linux machine with 12 CPU cores and 30 GB of RAM:
+
+- **First build, nothing cached:** about **7.9 GB** of memory at the peak. With an 8 GB limit it was
+  stopped during the final app optimization step; 12 GB leaves room to finish.
+- **Clean rebuild with the cache:** about **30 seconds** and **1.5 GB** of memory, because most of
+  the work is reused.
+- **Normal rebuild with no changes:** about **20 seconds**.
+- **Debug variant, first time:** about **3.5 minutes** and a **47 MB** APK (only for testing).
+- **Resulting release APK:** about **36 MB**, signed and ready to install.
+
+The first build is the slowest because it downloads Gradle, the dependencies and compiles every
+module. Later builds reuse the cache. If your computer has more headroom and you want to try
+parallel builds:
+
+```sh
+GRADLE_PARALLEL=1 GRADLE_MAX_WORKERS=4 BUILD_MEMORY=10g docker compose run --rm android-build
+```
+
+The first build is the slowest. Later builds reuse the Gradle cache. If your user id is not 1000,
+pass it explicitly:
+
+```sh
+HOST_UID=$(id -u) HOST_GID=$(id -g) docker compose run --rm android-build
+```
+
+**If something goes wrong**
+
+| Problem | What to do |
+| --- | --- |
+| Docker is not running | Start Docker Desktop/Engine and try again. |
+| Permission denied in `.secrets` | Create the folder as your user with `mkdir -p .secrets`; do not run the setup as root. |
+| The build is killed or runs out of memory | Raise `BUILD_MEMORY` (for example `16g`) or leave parallel builds off. |
+| "Missing signing key" | Run the one-time setup command from step 1. |
+| You changed the Dockerfile | Rebuild the image with `docker compose build`. |
+| You want a clean build | `docker compose run --rm android-build clean` and build again. |
+| The build mentions `ExtraTranslation` | The repository has three Greek texts without a default-language version. The Docker command skips that optional lint check so the APK can be built. It does not affect the APK. To re-enable it, remove the `-x :myExpenses:lintVitalExternRelease` option from `docker/entrypoint.sh` after fixing those texts. |
+
+Technical details and the design decisions are in `SPEC-docker-build.md`.
+
 Integrate
 =========
 My Expenses now has experimental support for inserting data from third party apps. See [TransactionsContract.java](https://github.com/mtotschnig/MyExpenses/blob/master/transactionscontract/src/main/java/org/totschnig/myexpenses/contract/TransactionsContract.java).
