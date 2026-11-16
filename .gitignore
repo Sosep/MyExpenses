@@ -9,3 +9,6 @@ google-services.json
 .kotlin
 .agents
 .android-studio
+.secrets
+*.jks
+*.keystore

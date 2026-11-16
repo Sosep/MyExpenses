@@ -24,30 +24,38 @@ publishing.
 - Passwords: generated automatically, stored in `./.secrets/keystore.env` (gitignored, chmod 600);
   the user does not have to invent them.
 - Output: the signed APK stays under the Gradle build tree
-  (`myExpenses/build/outputs/apk/extern/release/`), no separate `dist/`.
+  (`myExpenses/build/outputs/apk_from_bundle/externRelease/`), no separate `dist/`.
 - Base image: official `eclipse-temurin:21-jdk` + Android command-line tools.
 - Image name: `myexpenses-android-build:latest`.
 - Deliverables: `Dockerfile`, `compose.yaml`, and a "Build with Docker" section in `README.md`.
+- Build concurrency: serial across modules by default; `--parallel` is opt-in via `GRADLE_PARALLEL=1`
+  and always capped by `GRADLE_MAX_WORKERS`.
+- Resource guard: the compose service has a configurable `mem_limit` (`BUILD_MEMORY`, default 12g;
+  a measured full release build peaked at about 8g, so 8g was too tight).
+- Documentation: the README is the main, plain-language guide; technical decisions stay in this
+  spec.
 
 ## Assumptions
 
 1. Docker Engine/Compose v2+ is available (host: Linux `x86_64`, UID/GID 1000).
 2. Java 21 is required (README); Gradle is pinned by the wrapper (9.9.0), AGP is 9.5.1 and
-   `compileSdk`/`targetSdk` are 37/36. `platforms;android-37` and `build-tools;37.0.0` exist.
+   `compileSdk`/`targetSdk` are 37/36. The stable SDK platform package is `platforms;android-37.0`
+   (minor API version); `build-tools;37.0.0` exists.
 3. No NDK/CMake is needed: no `externalNativeBuild` is configured.
 4. The README release task is `:myExpenses:packageExternReleaseUniversalApk`; it produces an
    **unsigned** universal APK because `signingConfig` is commented out. The container zipaligns and
    signs it with the self-signed release keystore.
 5. The app is for personal installation. Losing the keystore means future updates cannot be installed
    over the current app; the keystore and password file must be backed up together.
-6. The build needs network access (Gradle, Google Maven, JitPack, Sonatype) and ~6 GB of Docker
-   memory. Image + caches need roughly 10–15 GB of disk.
+6. The build needs network access (Gradle, Google Maven, JitPack, Sonatype). The default container
+   limit is 12 GB of memory (configurable; an 8 GB limit was measured to kill the release build at
+   R8) and image + caches need roughly 10–15 GB of disk.
 7. No API key is required for a release build.
 
 ## Tech stack
 
 - `eclipse-temurin:21-jdk-noble` (pinned tag) as base.
-- Android `cmdline-tools;latest`, `platform-tools`, `platforms;android-37`,
+- Android `cmdline-tools;latest`, `platform-tools`, `platforms;android-37.0`,
   `build-tools;36.0.0` and `build-tools;37.0.0` (AGP default safety), licenses accepted at image
   build time.
 - `zipalign` and `apksigner` from build-tools 37 for release signing.
@@ -105,14 +113,18 @@ No app sources or Gradle build files are changed.
 
 ## Behaviour
 
+Gradle always runs with `--no-daemon --build-cache --max-workers="${GRADLE_MAX_WORKERS:-2}"`.
+`--parallel` is added only when `GRADLE_PARALLEL=1`. The final universal packaging and signing are
+serial.
+
 `BUILD_VARIANT=release` (default):
 
-1. `./gradlew :myExpenses:packageExternReleaseUniversalApk --no-daemon`
-2. locate the unsigned universal APK in `myExpenses/build/outputs/apk/extern/release/`
+1. `./gradlew :myExpenses:packageExternReleaseUniversalApk --no-daemon ...`
+2. locate the unsigned universal APK in `myExpenses/build/outputs/apk_from_bundle/externRelease/`
 3. `zipalign -p -f 4 unsigned.apk aligned.apk`
 4. `apksigner sign --ks /secrets/release.jks --ks-key-alias "$KEY_ALIAS"` with
    `--ks-pass env:KEYSTORE_PASSWORD --key-pass env:KEYSTORE_PASSWORD`, writing
-   `myExpenses/build/outputs/apk/extern/release/<original-name>-signed.apk`
+   `myExpenses/build/outputs/apk_from_bundle/externRelease/myExpenses-extern-release-universal-signed.apk`
 5. `apksigner verify --verbose` and fail if verification fails or the keystore/password file is
    missing, with a message pointing to the `keystore-init` command.
 
@@ -150,7 +162,7 @@ ENV PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PA
 Verified manually on the current host:
 
 1. Cold path: `docker compose build`, `keystore-init`, `docker compose run --rm android-build` exits
-   0 and a signed APK exists under `myExpenses/build/outputs/apk/extern/release/`.
+   0 and a signed APK exists under `myExpenses/build/outputs/apk_from_bundle/externRelease/`.
 2. `apksigner verify --verbose` passes; `aapt2 dump badging` reports
    `org.totschnig.myexpenses` with no `.debug` suffix.
 3. Warm path: a second run reuses the Gradle cache and does not reinstall the SDK.
@@ -160,6 +172,10 @@ Verified manually on the current host:
 7. No root-owned files in the repo; no keystore/password in the image or compose file.
 8. `.dockerignore` keeps `.git`, `build/`, `.gradle/`, `local.properties` and `.secrets/` out of the
    build context.
+9. Wall-clock time and peak container memory are measured for the serial default; the figures are
+   documented. Measured on 12 CPU cores / 30 GB RAM: first uncached build peaked at ~7.9 GB (8 GB
+   was too tight); clean rebuild with cache took ~30 s and ~1.5 GB; incremental rebuild ~20 s; APK
+   ~36 MB.
 
 No automated Docker test suite in V1; the image build and the commands above are the checks.
 
@@ -176,7 +192,7 @@ No automated Docker test suite in V1; the image build and the commands above are
 ## Success criteria
 
 - From a clean checkout plus a generated keystore, `docker compose run --rm android-build` produces a
-  **signed, installable release APK** under `myExpenses/build/outputs/apk/extern/release/` with no
+  **signed, installable release APK** under `myExpenses/build/outputs/apk_from_bundle/externRelease/` with no
   host Java/Android SDK.
 - `apksigner verify` passes and the package id is `org.totschnig.myexpenses` (no `.debug` suffix).
 - `BUILD_VARIANT=debug` is available as an explicit opt-in.
@@ -184,7 +200,9 @@ No automated Docker test suite in V1; the image build and the commands above are
 - Generated files in the bind-mounted repo are owned by the host user.
 - Missing secrets fail with a clear message; no secrets or keystores enter the image or git.
 - The README documents prerequisites, keystore creation/location/backup, both variants, output paths,
-  disk/RAM needs and the ARM/emulation caveat.
+  disk/RAM needs, the ARM/emulation caveat, the serial default and how to opt into parallel builds,
+  in plain language with a small troubleshooting table.
+- The measured build time and peak memory are recorded in the README.
 
 ## Out of scope (deferred)
 

@@ -1,0 +1,38 @@
+services:
+  android-build:
+    build:
+      context: .
+      args:
+        USER_ID: ${HOST_UID:-1000}
+        GROUP_ID: ${HOST_GID:-1000}
+    image: myexpenses-android-build:latest
+    working_dir: /workspace
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+    environment:
+      BUILD_VARIANT: ${BUILD_VARIANT:-release}
+      GRADLE_PARALLEL: ${GRADLE_PARALLEL:-0}
+      GRADLE_MAX_WORKERS: ${GRADLE_MAX_WORKERS:-2}
+    mem_limit: ${BUILD_MEMORY:-12g}
+    init: true
+    volumes:
+      - .:/workspace
+      - gradle-cache:/gradle-cache
+      - ./.secrets:/secrets:ro
+
+  keystore-init:
+    profiles: ["setup"]
+    build:
+      context: .
+      args:
+        USER_ID: ${HOST_UID:-1000}
+        GROUP_ID: ${HOST_GID:-1000}
+    image: myexpenses-android-build:latest
+    working_dir: /workspace
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+    entrypoint: ["keystore-init.sh"]
+    mem_limit: 512m
+    volumes:
+      - ./.secrets:/secrets
+
+volumes:
+  gradle-cache:

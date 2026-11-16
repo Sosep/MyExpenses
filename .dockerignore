@@ -1,0 +1,16 @@
+.git
+.gitignore
+.github
+.idea
+*.iml
+.gradle
+.kotlin
+build
+**/build
+local.properties
+.secrets
+docs
+SPEC-*.md
+tasks
+*.jks
+*.keystore
