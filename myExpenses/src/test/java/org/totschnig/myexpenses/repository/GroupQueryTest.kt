@@ -1,5 +1,6 @@
 package org.totschnig.myexpenses.repository
 
+import java.time.LocalDateTime
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -34,7 +35,6 @@ import org.totschnig.myexpenses.provider.filter.CategoryCriterion
 import org.totschnig.myexpenses.provider.filter.Operation
 import org.totschnig.myexpenses.util.toEpoch
 import org.totschnig.shared_test.CursorSubject.Companion.useAndAssert
-import java.time.LocalDateTime
 
 @RunWith(RobolectricTestRunner::class)
 class GroupQueryTest : BaseTestWithRepository() {
@@ -60,9 +60,9 @@ class GroupQueryTest : BaseTestWithRepository() {
 
     private fun insertTransactions() {
         repository.insertTransaction(testAccountId, 100, categoryId = neutralCategoryId)
-        repository.insertTransaction(testAccountId,-200, categoryId = expenseCategoryId)
-        repository.insertTransaction(testAccountId,400, categoryId = incomeCategoryId)
-        repository.insertTransaction(testAccountId,800, categoryId = transferCategoryId)
+        repository.insertTransaction(testAccountId, -200, categoryId = expenseCategoryId)
+        repository.insertTransaction(testAccountId, 400, categoryId = incomeCategoryId)
+        repository.insertTransaction(testAccountId, 800, categoryId = transferCategoryId)
     }
 
     private val splitDate = LocalDateTime.of(2024, 1, 15, 12, 0)
@@ -92,7 +92,10 @@ class GroupQueryTest : BaseTestWithRepository() {
             .appendQueryParameter(KEY_ACCOUNTID, testAccountId.toString())
             .apply {
                 splitStrategy?.let {
-                    appendQueryParameter(TransactionProvider.QUERY_PARAMETER_SPLIT_STRATEGY, it.name)
+                    appendQueryParameter(
+                        TransactionProvider.QUERY_PARAMETER_SPLIT_STRATEGY,
+                        it.name
+                    )
                 }
             }
             .build()
@@ -202,7 +205,11 @@ class GroupQueryTest : BaseTestWithRepository() {
         insertSplit(-30, listOf(-40L to expenseCategoryId, 10L to incomeCategoryId))
 
         contentResolver.query(
-            sumQuery(), arrayOf(KEY_SUM_EXPENSES, KEY_SUM_INCOME), null, null, null
+            sumQuery(),
+            arrayOf(KEY_SUM_EXPENSES, KEY_SUM_INCOME),
+            null,
+            null,
+            null
         ).useAndAssert {
             movesToFirst()
             hasLong(0, -30)
@@ -210,7 +217,11 @@ class GroupQueryTest : BaseTestWithRepository() {
         }
 
         contentResolver.query(
-            sumQuery(SplitStrategy.PARTS), arrayOf(KEY_SUM_EXPENSES, KEY_SUM_INCOME), null, null, null
+            sumQuery(SplitStrategy.PARTS),
+            arrayOf(KEY_SUM_EXPENSES, KEY_SUM_INCOME),
+            null,
+            null,
+            null
         ).useAndAssert {
             movesToFirst()
             hasLong(0, -40)
@@ -252,7 +263,11 @@ class GroupQueryTest : BaseTestWithRepository() {
     fun groupQueryFilterWithAmountFilter() {
         insertTransactions()
         val filter = AmountCriterion.create(
-            Operation.EQ, "EUR", true, 400L, null
+            Operation.EQ,
+            "EUR",
+            true,
+            400L,
+            null
         )
         contentResolver.query(
             BaseTransactionProvider.groupingUriBuilder(Grouping.NONE).build(),
@@ -312,7 +327,8 @@ class GroupQueryTest : BaseTestWithRepository() {
     @Test
     fun groupQueryWithVoid() {
         contentResolver.insert(
-            TransactionProvider.TRANSACTIONS_URI, TransactionInfo(
+            TransactionProvider.TRANSACTIONS_URI,
+            TransactionInfo(
                 accountId = testAccountId,
                 amount = 12345,
                 date = LocalDateTime.of(2024, 1, 1, 12, 0),

@@ -1,5 +1,6 @@
 package org.totschnig.myexpenses.provider
 
+import java.time.LocalDateTime
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -16,10 +17,9 @@ import org.totschnig.myexpenses.model2.Category
 import org.totschnig.myexpenses.preference.PrefKey
 import org.totschnig.myexpenses.util.toEpoch
 import org.totschnig.shared_test.CursorSubject.Companion.useAndAssert
-import java.time.LocalDateTime
 
 @RunWith(RobolectricTestRunner::class)
-class AccountSumTest: BaseTestWithRepository() {
+class AccountSumTest : BaseTestWithRepository() {
     val openingBalance: Long = 100L
     val expense1: Long = 11L
     val expense2: Long = 22L
@@ -61,12 +61,15 @@ class AccountSumTest: BaseTestWithRepository() {
             hasLong(KEY_SUM_INCOME, income1 + income2)
             hasLong(KEY_SUM_EXPENSES, -expense1 - expense2)
             hasLong(KEY_SUM_TRANSFERS, transferP - transferN)
-            hasLong(KEY_CURRENT_BALANCE, openingBalance + income1 + income2 - expense1 - expense2 + transferP - transferN)
+            hasLong(
+                KEY_CURRENT_BALANCE,
+                openingBalance + income1 + income2 - expense1 - expense2 + transferP - transferN
+            )
         }
 
         contentResolver.query(
             TransactionProvider.ACCOUNTS_FULL_URI,
-            null,  // get all the columns
+            null, // get all the columns
             "$KEY_ROWID= ?",
             arrayOf(testAccountId2.toString()),
             null // use default the sort order
