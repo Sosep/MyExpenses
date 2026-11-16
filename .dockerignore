@@ -14,3 +14,8 @@ SPEC-*.md
 tasks
 *.jks
 *.keystore
+
+.env
+.env.*
+compose.override.yaml
+docker-compose.override.yml
