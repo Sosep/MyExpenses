@@ -100,8 +100,12 @@ class GroupQueryTest : BaseTestWithRepository() {
             }
             .build()
 
-    private fun queryGroups() = contentResolver.query(
-        BaseTransactionProvider.groupingUriBuilder(Grouping.MONTH).build(),
+    private fun queryGroups(accountId: Long? = null) = contentResolver.query(
+        BaseTransactionProvider.groupingUriBuilder(Grouping.MONTH)
+            .apply {
+                accountId?.let { appendQueryParameter(KEY_ACCOUNTID, it.toString()) }
+            }
+            .build(),
         null,
         null,
         null,
@@ -190,7 +194,7 @@ class GroupQueryTest : BaseTestWithRepository() {
             )
         )
 
-        queryGroups().useAndAssert {
+        queryGroups(testAccountId).useAndAssert {
             hasCount(1)
             movesToFirst()
             hasLong(2, -100)
