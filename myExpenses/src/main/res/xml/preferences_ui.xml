@@ -246,6 +246,13 @@
             android:key="@string/pref_group_month_starts_key"
             android:title="@string/preferences_month_start_date_title"
             my:useSimpleSummaryProvider="true" />
+
+        <SwitchPreferenceCompat
+            android:defaultValue="true"
+            android:key="@string/pref_split_transactions_as_total_key"
+            android:summaryOff="@string/pref_split_transactions_as_total_summary_off"
+            android:summaryOn="@string/pref_split_transactions_as_total_summary_on"
+            android:title="@string/pref_split_transactions_as_total_title" />
     </PreferenceCategory>
 
     <PreferenceCategory

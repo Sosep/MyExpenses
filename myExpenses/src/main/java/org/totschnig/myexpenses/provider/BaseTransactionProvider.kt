@@ -622,6 +622,19 @@ abstract class BaseTransactionProvider : ContentProvider() {
     val typeWithFallBack: String
         get() = typeWithFallBack(prefHandler)
 
+    /**
+     * Decides whether split transactions are aggregated with their total or with their parts.
+     * Preference based, but a single query can override it with
+     * [TransactionProvider.QUERY_PARAMETER_SPLIT_STRATEGY].
+     */
+    val splitStrategy: SplitStrategy
+        get() = if (prefHandler.getBoolean(PrefKey.SPLIT_TRANSACTIONS_AS_TOTAL, true))
+            SplitStrategy.TOTAL else SplitStrategy.PARTS
+
+    fun resolveSplitStrategy(uri: Uri): SplitStrategy =
+        uri.getQueryParameter(TransactionProvider.QUERY_PARAMETER_SPLIT_STRATEGY)
+            ?.let { enumValueOrDefault(it, splitStrategy) } ?: splitStrategy
+
     val dynamicExchangeRatesDefault: String
         get() = runBlocking {
             dataStore.dynamicExchangeRates.first()
@@ -655,7 +668,8 @@ abstract class BaseTransactionProvider : ContentProvider() {
                     typeWithFallBack = typeWithFallBack,
                     date = date,
                     dynamicExpression = dynamicExchangeRatesDefault,
-                    aggregateInvisible = aggregateInvisible
+                    aggregateInvisible = aggregateInvisible,
+                    splitStrategy = splitStrategy
                 ) else accountQueryCTEV1(
                 homeCurrency = homeCurrency,
                 endOfDay = endOfDay,
@@ -663,7 +677,8 @@ abstract class BaseTransactionProvider : ContentProvider() {
                 typeWithFallBack = typeWithFallBack,
                 date = date,
                 dynamicExpression = dynamicExchangeRatesDefault,
-                aggregateInvisible = aggregateInvisible
+                aggregateInvisible = aggregateInvisible,
+                splitStrategy = splitStrategy
             )
         }
 
@@ -1500,7 +1515,7 @@ abstract class BaseTransactionProvider : ContentProvider() {
             add("$aggregateFunction(CASE WHEN $KEY_TYPE = $FLAG_TRANSFER THEN $KEY_DISPLAY_AMOUNT ELSE 0 END) AS $KEY_SUM_TRANSFERS")
         }.toTypedArray()
 
-        val sql = archiveSumCTE(uri.pathSegments[1].toLong(), typeWithFallBack) + " " +
+        val sql = archiveSumCTE(uri.pathSegments[1].toLong(), typeWithFallBack, splitStrategy) + " " +
                 SupportSQLiteQueryBuilder.builder(CTE_TRANSACTION_AMOUNTS)
                     .columns(projection)
                     .create()
@@ -1575,7 +1590,8 @@ abstract class BaseTransactionProvider : ContentProvider() {
             breakdownByAccount = breakdownByAccount,
             group = group,
             includeTransfers = includeTransfers,
-            aggregateFunction = aggregateFunction
+            aggregateFunction = aggregateFunction,
+            splitStrategy = splitStrategy
         ) + " " +
                 SupportSQLiteQueryBuilder.builder(if (breakdownByAccount) "with_market_rate" else CTE_TRANSACTION_GROUPS)
                     .columns(projection)
