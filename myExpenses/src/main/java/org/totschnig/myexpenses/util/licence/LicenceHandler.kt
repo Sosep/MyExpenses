@@ -61,6 +61,7 @@ open class LicenceHandler(
     private val repository: Repository,
     private val currencyFormatter: ICurrencyFormatter,
     private val clock: Clock = Clock.systemUTC(),
+    private val allFeaturesEnabled: Boolean = true,
 ) {
     private var hasOurLicence = false
     private val isSandbox = BuildConfig.DEBUG
@@ -127,8 +128,13 @@ open class LicenceHandler(
     fun hasAccessTo(feature: ContribFeature) =
         isEnabledFor(feature.licenceStatus) || addOnFeatures.contains(feature)
 
+    /**
+     * GPL self-build: the maintainer explicitly allows unlocking every feature by changing this
+     * method (see https://github.com/mtotschnig/MyExpenses/issues/1362#issuecomment-1872473999).
+     * The default enables everything; pass false to keep the normal licence checks (tests/mock).
+     */
     open fun isEnabledFor(licenceStatus: LicenceStatus) =
-        (this.licenceStatus?.compareTo(licenceStatus) ?: -1) >= 0
+        allFeaturesEnabled || (this.licenceStatus?.compareTo(licenceStatus) ?: -1) >= 0
 
     val isUpgradeable: Boolean
         get() = licenceStatus?.isUpgradeable != false

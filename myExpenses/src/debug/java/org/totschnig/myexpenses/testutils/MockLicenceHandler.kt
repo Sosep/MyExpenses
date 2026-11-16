@@ -18,7 +18,16 @@ class MockLicenceHandler(
     repository: Repository,
     currencyFormatter: ICurrencyFormatter,
     clock: Clock
-) : LicenceHandler(context, licenseStatusPrefs, crashHandler, prefHandler, repository, currencyFormatter, clock) {
+) : LicenceHandler(
+    context,
+    licenseStatusPrefs,
+    crashHandler,
+    prefHandler,
+    repository,
+    currencyFormatter,
+    clock,
+    allFeaturesEnabled = false
+) {
     fun setLockState(locked: Boolean) {
         this.licenceStatus = if (locked) null else LicenceStatus.PROFESSIONAL
         update()

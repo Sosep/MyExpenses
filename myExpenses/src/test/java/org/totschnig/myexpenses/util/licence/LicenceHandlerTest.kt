@@ -12,6 +12,7 @@ import org.junit.runner.RunWith
 import org.mockito.Mockito
 import org.totschnig.myexpenses.MyApplication
 import org.totschnig.myexpenses.db2.Repository
+import org.totschnig.myexpenses.model.ContribFeature
 import org.totschnig.myexpenses.preference.PrefHandler
 import org.totschnig.myexpenses.util.CurrencyFormatter
 import org.totschnig.myexpenses.util.crashreporting.CrashHandler
@@ -22,15 +23,18 @@ class LicenceHandlerTest {
 
     @Before
     fun setUp() {
-        licenceHandler = LicenceHandler(
-            Mockito.mock(MyApplication::class.java),
-            Mockito.mock(PreferenceObfuscator::class.java),
-            Mockito.mock(CrashHandler::class.java),
-            Mockito.mock(PrefHandler::class.java),
-            Mockito.mock(Repository::class.java),
-            Mockito.mock(CurrencyFormatter::class.java)
-        )
+        licenceHandler = createHandler()
     }
+
+    private fun createHandler(allFeaturesEnabled: Boolean = false) = LicenceHandler(
+        Mockito.mock(MyApplication::class.java),
+        Mockito.mock(PreferenceObfuscator::class.java),
+        Mockito.mock(CrashHandler::class.java),
+        Mockito.mock(PrefHandler::class.java),
+        Mockito.mock(Repository::class.java),
+        Mockito.mock(CurrencyFormatter::class.java),
+        allFeaturesEnabled = allFeaturesEnabled
+    )
 
     @Test
     @Parameters(
@@ -51,6 +55,14 @@ class LicenceHandlerTest {
         licenceHandler.licenceStatus = parse(hasStatus)
         Truth.assertThat(licenceHandler.isEnabledFor(LicenceStatus.valueOf(requestedStatus)))
             .isEqualTo(expected)
+    }
+
+    @Test
+    fun allFeaturesEnabledByDefault() {
+        val handler = createHandler(allFeaturesEnabled = true)
+        ContribFeature.entries.forEach {
+            Truth.assertThat(handler.hasAccessTo(it)).isTrue()
+        }
     }
 
     @Test
