@@ -19,6 +19,7 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.gson.gson
+import io.ktor.server.application.ApplicationCall
 import io.ktor.server.application.install
 import io.ktor.server.auth.Authentication
 import io.ktor.server.auth.UserIdPrincipal
@@ -102,12 +103,16 @@ import org.totschnig.myexpenses.util.NotificationBuilderWrapper.NOTIFICATION_WEB
 import org.totschnig.myexpenses.util.Utils
 import org.totschnig.myexpenses.util.io.getActiveIpAddress
 import org.totschnig.myexpenses.util.licence.LicenceHandler
+import org.totschnig.webui.api.ApiError
+import org.totschnig.webui.api.ApiException
+import org.totschnig.webui.api.ApiRoutes
 import java.io.IOException
 import java.lang.ref.WeakReference
 import java.net.ServerSocket
 import java.security.Security
 import java.time.LocalDate
 import java.time.LocalTime
+import java.util.Locale
 import javax.inject.Inject
 
 private const val STOP_CLICK_ACTION = "STOP_CLICK_ACTION"
@@ -313,13 +318,23 @@ class WebInputService : LifecycleService(), IWebInputService {
                             }
 
                             install(StatusPages) {
-                                exception<Throwable> { call, cause ->
+                                exception<ApiException> { call, cause ->
                                     call.respond(
-                                        HttpStatusCode.InternalServerError,
-                                        "Internal Server Error"
+                                        cause.status,
+                                        ApiError(cause.code, cause.message, cause.fields)
                                     )
+                                }
+                                exception<Throwable> { call, cause ->
                                     IWebInputService.report(cause)
-                                    throw cause
+                                    if (!call.response.isCommitted) {
+                                        call.respond(
+                                            HttpStatusCode.InternalServerError,
+                                            ApiError(
+                                                "internal_error",
+                                                "Internal server error"
+                                            )
+                                        )
+                                    }
                                 }
                             }
 
@@ -374,11 +389,27 @@ class WebInputService : LifecycleService(), IWebInputService {
                                     )
                                     //@formatter:on
                                 }
+                                serveWebApp()
+                                val appVersion =
+                                    this@WebInputService.packageManager.getPackageInfo(
+                                        this@WebInputService.packageName,
+                                        0
+                                    ).versionName ?: ""
+                                val api = ApiRoutes(
+                                    repository = repository,
+                                    prefHandler = prefHandler,
+                                    currencyContext = currencyContext,
+                                    payeeMap = payeeMapFlow,
+                                    tagMap = tagMapFlow,
+                                    appVersion = appVersion
+                                )
                                 if (passWord == null) {
                                     serve()
+                                    api.register(this)
                                 } else {
                                     authenticate("auth-basic") {
                                         serve()
+                                        api.register(this)
                                     }
                                 }
                             }
@@ -638,6 +669,57 @@ class WebInputService : LifecycleService(), IWebInputService {
             }
         }
     }
+
+    private fun Route.serveWebApp() {
+        get("/app") { call.respondWebAppIndex() }
+        get("/app/") { call.respondWebAppIndex() }
+        get("/app/{path...}") {
+            val path = call.parameters.getAll("path")?.joinToString("/") ?: ""
+            if (path.isBlank()) {
+                call.respondWebAppIndex()
+                return@get
+            }
+            try {
+                val bytes = assets.open("webapp/$path").use { it.readBytes() }
+                call.response.headers.append(
+                    HttpHeaders.CacheControl,
+                    if (path.startsWith("assets/")) {
+                        "public, max-age=31536000, immutable"
+                    } else {
+                        "no-cache"
+                    }
+                )
+                call.respondBytes(bytes, contentTypeFor(path))
+            } catch (_: IOException) {
+                if (!path.contains('.')) {
+                    call.respondWebAppIndex()
+                } else {
+                    call.respond(HttpStatusCode.NotFound, "Not found")
+                }
+            }
+        }
+    }
+
+    private suspend fun ApplicationCall.respondWebAppIndex() {
+        response.headers.append(HttpHeaders.CacheControl, "no-cache")
+        respondText(readTextFromAssets("webapp/index.html"), ContentType.Text.Html)
+    }
+
+    private fun contentTypeFor(path: String): ContentType =
+        when (path.substringAfterLast('.', "").lowercase(Locale.ROOT)) {
+            "html" -> ContentType.Text.Html
+            "js", "mjs" -> ContentType.Text.JavaScript
+            "css" -> ContentType.Text.CSS
+            "json" -> ContentType.Application.Json
+            "svg" -> ContentType("image", "svg+xml")
+            "png" -> ContentType.Image.PNG
+            "jpg", "jpeg" -> ContentType("image", "jpeg")
+            "ico" -> ContentType.Image.XIcon
+            "woff2" -> ContentType("font", "woff2")
+            "woff" -> ContentType("font", "woff")
+            "ttf" -> ContentType("font", "ttf")
+            else -> ContentType.Application.OctetStream
+        }
 
     private fun isAvailable(portNr: Int) = try {
         ServerSocket(portNr).close()
