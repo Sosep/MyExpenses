@@ -58,12 +58,16 @@ Se ejecuta en orden. Cada módulo se commitea con sus docs y sus assets si toca 
     `webui/API.md`, `webui/webapp/README.md`, `AGENTS.md`,
     `webui/src/main/assets/webapp/**`
 
-- [ ] **T7 — Verificación en el móvil real**
+- [x] **T7 — Verificación en el móvil real** (dashboard hecho; presupuesto pendiente de T9)
   - Acceptance: con un movimiento del mes, el dashboard muestra INGRESOS/GASTOS/
     AHORRADO iguales a `/reports/summary` y el gráfico dibuja el mes; un presupuesto
     mensual muestra el gasto del mes y "‹" va al mes anterior correcto.
   - Verify: checklist con `curl` + capturas 1440×900 y 390×844.
   - Files: ninguno (evidencia en el PR)
+  - Hecho (2026-11-17, APK universal instalado): con −5,00 € y +250,00 € el
+    dashboard da INGRESOS 250,00 €, GASTOS −5,00 €, AHORRADO +245,00 € y la barra
+    de noviembre mide 75 px (antes 0). La parte de presupuesto mensual no se puede
+    comprobar hasta que T9 arregle el alta (hoy 422).
 
 ## Módulo `presupuestos-escritura` + `divididas`
 
