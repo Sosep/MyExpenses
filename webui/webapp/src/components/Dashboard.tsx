@@ -1,0 +1,250 @@
+import { useMemo } from 'react'
+import type { Account, Group, Transaction } from '../types'
+import { getGrouped, getTransactions } from '../api'
+import {
+  addMonths,
+  currentMonth,
+  formatDate,
+  formatMoney,
+  formatMonth,
+  kindLabel,
+  lastMonths,
+  monthRange,
+} from '../format'
+import { useAsync } from '../hooks'
+import { Chart } from './Chart'
+
+interface DashboardProps {
+  account: Account
+  onOpenTransactions: () => void
+}
+
+function fillSeries(groups: Group[], fromMonth: string, count: number): Group[] {
+  const indexed = new Map(groups.map((group) => [`${group.year}-${group.second}`, group]))
+  const result: Group[] = []
+  let cursor = fromMonth
+  for (let index = 0; index < count; index += 1) {
+    const [year, second] = cursor.split('-').map(Number)
+    result.push(
+      indexed.get(cursor) ?? {
+        year,
+        second,
+        incomeMinor: 0,
+        expensesMinor: 0,
+        transfersMinor: 0,
+      },
+    )
+    cursor = addMonths(cursor, 1)
+  }
+  return result
+}
+
+function description(transaction: Transaction): string {
+  if (transaction.payee?.label) return transaction.payee.label
+  if (transaction.comment) return transaction.comment
+  return kindLabel(transaction.kind)
+}
+
+export function Dashboard({ account, onOpenTransactions }: DashboardProps) {
+  const months = lastMonths(12)
+  const fromMonth = months.from.slice(0, 7)
+  const groups = useAsync(
+    () => getGrouped(account.id, months.from, months.to),
+    [account.id, months.from, months.to],
+  )
+  const thisMonth = monthRange(currentMonth())
+  const recent = useAsync(
+    () => getTransactions(account.id, thisMonth.from, thisMonth.to, 'both', 8, 0),
+    [account.id, thisMonth.from, thisMonth.to],
+  )
+
+  const series = useMemo(
+    () => fillSeries(groups.data ?? [], fromMonth, 12),
+    [groups.data, fromMonth],
+  )
+  const current = series[series.length - 1]
+  const income = current?.incomeMinor ?? 0
+  const expenses = current?.expensesMinor ?? 0
+  const saved = income + expenses
+  const [year, second] = currentMonth().split('-').map(Number)
+  const loading = groups.loading || recent.loading
+  const error = groups.error ?? recent.error
+
+  return (
+    <>
+      <div className="page-head">
+        <div>
+          <h1>Overview</h1>
+          <p>
+            {formatMonth(year, second)} · {account.label}
+          </p>
+        </div>
+        <div className="page-actions">
+          <button type="button" className="btn ghost" onClick={onOpenTransactions}>
+            Transactions
+          </button>
+          <button
+            type="button"
+            className="btn"
+            onClick={() => {
+              groups.reload()
+              recent.reload()
+            }}
+          >
+            Refresh
+          </button>
+        </div>
+      </div>
+
+      {error ? (
+        <div className="banner" role="alert">
+          <span>{error.message}</span>
+          <button
+            type="button"
+            className="btn ghost banner-action"
+            onClick={() => {
+              groups.reload()
+              recent.reload()
+            }}
+          >
+            Retry
+          </button>
+        </div>
+      ) : null}
+
+      <div className="kpis">
+        <div className="hero">
+          <div className="accent-bar" />
+          <div className="kpi-label">Net worth</div>
+          <div className="hero-value">
+            {formatMoney(account.currentBalanceMinor, account.currency, account.fractionDigits)}
+          </div>
+          <div className="hero-delta">
+            <span className={saved >= 0 ? 'amount-pos' : 'amount-neg'}>
+              {formatMoney(saved, account.currency, account.fractionDigits, true)}
+            </span>{' '}
+            saved this month
+          </div>
+        </div>
+        <div className="kpi mint">
+          <div className="kpi-label">Income</div>
+          <div className="kpi-value">
+            {loading
+              ? '—'
+              : formatMoney(income, account.currency, account.fractionDigits)}
+          </div>
+          <div className="kpi-foot">This month</div>
+        </div>
+        <div className="kpi rose">
+          <div className="kpi-label">Expenses</div>
+          <div className="kpi-value">
+            {loading
+              ? '—'
+              : formatMoney(expenses, account.currency, account.fractionDigits)}
+          </div>
+          <div className="kpi-foot">This month</div>
+        </div>
+        <div className="kpi lav">
+          <div className="kpi-label">Saved</div>
+          <div className="kpi-value">
+            {loading
+              ? '—'
+              : formatMoney(saved, account.currency, account.fractionDigits, true)}
+          </div>
+          <div className="kpi-foot">Income minus expenses</div>
+        </div>
+      </div>
+
+      <section className="card">
+        <div className="card-head">
+          <div>
+            <h2>Income and expenses</h2>
+            <p>Last 12 months</p>
+          </div>
+          <span className="card-note">{account.currency}</span>
+        </div>
+        <div className="chart-wrap">
+          {groups.loading ? (
+            <div className="skeleton chart-skeleton" />
+          ) : (
+            <Chart
+              series={series}
+              currency={account.currency}
+              fractionDigits={account.fractionDigits}
+            />
+          )}
+        </div>
+      </section>
+
+      <section className="card">
+        <div className="card-head">
+          <div>
+            <h2>Recent transactions</h2>
+            <p>{formatMonth(year, second)}</p>
+          </div>
+          <button type="button" className="link" onClick={onOpenTransactions}>
+            View all
+          </button>
+        </div>
+        <table className="table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Description</th>
+              <th className="hide-sm">Category</th>
+              <th className="num">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            {recent.loading ? (
+              Array.from({ length: 3 }).map((_, index) => (
+                <tr key={index}>
+                  <td colSpan={4}>
+                    <div className="skeleton skeleton-row" />
+                  </td>
+                </tr>
+              ))
+            ) : recent.data && recent.data.items.length > 0 ? (
+              recent.data.items.map((transaction) => (
+                <tr key={transaction.id}>
+                  <td className="date">{formatDate(transaction.date)}</td>
+                  <td>
+                    <div className="desc">{description(transaction)}</div>
+                  </td>
+                  <td className="hide-sm">
+                    {transaction.category?.path ?? kindLabel(transaction.kind)}
+                  </td>
+                  <td
+                    className={`num ${
+                      transaction.kind === 'TRANSFER'
+                        ? 'amount-neutral'
+                        : transaction.amountMinor > 0
+                          ? 'amount-pos'
+                          : 'amount-neg'
+                    }`}
+                  >
+                    {formatMoney(
+                      transaction.amountMinor,
+                      transaction.currency,
+                      transaction.fractionDigits,
+                      true,
+                    )}
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={4}>
+                  <div className="empty">
+                    <h3>No transactions this month</h3>
+                    <p>Record one in the app and it will show up here.</p>
+                  </div>
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </section>
+    </>
+  )
+}
