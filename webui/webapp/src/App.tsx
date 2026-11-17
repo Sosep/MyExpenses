@@ -4,7 +4,7 @@ import { t } from '@lingui/core/macro'
 import type { Locale } from './i18n'
 import { activateLocale, initialLocale, LOCALES } from './i18n'
 import type { Account, Meta } from './types'
-import { ApiError, getAccounts, getMeta, login, logout, UNAUTHORIZED_EVENT } from './api'
+import { ApiError, describeError, getAccounts, getMeta, login, logout, UNAUTHORIZED_EVENT } from './api'
 import { Budgets } from './components/Budgets'
 import { Dashboard } from './components/Dashboard'
 import { Files } from './components/Files'
@@ -79,7 +79,7 @@ export default function App({ initialLocale: initial }: { initialLocale: Locale 
       .catch((error: unknown) => {
         if (cancelled) return
         if (error instanceof ApiError && error.status !== 401) {
-          setAuthError(error.message)
+          setAuthError(describeError(error))
         }
         setStatus('login')
       })
@@ -91,6 +91,9 @@ export default function App({ initialLocale: initial }: { initialLocale: Locale 
   useEffect(() => {
     document.documentElement.dataset.theme = theme
     localStorage.setItem(THEME_KEY, theme)
+    document
+      .querySelector('meta[name="theme-color"]')
+      ?.setAttribute('content', theme === 'dark' ? '#0B0D12' : '#FFFFFF')
   }, [theme])
 
   useEffect(() => {

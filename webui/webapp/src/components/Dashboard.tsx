@@ -1,8 +1,7 @@
 import { useMemo } from 'react'
-import type { Account, Group, Transaction } from '../types'
-import { getGrouped, getTransactions } from '../api'
+import type { Account, Transaction } from '../types'
+import { describeError, getGrouped, getTransactions } from '../api'
 import {
-  addMonths,
   currentMonth,
   formatDate,
   formatMoney,
@@ -13,32 +12,13 @@ import {
 } from '../format'
 import { t } from '@lingui/core/macro'
 import { useAsync } from '../hooks'
+import { fillSeries } from '../series'
 import { Chart } from './Chart'
 
 interface DashboardProps {
   account: Account
   onOpenTransactions: () => void
   onNewTransaction: () => void
-}
-
-function fillSeries(groups: Group[], fromMonth: string, count: number): Group[] {
-  const indexed = new Map(groups.map((group) => [`${group.year}-${group.second}`, group]))
-  const result: Group[] = []
-  let cursor = fromMonth
-  for (let index = 0; index < count; index += 1) {
-    const [year, second] = cursor.split('-').map(Number)
-    result.push(
-      indexed.get(cursor) ?? {
-        year,
-        second,
-        incomeMinor: 0,
-        expensesMinor: 0,
-        transfersMinor: 0,
-      },
-    )
-    cursor = addMonths(cursor, 1)
-  }
-  return result
 }
 
 function description(transaction: Transaction): string {
@@ -107,7 +87,7 @@ export function Dashboard({
 
       {error ? (
         <div className="banner" role="alert">
-          <span>{error.message}</span>
+          <span>{describeError(error, t`Could not load the overview.`)}</span>
           <button
             type="button"
             className="btn ghost banner-action"

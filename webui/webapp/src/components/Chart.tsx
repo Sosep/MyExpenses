@@ -9,9 +9,13 @@ interface ChartProps {
 }
 
 export function Chart({ series, currency, fractionDigits }: ChartProps) {
+  // A month without expenses arrives without the field (or null). Treating it as
+  // zero keeps one missing value from turning every bar height into NaN.
+  const amount = (value?: number | null): number =>
+    typeof value === 'number' && Number.isFinite(value) ? Math.abs(value) : 0
+
   const max = series.reduce(
-    (current, group) =>
-      Math.max(current, Math.abs(group.incomeMinor), Math.abs(group.expensesMinor)),
+    (current, group) => Math.max(current, amount(group.incomeMinor), amount(group.expensesMinor)),
     0,
   )
 
@@ -24,9 +28,10 @@ export function Chart({ series, currency, fractionDigits }: ChartProps) {
     )
   }
 
-  const height = (value: number) => {
-    if (value === 0) return 0
-    return Math.max(2, Math.min(96, (Math.abs(value) / max) * 96))
+  const height = (value?: number | null) => {
+    const magnitude = amount(value)
+    if (magnitude === 0) return 0
+    return Math.max(2, Math.min(96, (magnitude / max) * 96))
   }
 
   return (

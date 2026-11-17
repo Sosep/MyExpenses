@@ -19,6 +19,7 @@ import {
   createSplit,
   createTransaction,
   createTransfer,
+  describeError,
   getCategories,
   getMethods,
   getPayees,
@@ -233,7 +234,7 @@ export function TransactionEditor({
         onClose={onClose}
       >
         <div className="banner" role="alert">
-          <span>{error.message}</span>
+          <span>{describeError(error, t`Could not load the transaction.`)}</span>
           <button
             type="button"
             className="btn ghost banner-action"
@@ -429,7 +430,7 @@ function TransactionForm({
       onSaved()
     } catch (cause) {
       if (cause instanceof ApiError) {
-        setSubmitError(cause.message)
+        setSubmitError(describeError(cause, t`Could not save the transaction.`))
         if (cause.fields) {
           const mapped: Record<string, string> = {}
           Object.entries(cause.fields).forEach(([key, message]) => {
@@ -439,7 +440,7 @@ function TransactionForm({
           setErrors(mapped)
         }
       } else {
-        setSubmitError(cause instanceof Error ? cause.message : t`Could not save the transaction.`)
+        setSubmitError(describeError(cause, t`Could not save the transaction.`))
       }
     } finally {
       setSaving(false)
@@ -834,10 +835,10 @@ function TransferForm({
       onSaved()
     } catch (cause) {
       if (cause instanceof ApiError) {
-        setSubmitError(cause.message)
+        setSubmitError(describeError(cause, t`Could not save the transfer.`))
         if (cause.fields) setErrors(cause.fields)
       } else {
-        setSubmitError(cause instanceof Error ? cause.message : t`Could not save the transfer.`)
+        setSubmitError(describeError(cause, t`Could not save the transfer.`))
       }
     } finally {
       setSaving(false)
@@ -1267,10 +1268,10 @@ function SplitForm({
       onSaved()
     } catch (cause) {
       if (cause instanceof ApiError) {
-        setSubmitError(cause.message)
+        setSubmitError(describeError(cause, t`Could not save the split.`))
         if (cause.fields) setErrors(cause.fields)
       } else {
-        setSubmitError(cause instanceof Error ? cause.message : t`Could not save the split.`)
+        setSubmitError(describeError(cause, t`Could not save the split.`))
       }
     } finally {
       setSaving(false)

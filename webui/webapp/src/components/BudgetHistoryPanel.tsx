@@ -1,6 +1,6 @@
 import { t } from '@lingui/core/macro'
 import type { Budget } from '../types'
-import { getBudgetHistory } from '../api'
+import { describeError, getBudgetHistory } from '../api'
 import { formatMoney, formatMonthShort } from '../format'
 import { useAsync } from '../hooks'
 import { IconX } from './Icons'
@@ -41,7 +41,9 @@ export function BudgetHistoryPanel({ budget, onClose }: BudgetHistoryPanelProps)
         </div>
         <div className="panel-body">
           {history.loading ? <p className="card-note">{t`Loading…`}</p> : null}
-          {history.error ? <div className="banner">{history.error.message}</div> : null}
+          {history.error ? (
+            <div className="banner">{describeError(history.error, t`Could not load the history.`)}</div>
+          ) : null}
           {items.length === 0 && !history.loading ? (
             <p className="card-note">{t`No history yet.`}</p>
           ) : null}

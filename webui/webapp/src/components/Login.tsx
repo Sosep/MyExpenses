@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { t } from '@lingui/core/macro'
+import { describeError } from '../api'
 
 interface LoginProps {
   onSubmit: (password: string) => Promise<void>
@@ -17,7 +18,7 @@ export function Login({ onSubmit, error }: LoginProps) {
     try {
       await onSubmit(password)
     } catch (cause) {
-      setLocalError(cause instanceof Error ? cause.message : t`Could not sign in`)
+      setLocalError(describeError(cause, t`Could not sign in`))
     } finally {
       setSubmitting(false)
     }

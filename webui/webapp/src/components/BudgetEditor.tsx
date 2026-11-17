@@ -5,6 +5,7 @@ import {
   ApiError,
   createBudget,
   deleteBudget,
+  describeError,
   duplicateBudget,
   getBudgetAllocations,
   updateBudget,
@@ -261,12 +262,8 @@ export function BudgetEditor({
       }
       onSaved(mode === 'create' ? t`Budget created.` : t`Budget saved.`)
     } catch (cause) {
-      if (cause instanceof ApiError) {
-        setSubmitError(cause.message)
-        if (cause.fields) setErrors(cause.fields)
-      } else {
-        setSubmitError(cause instanceof Error ? cause.message : t`Could not save the budget.`)
-      }
+      setSubmitError(describeError(cause, t`Could not save the budget.`))
+      if (cause instanceof ApiError && cause.fields) setErrors(cause.fields)
     } finally {
       setSaving(false)
     }
@@ -280,7 +277,7 @@ export function BudgetEditor({
       await duplicateBudget(budget.id)
       onSaved(t`Budget duplicated.`)
     } catch (cause) {
-      setSubmitError(cause instanceof Error ? cause.message : t`Could not duplicate the budget.`)
+      setSubmitError(describeError(cause, t`Could not duplicate the budget.`))
     } finally {
       setSaving(false)
     }
@@ -295,7 +292,7 @@ export function BudgetEditor({
       await deleteBudget(budget.id)
       onSaved(t`Budget deleted.`)
     } catch (cause) {
-      setSubmitError(cause instanceof Error ? cause.message : t`Could not delete the budget.`)
+      setSubmitError(describeError(cause, t`Could not delete the budget.`))
     } finally {
       setSaving(false)
     }

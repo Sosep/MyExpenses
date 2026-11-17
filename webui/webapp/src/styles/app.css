@@ -1167,6 +1167,10 @@ button:disabled {
     max-width: 140px;
   }
 
+  .topbar {
+    gap: 8px;
+  }
+
   .kpis {
     grid-template-columns: 1fr;
   }
@@ -1210,6 +1214,22 @@ button:disabled {
 
   .detail-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+/* Narrow phones: the wordmark pushes the account picker and the session button
+   past the viewport, so only the mark stays and the pickers shrink. */
+@media (max-width: 480px) {
+  .brand {
+    gap: 0;
+  }
+
+  .brand-word {
+    display: none;
+  }
+
+  .account-select {
+    max-width: 112px;
   }
 }
 

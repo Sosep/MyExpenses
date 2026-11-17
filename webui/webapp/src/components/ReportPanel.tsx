@@ -1,6 +1,6 @@
 import { t } from '@lingui/core/macro'
 import type { BreakdownItem, Transaction } from '../types'
-import { getReportTransactions } from '../api'
+import { getReportTransactions, describeError } from '../api'
 import { formatDate, formatMoney } from '../format'
 import { useAsync } from '../hooks'
 import { IconX } from './Icons'
@@ -57,7 +57,9 @@ export function ReportPanel({
         </div>
         <div className="panel-body">
           {page.loading ? <p className="card-note">{t`Loading…`}</p> : null}
-          {page.error ? <div className="banner">{page.error.message}</div> : null}
+          {page.error ? (
+            <div className="banner">{describeError(page.error, t`Could not load the detail.`)}</div>
+          ) : null}
           {items.length > 0 ? (
             <table className="table">
               <thead>

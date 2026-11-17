@@ -219,8 +219,13 @@ msgstr "Budgets"
 msgid "Budgets with different currencies or periods are shown separately."
 msgstr "Budgets with different currencies or periods are shown separately."
 
+#: src/api.ts
+msgid "Can't reach the phone. Check that My Expenses is open and on the same network."
+msgstr "Can't reach the phone. Check that My Expenses is open and on the same network."
+
 #: src/components/BudgetEditor.tsx
 #: src/components/TransactionEditor.tsx
+#: src/components/TransactionPanel.tsx
 msgid "Cancel"
 msgstr "Cancel"
 
@@ -283,6 +288,43 @@ msgstr "Could not download the file."
 msgid "Could not duplicate the budget."
 msgstr "Could not duplicate the budget."
 
+#: src/components/Transactions.tsx
+msgid "Could not load more transactions."
+msgstr "Could not load more transactions."
+
+#: src/components/Budgets.tsx
+msgid "Could not load the budgets."
+msgstr "Could not load the budgets."
+
+#: src/components/ReportPanel.tsx
+msgid "Could not load the detail."
+msgstr "Could not load the detail."
+
+#: src/components/Files.tsx
+msgid "Could not load the files."
+msgstr "Could not load the files."
+
+#: src/components/BudgetHistoryPanel.tsx
+msgid "Could not load the history."
+msgstr "Could not load the history."
+
+#: src/components/Dashboard.tsx
+msgid "Could not load the overview."
+msgstr "Could not load the overview."
+
+#: src/components/Reports.tsx
+msgid "Could not load the report."
+msgstr "Could not load the report."
+
+#: src/components/TransactionEditor.tsx
+#: src/components/TransactionPanel.tsx
+msgid "Could not load the transaction."
+msgstr "Could not load the transaction."
+
+#: src/components/Transactions.tsx
+msgid "Could not load the transactions."
+msgstr "Could not load the transactions."
+
 #: src/components/BudgetEditor.tsx
 msgid "Could not save the budget."
 msgstr "Could not save the budget."
@@ -344,6 +386,10 @@ msgstr "Delete"
 #: src/components/BudgetEditor.tsx
 msgid "Delete the budget “{0}”?"
 msgstr "Delete the budget “{0}”?"
+
+#: src/components/TransactionPanel.tsx
+msgid "Delete this transaction?"
+msgstr "Delete this transaction?"
 
 #: src/components/TransactionPanel.tsx
 msgid "Deleting…"
@@ -841,6 +887,7 @@ msgstr "Required."
 
 #: src/components/Dashboard.tsx
 #: src/components/TransactionEditor.tsx
+#: src/components/TransactionPanel.tsx
 #: src/components/Transactions.tsx
 msgid "Retry"
 msgstr "Retry"
@@ -892,6 +939,10 @@ msgstr "Settings (next milestone)"
 msgid "Sign in"
 msgstr "Sign in"
 
+#: src/api.ts
+msgid "Sign in required."
+msgstr "Sign in required."
+
 #: src/components/Shell.tsx
 msgid "Sign out"
 msgstr "Sign out"
@@ -903,6 +954,10 @@ msgstr "Signing in…"
 #: src/components/Files.tsx
 msgid "Size"
 msgstr "Size"
+
+#: src/api.ts
+msgid "Something did not work. Try again."
+msgstr "Something did not work. Try again."
 
 #: src/components/Reports.tsx
 msgid "Spending by {noun}"
@@ -960,6 +1015,10 @@ msgstr "The linked side is deleted too."
 msgid "The parts must add up to the total."
 msgstr "The parts must add up to the total."
 
+#: src/api.ts
+msgid "The phone could not complete the request."
+msgstr "The phone could not complete the request."
+
 #: src/components/TransactionEditor.tsx
 msgid "The transaction could not be loaded."
 msgstr "The transaction could not be loaded."
@@ -967,6 +1026,14 @@ msgstr "The transaction could not be loaded."
 #: src/components/TransactionPanel.tsx
 msgid "This cannot be undone."
 msgstr "This cannot be undone."
+
+#: src/api.ts
+msgid "This change is not allowed here."
+msgstr "This change is not allowed here."
+
+#: src/api.ts
+msgid "This item no longer exists on the phone."
+msgstr "This item no longer exists on the phone."
 
 #: src/components/Dashboard.tsx
 #: src/components/Reports.tsx
@@ -1083,6 +1150,10 @@ msgstr "Weekly"
 #: src/components/TransactionEditor.tsx
 msgid "What do you want to add?"
 msgstr "What do you want to add?"
+
+#: src/api.ts
+msgid "Wrong password."
+msgstr "Wrong password."
 
 #: src/components/BudgetEditor.tsx
 #: src/components/Budgets.tsx

@@ -219,8 +219,13 @@ msgstr "Presupuestos"
 msgid "Budgets with different currencies or periods are shown separately."
 msgstr "Los presupuestos con divisas o periodos distintos se muestran por separado."
 
+#: src/api.ts
+msgid "Can't reach the phone. Check that My Expenses is open and on the same network."
+msgstr "No se puede acceder al móvil. Comprueba que My Expenses está abierto y en la misma red."
+
 #: src/components/BudgetEditor.tsx
 #: src/components/TransactionEditor.tsx
+#: src/components/TransactionPanel.tsx
 msgid "Cancel"
 msgstr "Cancelar"
 
@@ -283,6 +288,43 @@ msgstr "No se pudo descargar el fichero."
 msgid "Could not duplicate the budget."
 msgstr "No se pudo duplicar el presupuesto."
 
+#: src/components/Transactions.tsx
+msgid "Could not load more transactions."
+msgstr "No se pudieron cargar más transacciones."
+
+#: src/components/Budgets.tsx
+msgid "Could not load the budgets."
+msgstr "No se pudieron cargar los presupuestos."
+
+#: src/components/ReportPanel.tsx
+msgid "Could not load the detail."
+msgstr "No se pudo cargar el detalle."
+
+#: src/components/Files.tsx
+msgid "Could not load the files."
+msgstr "No se pudieron cargar los ficheros."
+
+#: src/components/BudgetHistoryPanel.tsx
+msgid "Could not load the history."
+msgstr "No se pudo cargar el historial."
+
+#: src/components/Dashboard.tsx
+msgid "Could not load the overview."
+msgstr "No se pudo cargar el resumen."
+
+#: src/components/Reports.tsx
+msgid "Could not load the report."
+msgstr "No se pudo cargar el informe."
+
+#: src/components/TransactionEditor.tsx
+#: src/components/TransactionPanel.tsx
+msgid "Could not load the transaction."
+msgstr "No se pudo cargar la transacción."
+
+#: src/components/Transactions.tsx
+msgid "Could not load the transactions."
+msgstr "No se pudieron cargar las transacciones."
+
 #: src/components/BudgetEditor.tsx
 msgid "Could not save the budget."
 msgstr "No se pudo guardar el presupuesto."
@@ -344,6 +386,10 @@ msgstr "Eliminar"
 #: src/components/BudgetEditor.tsx
 msgid "Delete the budget “{0}”?"
 msgstr "¿Eliminar el presupuesto «{0}»?"
+
+#: src/components/TransactionPanel.tsx
+msgid "Delete this transaction?"
+msgstr "¿Eliminar esta transacción?"
 
 #: src/components/TransactionPanel.tsx
 msgid "Deleting…"
@@ -841,6 +887,7 @@ msgstr "Obligatorio."
 
 #: src/components/Dashboard.tsx
 #: src/components/TransactionEditor.tsx
+#: src/components/TransactionPanel.tsx
 #: src/components/Transactions.tsx
 msgid "Retry"
 msgstr "Reintentar"
@@ -892,6 +939,10 @@ msgstr "Ajustes (próximo hito)"
 msgid "Sign in"
 msgstr "Iniciar sesión"
 
+#: src/api.ts
+msgid "Sign in required."
+msgstr "Es necesario iniciar sesión."
+
 #: src/components/Shell.tsx
 msgid "Sign out"
 msgstr "Cerrar sesión"
@@ -903,6 +954,10 @@ msgstr "Iniciando sesión…"
 #: src/components/Files.tsx
 msgid "Size"
 msgstr "Tamaño"
+
+#: src/api.ts
+msgid "Something did not work. Try again."
+msgstr "Algo no funcionó. Inténtalo de nuevo."
 
 #: src/components/Reports.tsx
 msgid "Spending by {noun}"
@@ -960,6 +1015,10 @@ msgstr "El lado enlazado también se elimina."
 msgid "The parts must add up to the total."
 msgstr "Las partes deben sumar el total."
 
+#: src/api.ts
+msgid "The phone could not complete the request."
+msgstr "El móvil no pudo completar la solicitud."
+
 #: src/components/TransactionEditor.tsx
 msgid "The transaction could not be loaded."
 msgstr "No se pudo cargar la transacción."
@@ -967,6 +1026,14 @@ msgstr "No se pudo cargar la transacción."
 #: src/components/TransactionPanel.tsx
 msgid "This cannot be undone."
 msgstr "Esto no se puede deshacer."
+
+#: src/api.ts
+msgid "This change is not allowed here."
+msgstr "Ese cambio no está permitido aquí."
+
+#: src/api.ts
+msgid "This item no longer exists on the phone."
+msgstr "Ese elemento ya no existe en el móvil."
 
 #: src/components/Dashboard.tsx
 #: src/components/Reports.tsx
@@ -1083,6 +1150,10 @@ msgstr "Semanal"
 #: src/components/TransactionEditor.tsx
 msgid "What do you want to add?"
 msgstr "¿Qué quieres añadir?"
+
+#: src/api.ts
+msgid "Wrong password."
+msgstr "Contraseña incorrecta."
 
 #: src/components/BudgetEditor.tsx
 #: src/components/Budgets.tsx

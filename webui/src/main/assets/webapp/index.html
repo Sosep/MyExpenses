@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="light dark" />
-    <meta name="theme-color" content="#2F6BFF" />
+    <meta name="theme-color" content="#FFFFFF" />
     <title>My Expenses</title>
     <link rel="icon" href="/favicon.ico" />
     <link rel="apple-touch-icon" href="/app/apple-touch-icon.png" />
@@ -17,13 +17,15 @@
             saved === 'dark' ||
             (saved !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches)
           document.documentElement.dataset.theme = dark ? 'dark' : 'light'
+          var themeColor = document.querySelector('meta[name="theme-color"]')
+          if (themeColor) themeColor.setAttribute('content', dark ? '#0B0D12' : '#FFFFFF')
         } catch (_) {
           document.documentElement.dataset.theme = 'light'
         }
       })()
     </script>
-    <script type="module" crossorigin src="/app/assets/index-Br5KOPb6.js"></script>
-    <link rel="stylesheet" crossorigin href="/app/assets/index-C3nplidq.css">
+    <script type="module" crossorigin src="/app/assets/index-CxQlw4Jt.js"></script>
+    <link rel="stylesheet" crossorigin href="/app/assets/index-BMGJsiad.css">
   </head>
   <body>
     <div id="root"></div>

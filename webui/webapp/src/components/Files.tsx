@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { FileEntry } from '../types'
-import { downloadFile, getFiles } from '../api'
+import { describeError, downloadFile, getFiles } from '../api'
 import { formatBytes, formatTimestamp } from '../format'
 import { t } from '@lingui/core/macro'
 import { useAsync } from '../hooks'
@@ -27,7 +27,7 @@ export function Files() {
       anchor.remove()
       URL.revokeObjectURL(url)
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : t`Could not download the file.`)
+      setError(describeError(cause, t`Could not download the file.`))
     } finally {
       setBusy(null)
     }
@@ -54,7 +54,7 @@ export function Files() {
 
       {files.error ? (
         <div className="banner" role="alert">
-          <span>{files.error.message}</span>
+          <span>{describeError(files.error, t`Could not load the files.`)}</span>
           <button type="button" className="btn ghost" onClick={files.reload}>
             {t`Try again`}
           </button>

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { t } from '@lingui/core/macro'
 import type { Account, BreakdownItem } from '../types'
-import { getBreakdown, getReportSummary } from '../api'
+import { describeError, getBreakdown, getReportSummary } from '../api'
 import {
   addMonths,
   currentMonth,
@@ -137,7 +137,7 @@ export function Reports({ account, accounts }: ReportsProps) {
 
       {error ? (
         <div className="banner" role="alert">
-          <span>{error.message}</span>
+          <span>{describeError(error, t`Could not load the report.`)}</span>
           <button
             type="button"
             className="btn ghost"

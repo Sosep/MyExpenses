@@ -1,3 +1,4 @@
+import { t } from '@lingui/core/macro'
 import type {
   Account,
   Breakdown,
@@ -34,6 +35,36 @@ export class ApiError extends Error {
     super(message)
     this.name = 'ApiError'
   }
+}
+
+/**
+ * Turns an error into copy in the active locale. The server speaks English and
+ * the network layer never formats sentences for the user, so the UI translates
+ * by code and only falls back to the server text for codes it does not know.
+ */
+export function describeError(error: unknown, fallback?: string): string {
+  if (error instanceof ApiError) {
+    switch (error.code) {
+      case 'network_error':
+        return t`Can't reach the phone. Check that My Expenses is open and on the same network.`
+      case 'unauthorized':
+        return t`Sign in required.`
+      case 'invalid_password':
+        return t`Wrong password.`
+      case 'not_found':
+        return t`This item no longer exists on the phone.`
+      case 'conflict':
+        return t`This change is not allowed here.`
+      case 'http_error':
+        return error.status >= 500
+          ? t`The phone could not complete the request.`
+          : (fallback ?? error.message)
+      default:
+        return error.message
+    }
+  }
+  if (error instanceof Error && error.message) return error.message
+  return fallback ?? t`Something did not work. Try again.`
 }
 
 function requestInit(options: RequestOptions, headers: Headers): RequestInit {
@@ -107,7 +138,7 @@ export async function login(password: string): Promise<Meta> {
     )
   }
   if (response.status === 401) {
-    throw new ApiError(401, 'unauthorized', 'Wrong password')
+    throw new ApiError(401, 'invalid_password', 'Wrong password')
   }
   if (!response.ok) {
     throw new ApiError(response.status, 'http_error', 'Could not sign in')
@@ -223,7 +254,7 @@ export async function downloadFile(name: string): Promise<Blob> {
   if (!response.ok) {
     throw new ApiError(
       response.status,
-      'http_error',
+      response.status === 404 ? 'not_found' : 'http_error',
       response.status === 404 ? 'File not found' : 'Could not download the file',
     )
   }

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { t } from '@lingui/core/macro'
 import type { Account, Budget, BudgetProgress } from '../types'
-import { getBudgetProgress, getBudgets } from '../api'
+import { describeError, getBudgetProgress, getBudgets } from '../api'
 import { addMonths, currentMonth, formatMoney, formatMonth } from '../format'
 import { useAsync } from '../hooks'
 import { BudgetEditor } from './BudgetEditor'
@@ -150,7 +150,7 @@ export function Budgets({
 
       {entries.error ? (
         <div className="banner" role="alert">
-          <span>{entries.error.message}</span>
+          <span>{describeError(entries.error, t`Could not load the budgets.`)}</span>
           <button type="button" className="btn ghost" onClick={entries.reload}>
             {t`Try again`}
           </button>

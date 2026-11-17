@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { Account } from '../types'
-import { deleteTransaction, getTransaction } from '../api'
+import { deleteTransaction, describeError, getTransaction } from '../api'
 import { formatDate, formatMoney, kindLabel, statusLabel } from '../format'
 import { t } from '@lingui/core/macro'
 import { useAsync } from '../hooks'
@@ -64,7 +64,7 @@ export function TransactionPanel({
       await deleteTransaction(transaction.id)
       onDeleted()
     } catch (cause) {
-      setDeleteError(cause instanceof Error ? cause.message : t`Could not delete the transaction.`)
+      setDeleteError(describeError(cause, t`Could not delete the transaction.`))
       setDeleting(false)
     }
   }
@@ -100,13 +100,13 @@ export function TransactionPanel({
             </div>
           ) : detail.error ? (
             <div className="banner" role="alert">
-              <span>{detail.error.message}</span>
+              <span>{describeError(detail.error, t`Could not load the transaction.`)}</span>
               <button
                 type="button"
                 className="btn ghost banner-action"
                 onClick={() => detail.reload()}
               >
-                Retry
+                {t`Retry`}
               </button>
             </div>
           ) : transaction ? (
@@ -229,7 +229,7 @@ export function TransactionPanel({
             {confirmingDelete ? (
               <div className="confirm-box">
                 <p>
-                  Delete this transaction?{' '}
+                  {t`Delete this transaction?`}{' '}
                   {transaction.kind === 'SPLIT'
                     ? t`Its parts are deleted too.`
                     : transaction.kind === 'TRANSFER'
@@ -243,7 +243,7 @@ export function TransactionPanel({
                     onClick={() => setConfirmingDelete(false)}
                     disabled={deleting}
                   >
-                    Cancel
+                    {t`Cancel`}
                   </button>
                   <button
                     type="button"
@@ -265,7 +265,7 @@ export function TransactionPanel({
                   className="btn ghost danger"
                   onClick={() => setConfirmingDelete(true)}
                 >
-                  Delete
+                  {t`Delete`}
                 </button>
               </div>
             )}

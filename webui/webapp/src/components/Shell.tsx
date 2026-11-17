@@ -63,7 +63,7 @@ export function Shell({
       <header className="topbar">
         <div className="brand" title={`My Expenses ${meta.appVersion}`}>
           <span className="mark">Σ</span>
-          <span>My Expenses</span>
+          <span className="brand-word">My Expenses</span>
         </div>
         <span className="crumb">{crumb}</span>
         <div className="top-right">

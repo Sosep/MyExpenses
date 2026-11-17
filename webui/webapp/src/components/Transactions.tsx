@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { Account, Transaction } from '../types'
-import { getCategories, getGrouped, getMethods, getPayees, getTags, getTransactions } from '../api'
+import { describeError, getCategories, getGrouped, getMethods, getPayees, getTags, getTransactions } from '../api'
 import {
   addMonths,
   currentMonth,
@@ -130,7 +130,7 @@ export function Transactions({
       )
       setExtra((previous) => [...previous, ...next.items])
     } catch (cause) {
-      setMoreError(cause instanceof Error ? cause.message : 'Could not load more')
+      setMoreError(describeError(cause, t`Could not load more transactions.`))
     } finally {
       setLoadingMore(false)
     }
@@ -311,7 +311,7 @@ export function Transactions({
 
       {page.error ? (
         <div className="banner" role="alert">
-          <span>{page.error.message}</span>
+          <span>{describeError(page.error, t`Could not load the transactions.`)}</span>
           <button
             type="button"
             className="btn ghost banner-action"
@@ -347,6 +347,8 @@ export function Transactions({
                 <tr
                   key={transaction.id}
                   className="clickable"
+                  data-kind={transaction.kind}
+                  data-id={transaction.id}
                   tabIndex={0}
                   aria-label={t`Open transaction: ${description(transaction)}`}
                   onClick={() => setSelectedId(transaction.id)}

@@ -425,7 +425,7 @@ const currentIncome = transactions
   .reduce((total, item) => total + item.amountMinor, 0)
 
 const incomes = [280000, 295000, 310000, 290000, 305000, 312000, 298000, 301000, 320000, 309000, 315000]
-const expenses = [-240000, -255000, -268000, -250000, -262000, -271000, -259000, -266000, -280000, -272000]
+const expenses = [-240000, -255000, -268000, -250000, -262000, -271000, -259000, -266000, -280000, -272000, -266000]
 const groups = []
 for (let index = 11; index >= 0; index -= 1) {
   const date = new Date(year, month - 1 - index, 1)
@@ -456,11 +456,8 @@ function serveAppIndex(response) {
           document.cookie = 'myexpenses_session=mock; path=/'
         }
         if (q.get('locale')) localStorage.setItem('myexpenses.locale', q.get('locale'))
-        localStorage.setItem('myexpenses.theme','light')
+        localStorage.setItem('myexpenses.theme', q.get('theme') === 'dark' ? 'dark' : 'light')
         window.addEventListener('load', function(){
-          if (q.get('theme') === 'dark') {
-            setTimeout(function(){ document.querySelector('button[aria-label="Switch to dark"]')?.click() }, 120)
-          }
           if (q.get('view') === 'reports') {
             setTimeout(function(){ document.querySelector('button[data-view="reports"]')?.click() }, 250)
             if (q.get('allAccounts') === '1') {
@@ -545,16 +542,9 @@ function serveAppIndex(response) {
             var panel = q.get('panel')
             if (panel) {
               setTimeout(function(){
-                var rows = document.querySelectorAll('tbody tr')
-                var target = null
-                var needle = panel === 'transfer' ? 'Transfer' : 'Split transaction'
-                for (var i = 0; i < rows.length; i++) {
-                  if (rows[i].textContent && rows[i].textContent.indexOf(needle) >= 0) {
-                    target = rows[i]
-                    break
-                  }
-                }
-                ;(target || rows[Number(panel) - 1])?.click()
+                var kind = panel === 'transfer' ? 'TRANSFER' : 'SPLIT'
+                var target = document.querySelector('tbody tr[data-kind="' + kind + '"]')
+                ;(target || document.querySelectorAll('tbody tr')[Number(panel) - 1])?.click()
               }, 900)
             }
           }
