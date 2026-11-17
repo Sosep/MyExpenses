@@ -2,7 +2,6 @@ package org.totschnig.myexpenses.db2
 
 import android.database.Cursor
 import com.google.common.truth.Truth.assertThat
-import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -10,6 +9,7 @@ import org.totschnig.myexpenses.BaseTestWithRepository
 import org.totschnig.myexpenses.db2.entities.Transaction
 import org.totschnig.myexpenses.model.CrStatus
 import org.totschnig.myexpenses.model.generateUuid
+import org.totschnig.myexpenses.provider.CTE_SEARCH
 import org.totschnig.myexpenses.provider.DataBaseAccount
 import org.totschnig.myexpenses.provider.KEY_ACCOUNTID
 import org.totschnig.myexpenses.provider.KEY_AMOUNT
@@ -32,16 +32,16 @@ import java.time.LocalDateTime
  * `ApiQueries.transactionSelection` and `reportSelection`, so a failing one shows
  * the SQLite message instead of the generic 500 the device returns.
  *
- * Today all four cases fail; they document the three causes of the device 500s:
- *  - the builder always sets `search=1`, so the provider wraps the query in
- *    `cte_search` and a selection qualified with `transactions_extended` no
- *    longer resolves (category and tag filters);
+ * The provider builds two different shapes:
+ *  - list queries set `search=1` and are wrapped in `cte_search`, so a selection
+ *    must qualify with that alias;
+ *  - aggregates query `transactions_extended` directly, where `display_amount`
+ *    does not exist — all-accounts aggregates therefore go through the cte,
+ *    which is the only place the home-currency amount is computed.
  *  - the exchange-rate join adds `account_exchangerates.account_id`, so
- *    `account_id = ?` is ambiguous (drill-down);
- *  - `display_amount` only exists inside `cte_search`, so using it against
- *    `EXTENDED_URI` fails (all-accounts summary and breakdown).
+ *    `account_id` must always be qualified.
  *
- * Un-ignore each case as its fix lands.
+ * Keep these cases in sync with `ApiQueries`.
  */
 @RunWith(RobolectricTestRunner::class)
 class WebQueryReproTest : BaseTestWithRepository() {
@@ -66,31 +66,36 @@ class WebQueryReproTest : BaseTestWithRepository() {
         return accountId to categoryId
     }
 
+    private fun listUri(accountId: Long) =
+        DataBaseAccount.uriBuilderForTransactionList(accountId, extended = true).build()
+
+    private fun allAccountsUri() =
+        DataBaseAccount.uriBuilderForTransactionList(shortenComment = false, extended = true).build()
+
     private fun query(
         accountId: Long,
         projection: Array<String>,
         selection: String,
         args: Array<String>
     ): Cursor? = contentResolver.query(
-        DataBaseAccount.uriBuilderForTransactionList(accountId, extended = true).build(),
+        listUri(accountId),
         projection,
         selection,
         args,
         null
     )
 
-    @Ignore("known 500, see the class comment")
     @Test
     fun categoryFilter() {
         val (accountId, categoryId) = seed()
         val selection = "($KEY_CATID = ? OR ($KEY_CATID = $SPLIT_CATID AND EXISTS (" +
             "SELECT 1 FROM $TABLE_TRANSACTIONS child " +
-            "WHERE child.$KEY_PARENTID = $VIEW_EXTENDED.$KEY_ROWID " +
+            "WHERE child.$KEY_PARENTID = $CTE_SEARCH.$KEY_ROWID " +
             "AND child.$KEY_CATID = ?)))"
         val args = arrayOf(categoryId.toString(), categoryId.toString())
 
         val total = contentResolver.query(
-            DataBaseAccount.uriBuilderForTransactionList(accountId, extended = true).build(),
+            listUri(accountId),
             arrayOf("count(*)"),
             selection,
             args,
@@ -103,22 +108,21 @@ class WebQueryReproTest : BaseTestWithRepository() {
         }
     }
 
-    @Ignore("known 500, see the class comment")
     @Test
     fun tagFilter() {
         val (accountId, _) = seed()
         val selection = "EXISTS (SELECT 1 FROM ${TABLE_TRANSACTIONS}_tags tag_filter " +
-            "WHERE tag_filter.transaction_id = $VIEW_EXTENDED.$KEY_ROWID AND tag_filter.tag_id = ?)"
+            "WHERE tag_filter.transaction_id = $CTE_SEARCH.$KEY_ROWID AND tag_filter.tag_id = ?)"
         query(accountId, Transaction.projection, selection, arrayOf("1"))?.close()
     }
 
-    @Ignore("known 500, see the class comment")
     @Test
     fun reportSelectionWithoutJoin() {
         val (accountId, _) = seed()
         val today = LocalDateTime.now()
-        val selection = "$KEY_ACCOUNTID = ? AND $KEY_CR_STATUS != ? AND " +
-            "$KEY_TRANSFER_ACCOUNT IS NULL AND $KEY_DATE >= ? AND $KEY_DATE <= ?"
+        val selection = "$VIEW_EXTENDED.$KEY_ACCOUNTID = ? AND $VIEW_EXTENDED.$KEY_CR_STATUS != ? AND " +
+            "$VIEW_EXTENDED.$KEY_TRANSFER_ACCOUNT IS NULL AND $VIEW_EXTENDED.$KEY_DATE >= ? AND " +
+            "$VIEW_EXTENDED.$KEY_DATE <= ?"
         val args = arrayOf(
             accountId.toString(),
             CrStatus.VOID.name,
@@ -134,7 +138,29 @@ class WebQueryReproTest : BaseTestWithRepository() {
         )?.use { assertThat(it.count).isEqualTo(1) }
     }
 
-    @Ignore("known 500, see the class comment")
+    @Test
+    fun breakdownAllAccounts() {
+        seed()
+        val uri = allAccountsUri().buildUpon()
+            .appendQueryParameter(
+                TransactionProvider.QUERY_PARAMETER_GROUP_BY,
+                "coalesce($KEY_CATID, 0)"
+            )
+            .build()
+        val projection = arrayOf(
+            "coalesce($KEY_CATID, 0) AS group_id",
+            "sum($KEY_DISPLAY_AMOUNT) AS amount_minor",
+            "count(*) AS transaction_count"
+        )
+        val selection =
+            "$CTE_SEARCH.$KEY_CR_STATUS != ? AND $CTE_SEARCH.$KEY_TRANSFER_ACCOUNT IS NULL"
+        contentResolver.query(uri, projection, selection, arrayOf(CrStatus.VOID.name), null)
+            ?.use {
+                assertThat(it.moveToFirst()).isTrue()
+                assertThat(it.getLong(2)).isEqualTo(1L)
+            }
+    }
+
     @Test
     fun summaryAllAccounts() {
         seed()
@@ -143,14 +169,16 @@ class WebQueryReproTest : BaseTestWithRepository() {
             "sum(CASE WHEN $KEY_AMOUNT < 0 THEN $KEY_DISPLAY_AMOUNT ELSE 0 END) AS expenses",
             "count(*) AS transactions"
         )
-        val selection = "exclude_from_totals = 0 AND $KEY_CR_STATUS != ? AND " +
-            "$KEY_TRANSFER_ACCOUNT IS NULL"
+        val selection = "$CTE_SEARCH.$KEY_CR_STATUS != ? AND $CTE_SEARCH.$KEY_TRANSFER_ACCOUNT IS NULL"
         contentResolver.query(
-            TransactionProvider.EXTENDED_URI,
+            allAccountsUri(),
             projection,
             selection,
             arrayOf(CrStatus.VOID.name),
             null
-        )?.use { assertThat(it.count).isEqualTo(1) }
+        )?.use {
+            assertThat(it.moveToFirst()).isTrue()
+            assertThat(it.getLong(2)).isEqualTo(1L)
+        }
     }
 }

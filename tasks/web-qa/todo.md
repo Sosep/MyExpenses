@@ -103,12 +103,17 @@ Se ejecuta en orden. Cada módulo se commitea con sus docs y sus assets si toca 
 
 ## Módulo `consultas-informes`
 
-- [ ] **T11 — 200 en las cinco rutas**
+- [x] **T11 — 200 en las cinco rutas**
   - Acceptance: `categoryId`, `tagId`, drill-down por los cuatro `by` y
     `accountId=all` responden 200; la causa raíz corregida, no silenciada.
   - Verify: los cinco `curl` del informe + `ApiRoutesTest` con casos felices.
   - Files: `ApiQueries.kt`, `AndroidWebApiDataSource.kt`, `ApiRoutesTest.kt`,
     `API.md`
+  - Hecho: las selecciones usan el alias de la tabla en scope (`cte_search` en
+    listas, `transactions_extended` en agregados), `account_id` va cualificado y
+    los agregados de todas las cuentas pasan por el CTE, único sitio donde
+    `display_amount` lleva la conversión. Cubierto por `WebQueryReproTest`
+    (5 casos, SQLite real). Pendiente de verificar en el móvil con este build.
 
 ## Módulo `endurecimiento`
 

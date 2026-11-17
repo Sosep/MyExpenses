@@ -1,6 +1,7 @@
 package org.totschnig.webui.api
 
 import android.content.ContentResolver
+import android.net.Uri
 import java.time.LocalDate
 import java.time.ZoneId
 import kotlin.math.abs
@@ -12,6 +13,7 @@ import org.totschnig.myexpenses.model.CurrencyContext
 import org.totschnig.myexpenses.model.CurrencyUnit
 import org.totschnig.myexpenses.model.Grouping
 import org.totschnig.myexpenses.provider.BaseTransactionProvider
+import org.totschnig.myexpenses.provider.CTE_SEARCH
 import org.totschnig.myexpenses.provider.DataBaseAccount
 import org.totschnig.myexpenses.provider.KEY_ACCOUNTID
 import org.totschnig.myexpenses.provider.KEY_ACCOUNT_TYPE_LIST
@@ -280,14 +282,23 @@ internal fun Repository.queryReportSummary(
     allAccounts: Boolean
 ): ReportSummaryDto {
     val amountColumn = if (allAccounts) KEY_DISPLAY_AMOUNT else KEY_AMOUNT
-    val (selection, args) = reportSelection(accountId, from, to, "both", wholeTransactions = true)
+    // display_amount is only defined inside the cte the provider builds for list
+    // queries, and only it carries the home-currency equivalent.
+    val (uri, alias) = if (allAccounts) {
+        DataBaseAccount.uriBuilderForTransactionList(shortenComment = false, extended = true)
+            .build() to CTE_SEARCH
+    } else {
+        TransactionProvider.EXTENDED_URI to VIEW_EXTENDED
+    }
+    val (selection, args) =
+        reportSelection(accountId, from, to, "both", wholeTransactions = true, alias = alias)
     val projection = arrayOf(
         "sum(CASE WHEN $KEY_AMOUNT > 0 THEN $amountColumn ELSE 0 END) AS income",
         "sum(CASE WHEN $KEY_AMOUNT < 0 THEN $amountColumn ELSE 0 END) AS expenses",
         "count(*) AS transactions"
     )
     val (income, expenses, count) = contentResolver.query(
-        TransactionProvider.EXTENDED_URI,
+        uri,
         projection,
         selection,
         args,
@@ -322,10 +333,34 @@ internal fun Repository.queryBreakdown(
     allAccounts: Boolean
 ): BreakdownDto {
     val amountColumn = if (allAccounts) KEY_DISPLAY_AMOUNT else KEY_AMOUNT
+    val (baseUri, alias) = if (allAccounts) {
+        DataBaseAccount.uriBuilderForTransactionList(shortenComment = false, extended = true)
+            .build() to CTE_SEARCH
+    } else {
+        TransactionProvider.EXTENDED_URI to VIEW_EXTENDED
+    }
     val items = when (by) {
-        "category" -> queryGroupedBreakdown(accountId, by, type, from, to, amountColumn)
-        "payee", "method" -> queryGroupedBreakdown(accountId, by, type, from, to, amountColumn)
-        "tag" -> queryTagBreakdown(accountId, type, from, to, amountColumn)
+        "category", "payee", "method" -> queryGroupedBreakdown(
+            accountId,
+            by,
+            type,
+            from,
+            to,
+            amountColumn,
+            baseUri,
+            alias
+        )
+
+        "tag" -> queryTagBreakdown(
+            accountId,
+            type,
+            from,
+            to,
+            amountColumn,
+            baseUri,
+            alias
+        )
+
         else -> throw IllegalArgumentException("Unknown breakdown $by")
     }
     val total = items.sumOf { it.amountMinor }
@@ -351,11 +386,13 @@ private fun Repository.queryGroupedBreakdown(
     type: String,
     from: LocalDate,
     to: LocalDate,
-    amountColumn: String
+    amountColumn: String,
+    baseUri: Uri,
+    alias: String
 ): List<BreakdownItemDto> {
     val wholeTransactions = by != "category"
     val (baseSelection, args) =
-        reportSelection(accountId, from, to, type, wholeTransactions)
+        reportSelection(accountId, from, to, type, wholeTransactions, alias)
     val selection = if (by == "category") "$baseSelection AND $KEY_CATID > 0" else baseSelection
     val projection: Array<String>
     val groupBy: String
@@ -390,7 +427,7 @@ private fun Repository.queryGroupedBreakdown(
             groupBy = "coalesce($KEY_METHODID, 0), coalesce($KEY_METHOD_LABEL, 'No method')"
         }
     }
-    val uri = TransactionProvider.EXTENDED_URI.buildUpon()
+    val uri = baseUri.buildUpon()
         .appendQueryParameter(QUERY_PARAMETER_GROUP_BY, groupBy)
         .build()
     return contentResolver.query(uri, projection, selection, args, null)
@@ -410,17 +447,19 @@ private fun Repository.queryTagBreakdown(
     type: String,
     from: LocalDate,
     to: LocalDate,
-    amountColumn: String
+    amountColumn: String,
+    baseUri: Uri,
+    alias: String
 ): List<BreakdownItemDto> = queryTags().mapNotNull { tag ->
     val (baseSelection, baseArgs) =
-        reportSelection(accountId, from, to, type, wholeTransactions = true)
+        reportSelection(accountId, from, to, type, wholeTransactions = true, alias = alias)
     val selection = "$baseSelection AND EXISTS (" +
         "SELECT 1 FROM $TABLE_TRANSACTIONS_TAGS tag_link " +
-        "WHERE tag_link.$KEY_TRANSACTIONID = $VIEW_EXTENDED.$KEY_ROWID " +
+        "WHERE tag_link.$KEY_TRANSACTIONID = $alias.$KEY_ROWID " +
         "AND tag_link.$KEY_TAGID = ?)"
     val args = (baseArgs ?: emptyArray()) + tag.id.toString()
     contentResolver.query(
-        TransactionProvider.EXTENDED_URI,
+        baseUri,
         arrayOf("sum($amountColumn) AS amount_minor", "count(*) AS transaction_count"),
         selection,
         args,
@@ -448,20 +487,21 @@ private fun reportSelection(
     from: LocalDate,
     to: LocalDate,
     type: String,
-    wholeTransactions: Boolean
+    wholeTransactions: Boolean,
+    alias: String = VIEW_EXTENDED
 ): Pair<String, Array<String>?> {
     val clauses = mutableListOf<String>()
     val args = mutableListOf<String>()
-    if (accountId != null) {
-        clauses.add("$KEY_ACCOUNTID = ?")
-        args.add(accountId.toString())
-    } else {
-        clauses.add("$KEY_EXCLUDE_FROM_TOTALS = 0")
+    // With no account the provider adds its own "exclude accounts that are not in
+    // totals" selector, so we must not reference a column of another table here.
+    accountId?.let {
+        clauses.add("$alias.$KEY_ACCOUNTID = ?")
+        args.add(it.toString())
     }
-    clauses.add("$KEY_CR_STATUS != ?")
+    clauses.add("$alias.$KEY_CR_STATUS != ?")
     args.add(CrStatus.VOID.name)
-    clauses.add("$KEY_TRANSFER_ACCOUNT IS NULL")
-    appendDateRange(clauses, args, from, to)
+    clauses.add("$alias.$KEY_TRANSFER_ACCOUNT IS NULL")
+    appendDateRange(clauses, args, from, to, alias)
     when (type) {
         "income" -> clauses.add("$KEY_AMOUNT > 0")
         "expense" -> clauses.add("$KEY_AMOUNT < 0")
@@ -554,7 +594,7 @@ private fun transactionSelection(
         clauses.add(
             "($KEY_CATID = ? OR ($KEY_CATID = $SPLIT_CATID AND EXISTS (" +
                 "SELECT 1 FROM $TABLE_TRANSACTIONS child " +
-                "WHERE child.$KEY_PARENTID = $VIEW_EXTENDED.$KEY_ROWID " +
+                "WHERE child.$KEY_PARENTID = $CTE_SEARCH.$KEY_ROWID " +
                 "AND child.$KEY_CATID = ?)))"
         )
         args.add(it.toString())
@@ -571,7 +611,7 @@ private fun transactionSelection(
     tagId?.let {
         clauses.add(
             "EXISTS (SELECT 1 FROM $TABLE_TRANSACTIONS_TAGS tag_filter " +
-                "WHERE tag_filter.$KEY_TRANSACTIONID = $VIEW_EXTENDED.$KEY_ROWID " +
+                "WHERE tag_filter.$KEY_TRANSACTIONID = $CTE_SEARCH.$KEY_ROWID " +
                 "AND tag_filter.$KEY_TAGID = ?)"
         )
         args.add(it.toString())
@@ -590,15 +630,17 @@ private fun appendDateRange(
     clauses: MutableList<String>,
     args: MutableList<String>,
     from: LocalDate?,
-    to: LocalDate?
+    to: LocalDate?,
+    alias: String? = null
 ) {
     val zone = ZoneId.systemDefault()
+    val column = alias?.let { "$it.$KEY_DATE" } ?: KEY_DATE
     from?.let {
-        clauses.add("$KEY_DATE >= ?")
+        clauses.add("$column >= ?")
         args.add(it.atStartOfDay(zone).toEpochSecond().toString())
     }
     to?.let {
-        clauses.add("$KEY_DATE < ?")
+        clauses.add("$column < ?")
         args.add(it.plusDays(1).atStartOfDay(zone).toEpochSecond().toString())
     }
 }
