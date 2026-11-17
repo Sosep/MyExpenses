@@ -27,18 +27,18 @@ export function Login({ onSubmit, error }: LoginProps) {
   const message = localError ?? error
 
   return (
-    <div className="login">
-      <div className="login-card">
-        <div className="login-brand">
+    <div className="grid min-h-screen place-items-center bg-canvas bg-[radial-gradient(circle_at_1px_1px,var(--dots)_1px,transparent_0)] bg-[length:16px_16px] p-6">
+      <div className="flex w-full max-w-[380px] flex-col gap-[18px] rounded-2xl border border-line bg-surface p-7 shadow-[var(--shadow-card)]">
+        <div className="flex items-center gap-2.5 text-[14px] font-semibold">
           <span className="mark">Σ</span>
           <span>My Expenses</span>
         </div>
         <div>
-          <h1>{t`Sign in`}</h1>
-          <p>{t`Enter the password configured in the Android app.`}</p>
+          <h1 className="m-0 text-[22px] leading-[1.2] tracking-[-0.02em]">{t`Sign in`}</h1>
+          <p className="mb-0 mt-1 text-[14px] text-muted">{t`Enter the password configured in the Android app.`}</p>
         </div>
         <form
-          className="login-form"
+          className="flex flex-col gap-3"
           onSubmit={(event) => {
             event.preventDefault()
             void submit()
@@ -59,11 +59,11 @@ export function Login({ onSubmit, error }: LoginProps) {
             />
           </label>
           {message ? <p className="error-text">{message}</p> : null}
-          <button type="submit" className="btn primary login-submit" disabled={submitting}>
+          <button type="submit" className="btn primary h-[var(--field-h)] w-full" disabled={submitting}>
             {submitting ? t`Signing in…` : t`Sign in`}
           </button>
         </form>
-        <p className="hint">{t`Leave the password empty if you have not set one.`}</p>
+        <p className="hint mt-1 text-[14px]">{t`Leave the password empty if you have not set one.`}</p>
       </div>
     </div>
   )

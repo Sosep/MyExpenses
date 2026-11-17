@@ -151,3 +151,13 @@ commitee. Ningún módulo toca Kotlin, `API.md` ni el keystore.
 - Pendiente: revisión visual en dispositivo real (en esta sesión el panel del navegador dejó
   de dibujarse y bloquea capturas y clics) y cerrar la pregunta de si `AGENTS.md` debe
   listar los filtros en la URL (ya documentado en README).
+
+
+## Módulo Tailwind (migración por capas)
+
+- [x] **Primitivas**: `btn`, `input`, `card`, `table`, `segmented`, `kpi`, campos y cabeceras de tarjeta como `@apply` sobre tokens; paridad medida contra el build anterior.
+- [x] **Layout compartido**: `page-head`, `kpis`, `hero`, `filter-bar`, `summary-strip`, `month-nav`, `overlay`, `panel` y `load-more`.
+- [x] **Login**: contenedor, tarjeta, marca, formulario y botón con utilidades; paridad exacta (380×367 a 1440).
+- [x] **Ficheros**: tarjeta de 760 px, acción compacta y nombre envuelto en móvil con utilidades; paridad exacta.
+- [ ] Resto de pantallas: Dashboard/Transacciones/Informes/Presupuestos/Editores, sustituyendo clases sueltas por utilidades manteniendo las primitivas.
+- Verificación por pantalla: 1440×900 y 390×844, claro/oscuro, `npm test`, `npm run build` e `i18n:compile --strict`.

@@ -19,4 +19,11 @@
   --color-accent-ink: var(--accent-ink);
   --color-positive: var(--positive);
   --color-negative: var(--negative);
+  --color-secondary: var(--text-secondary);
+  --color-mint: var(--tint-mint);
+  --color-rose: var(--tint-rose);
+  --color-lavender: var(--tint-lavender);
+  --color-sky: var(--tint-sky);
+  --color-focus: var(--focus-ring);
+  --color-accent-2: var(--accent-2);
 }

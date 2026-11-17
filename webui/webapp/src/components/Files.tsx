@@ -81,14 +81,14 @@ export function Files() {
           </div>
         </div>
       ) : (
-        <div className="card table-card files-card">
+        <div className="card table-card max-w-[760px]">
           <table className="table">
             <thead>
               <tr>
                 <th>{t`Name`}</th>
                 <th className="num">{t`Size`}</th>
                 <th className="hide-sm">{t`Modified`}</th>
-                <th className="file-action-head">
+                <th className="w-px whitespace-nowrap text-right max-sm:hidden">
                   <span className="sr-only">{t`Actions`}</span>
                 </th>
               </tr>
@@ -96,13 +96,13 @@ export function Files() {
             <tbody>
               {items.map((file) => (
                 <tr key={file.name}>
-                  <td className="desc">{file.name}</td>
+                  <td className="desc max-sm:max-w-[190px] max-sm:whitespace-normal max-sm:[overflow-wrap:anywhere]">{file.name}</td>
                   <td className="num">{formatBytes(file.size)}</td>
                   <td className="date hide-sm">{formatTimestamp(file.modified)}</td>
-                  <td className="file-action">
+                  <td className="w-px whitespace-nowrap text-right">
                     <button
                       type="button"
-                      className="btn ghost"
+                      className="btn ghost gap-1.5 px-2.5 py-[5px] text-[12px] max-sm:h-8 max-sm:w-8 max-sm:min-w-8 max-sm:gap-0 max-sm:p-[7px] max-sm:text-[0px] [&_svg]:max-sm:h-4 [&_svg]:max-sm:w-4"
                       aria-label={t`Download ${file.name}`}
                       onClick={() => void download(file)}
                       disabled={busy === file.name}
