@@ -107,6 +107,12 @@ export function BudgetEditor({
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [allocationValues, setAllocationValues] = useState<Record<number, string>>({})
   const [rolloverValues, setRolloverValues] = useState<Record<number, boolean>>({})
+  const [customPeriod, setCustomPeriod] = useState(progress?.periodAllocationMinor != null)
+  const [periodAmount, setPeriodAmount] = useState(
+    progress?.periodAllocationMinor != null && budget
+      ? amountInputValue(progress.periodAllocationMinor, budget.fractionDigits)
+      : '',
+  )
   const [saving, setSaving] = useState(false)
   const account =
     accounts.find((candidate) => candidate.id === state.accountId) ?? accounts[0]
@@ -169,7 +175,7 @@ export function BudgetEditor({
     setErrors(nextErrors)
     if (Object.keys(nextErrors).length > 0 || amount === null) return
 
-    let allocationPayload: { categoryId: number; amountMinor: number }[] | null = null
+    let allocationPayload: { categoryId: number; amountMinor: number | null }[] | null = null
     if (mode === 'edit' && budget && progress && progress.periodYear !== null) {
       const rows = allocations.data ?? []
       allocationPayload = []
@@ -185,6 +191,23 @@ export function BudgetEditor({
       if (nextErrors.allocations) {
         setErrors(nextErrors)
         return
+      }
+    }
+
+    let periodOverride: { categoryId: number; amountMinor: number | null; oneTime?: boolean } | null =
+      null
+    if (mode === 'edit' && budget && progress && progress.periodYear !== null) {
+      if (customPeriod) {
+        const parsedPeriod =
+          periodAmount.trim() === '' ? null : parseAmountMinor(periodAmount, fractionDigits)
+        if (parsedPeriod === null) {
+          nextErrors.periodAmount = t`Enter a valid amount for this period.`
+          setErrors(nextErrors)
+          return
+        }
+        periodOverride = { categoryId: 0, amountMinor: parsedPeriod, oneTime: true }
+      } else if (progress.periodAllocationMinor !== null) {
+        periodOverride = { categoryId: 0, amountMinor: null }
       }
     }
 
@@ -229,7 +252,9 @@ export function BudgetEditor({
           await updateBudgetAllocations(budget.id, {
             year: progress.periodYear,
             second: progress.periodSecond,
-            allocations: allocationPayload,
+            allocations: periodOverride
+              ? [...(allocationPayload ?? []), periodOverride]
+              : (allocationPayload ?? []),
             rollover: rolloverPayload ?? undefined,
           })
         }
@@ -359,7 +384,7 @@ export function BudgetEditor({
 
           {mode === 'edit' ? (
             <p className="card-note">
-              {t`Account and period type are fixed after creation. Rollover stays in the Android app.`}
+              {t`Account and period type are fixed after creation. Rollover is available for monthly and yearly budgets.`}
             </p>
           ) : null}
 
@@ -384,6 +409,52 @@ export function BudgetEditor({
             </div>
             {errors.amount ? <span className="field-error">{errors.amount}</span> : null}
           </label>
+
+          {mode === 'edit' && budget && progress && progress.periodYear !== null ? (
+            <div className="field">
+              <label className="check-row">
+                <input
+                  type="checkbox"
+                  aria-label={t`Different amount this period`}
+                  data-action="period-override"
+                  checked={customPeriod}
+                  onChange={(event) => {
+                    setCustomPeriod(event.target.checked)
+                    if (event.target.checked && !periodAmount) {
+                      setPeriodAmount(state.amount)
+                    }
+                  }}
+                />
+                <span>{t`Different amount this period`}</span>
+              </label>
+              {customPeriod ? (
+                <>
+                  <div className="amount-field">
+                    <input
+                      className={`input amount-input ${errors.periodAmount ? 'invalid' : ''}`}
+                      aria-label={t`Period amount`}
+                      data-role="period-amount"
+                      inputMode="decimal"
+                      value={periodAmount}
+                      onChange={(event) =>
+                        setPeriodAmount(event.target.value.replace(/[^\d.,]/g, ''))
+                      }
+                      placeholder="0.00"
+                    />
+                    <span className="amount-currency">
+                      {currencySymbol(account?.currency ?? 'EUR')}
+                    </span>
+                  </div>
+                  {errors.periodAmount ? (
+                    <span className="field-error">{errors.periodAmount}</span>
+                  ) : null}
+                </>
+              ) : null}
+              <p className="card-note">
+                {t`Other periods keep using the default amount.`}
+              </p>
+            </div>
+          ) : null}
 
           {state.grouping === 'NONE' ? (
             <div className="form-row">

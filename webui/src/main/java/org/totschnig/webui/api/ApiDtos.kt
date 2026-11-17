@@ -241,7 +241,8 @@ data class BudgetProgressDto(
     val spentMinor: Long,
     val remainingMinor: Long,
     val totalDays: Long,
-    val currentDay: Long
+    val currentDay: Long,
+    val periodAllocationMinor: Long? = null
 )
 
 @Keep
@@ -309,7 +310,8 @@ data class BudgetAllocationDto(
 @Keep
 data class BudgetAllocationWriteDto(
     val categoryId: Long? = null,
-    val amountMinor: Long? = null
+    val amountMinor: Long? = null,
+    val oneTime: Boolean? = null
 )
 
 @Keep

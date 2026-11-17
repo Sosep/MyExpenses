@@ -83,8 +83,12 @@ msgid "Account"
 msgstr "Cuenta"
 
 #: src/components/BudgetEditor.tsx
-msgid "Account and period type are fixed after creation. Rollover stays in the Android app."
-msgstr "La cuenta y el tipo de periodo no se pueden cambiar después de crear el presupuesto. El rollover sigue en la app Android."
+msgid "Account and period type are fixed after creation. Rollover is available for monthly and yearly budgets."
+msgstr "La cuenta y el tipo de periodo no se pueden cambiar después de crear el presupuesto. El rollover está disponible para presupuestos mensuales y anuales."
+
+#: src/components/BudgetEditor.tsx
+#~ msgid "Account and period type are fixed after creation. Rollover stays in the Android app."
+#~ msgstr "La cuenta y el tipo de periodo no se pueden cambiar después de crear el presupuesto. El rollover sigue en la app Android."
 
 #: src/components/Files.tsx
 msgid "Actions"
@@ -341,6 +345,10 @@ msgid "Details"
 msgstr "Detalles"
 
 #: src/components/BudgetEditor.tsx
+msgid "Different amount this period"
+msgstr "Importe distinto para este periodo"
+
+#: src/components/BudgetEditor.tsx
 #: src/components/TransactionEditor.tsx
 msgid "Discard changes?"
 msgstr "¿Descartar los cambios?"
@@ -399,6 +407,10 @@ msgstr "Introduce un importe válido en cada categoría."
 #: src/components/TransactionEditor.tsx
 msgid "Enter a valid amount for every part."
 msgstr "Introduce un importe válido en cada parte."
+
+#: src/components/BudgetEditor.tsx
+msgid "Enter a valid amount for this period."
+msgstr "Introduce un importe válido para este periodo."
 
 #: src/components/TransactionEditor.tsx
 msgid "Enter an amount greater than zero."
@@ -649,6 +661,10 @@ msgstr "Periodo único"
 msgid "Open transaction: {0}"
 msgstr "Abrir transacción: {0}"
 
+#: src/components/BudgetEditor.tsx
+msgid "Other periods keep using the default amount."
+msgstr "Los demás periodos siguen usando el importe por defecto."
+
 #: src/components/Budgets.tsx
 msgid "Over"
 msgstr "Excedido"
@@ -715,6 +731,10 @@ msgstr "Beneficiario"
 #: src/components/Reports.tsx
 msgid "Period"
 msgstr "Periodo"
+
+#: src/components/BudgetEditor.tsx
+msgid "Period amount"
+msgstr "Importe del periodo"
 
 #: src/components/Reports.tsx
 #: src/components/Transactions.tsx

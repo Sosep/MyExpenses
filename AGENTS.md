@@ -20,8 +20,9 @@ Read this before changing code. Detailed sources:
 - Budgets: list plus current-period progress, create/update/delete and
   per-category allocations for the current period. The summary only aggregates
   budgets that share currency and period. Account and period type are fixed on
-  edit; amount edits the default allocation. Duplication and rollover (monthly
-  and yearly) are available.
+  edit; amount edits the default allocation. A period can override the total
+  (`categoryId: 0`, `oneTime: true`), and duplication plus monthly/yearly
+  rollover are available.
 - Files: `GET /api/v1/files` lists app-directory backups and `GET /api/v1/files/{name}`
   streams one with `Content-Disposition`; the SPA downloads via fetch + blob with
   the session cookie.

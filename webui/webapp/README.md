@@ -23,7 +23,7 @@ presupuestos e informes.
 - Presupuestos: progreso del periodo actual por presupuesto, resumen cuando
   comparten divisa y periodo, sobregiro explícito y días restantes. Alta,
   edición y borrado desde un panel lateral, con asignación por categoría para el
-  periodo actual, rollover del importe no gastado y duplicación.
+  periodo actual, total específico del periodo, rollover del importe no gastado y duplicación.
 - Informes: KPIs y desglose por categoría, beneficiario, etiqueta o método, con
   presets de periodo, tipo gasto/ingreso/ambos, todas las cuentas y drill-down al
   detalle de cada grupo.

@@ -210,6 +210,7 @@ export interface BudgetProgress {
   remainingMinor: number
   totalDays: number
   currentDay: number
+  periodAllocationMinor: number | null
 }
 
 export interface BudgetWrite {
@@ -266,7 +267,8 @@ export interface BudgetAllocation {
 
 export interface BudgetAllocationWrite {
   categoryId: number
-  amountMinor: number
+  amountMinor: number | null
+  oneTime?: boolean
 }
 
 export interface BudgetAllocationsWrite {

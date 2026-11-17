@@ -105,6 +105,8 @@ class AndroidWebApiDataSource(
         val budget = repository.loadBudget(id) ?: return null
         val period = if (year != null && second != null) year to second else null
         val progress = repository.loadBudgetProgress(id, period) ?: return null
+        val periodYear = progress.groupInfo.year
+        val periodSecond = progress.groupInfo.second
         return BudgetProgressDto(
             budgetId = budget.id,
             accountId = budget.accountId,
@@ -121,7 +123,12 @@ class AndroidWebApiDataSource(
             spentMinor = progress.spent,
             remainingMinor = progress.remainingBudget,
             totalDays = progress.totalDays,
-            currentDay = progress.currentDay
+            currentDay = progress.currentDay,
+            periodAllocationMinor = if (periodYear != null && periodSecond != null) {
+                repository.budgetAllocation(budget.id, 0L, periodYear to periodSecond)
+            } else {
+                null
+            }
         )
     }
 
@@ -989,36 +996,143 @@ class AndroidWebApiDataSource(
             mapOf("second" to "Required")
         )
         body.allocations.orEmpty().forEach { allocation ->
-            val categoryId = allocation.categoryId.requirePositive("categoryId")
-            validateOptional("categoryId", "category", categoryId, CATEGORIES_URI)
-            val amount = allocation.amountMinor ?: throw ApiException(
+            val categoryId = allocation.categoryId ?: throw ApiException(
                 HttpStatusCode.UnprocessableEntity,
                 "validation_failed",
-                "Missing amountMinor",
-                mapOf("amountMinor" to "Required")
+                "Missing categoryId",
+                mapOf("categoryId" to "Required")
             )
-            if (amount < 0) {
+            if (categoryId < 0) {
                 throw ApiException(
                     HttpStatusCode.UnprocessableEntity,
                     "validation_failed",
-                    "Invalid amountMinor",
-                    mapOf("amountMinor" to "Must not be negative")
+                    "Invalid categoryId",
+                    mapOf("categoryId" to "Must not be negative")
                 )
             }
-            repository.contentResolver.update(
-                budgetAllocationUri(id, categoryId),
-                ContentValues().apply {
-                    put(KEY_YEAR, year)
-                    put(KEY_SECOND_GROUP, second)
-                    put(KEY_BUDGET, amount)
-                    put(KEY_ONE_TIME, false)
-                },
-                null,
-                null
-            )
+            if (categoryId > 0) {
+                validateOptional("categoryId", "category", categoryId, CATEGORIES_URI)
+            }
+            val amount = allocation.amountMinor
+            if (amount == null) {
+                clearBudgetAllocation(id, categoryId, year, second)
+            } else {
+                if (amount < 0) {
+                    throw ApiException(
+                        HttpStatusCode.UnprocessableEntity,
+                        "validation_failed",
+                        "Invalid amountMinor",
+                        mapOf("amountMinor" to "Must not be negative")
+                    )
+                }
+                repository.contentResolver.update(
+                    budgetAllocationUri(id, categoryId),
+                    ContentValues().apply {
+                        put(KEY_YEAR, year)
+                        put(KEY_SECOND_GROUP, second)
+                        put(KEY_BUDGET, amount)
+                        put(KEY_ONE_TIME, allocation.oneTime ?: false)
+                    },
+                    null,
+                    null
+                )
+            }
+        }
+        body.rollover?.let { rollover ->
+            if (budget.grouping != Grouping.MONTH && budget.grouping != Grouping.YEAR) {
+                throw ApiException(
+                    HttpStatusCode.UnprocessableEntity,
+                    "unsupported_grouping",
+                    "Rollover is only supported for monthly and yearly budgets",
+                    mapOf("grouping" to "Not supported")
+                )
+            }
+            val (nextYear, nextSecond) = nextBudgetPeriod(budget.grouping, year, second)
+            rollover.forEach { entry ->
+                val categoryId = entry.categoryId ?: throw ApiException(
+                    HttpStatusCode.UnprocessableEntity,
+                    "validation_failed",
+                    "Missing categoryId",
+                    mapOf("categoryId" to "Required")
+                )
+                if (categoryId < 0) {
+                    throw ApiException(
+                        HttpStatusCode.UnprocessableEntity,
+                        "validation_failed",
+                        "Invalid categoryId",
+                        mapOf("categoryId" to "Must not be negative")
+                    )
+                }
+                if (categoryId > 0) {
+                    validateOptional("categoryId", "category", categoryId, CATEGORIES_URI)
+                }
+                val amount = entry.amountMinor ?: throw ApiException(
+                    HttpStatusCode.UnprocessableEntity,
+                    "validation_failed",
+                    "Missing amountMinor",
+                    mapOf("amountMinor" to "Required")
+                )
+                if (amount < 0) {
+                    throw ApiException(
+                        HttpStatusCode.UnprocessableEntity,
+                        "validation_failed",
+                        "Invalid amountMinor",
+                        mapOf("amountMinor" to "Must not be negative")
+                    )
+                }
+                writeBudgetRollover(id, categoryId, year, second, KEY_BUDGET_ROLLOVER_NEXT, amount)
+                writeBudgetRollover(
+                    id,
+                    categoryId,
+                    nextYear,
+                    nextSecond,
+                    KEY_BUDGET_ROLLOVER_PREVIOUS,
+                    amount
+                )
+            }
         }
         return budgetAllocations(id, year, second)
     }
+
+    private fun clearBudgetAllocation(
+        budgetId: Long,
+        categoryId: Long,
+        year: Int,
+        second: Int
+    ) {
+        repository.contentResolver.delete(
+            BUDGET_ALLOCATIONS_URI,
+            "$KEY_BUDGETID = ? AND $KEY_CATID = ? AND $KEY_YEAR = ? AND $KEY_SECOND_GROUP = ?",
+            arrayOf(budgetId.toString(), categoryId.toString(), year.toString(), second.toString())
+        )
+    }
+
+    private fun writeBudgetRollover(
+        budgetId: Long,
+        categoryId: Long,
+        year: Int,
+        second: Int,
+        column: String,
+        amount: Long
+    ) {
+        repository.contentResolver.update(
+            budgetAllocationUri(budgetId, categoryId),
+            ContentValues().apply {
+                put(KEY_YEAR, year)
+                put(KEY_SECOND_GROUP, second)
+                put(column, amount)
+            },
+            null,
+            null
+        )
+    }
+
+    private fun nextBudgetPeriod(grouping: Grouping, year: Int, second: Int): Pair<Int, Int> =
+        when (grouping) {
+            Grouping.MONTH -> if (second >= 12) year + 1 to 1 else year to second + 1
+            Grouping.YEAR -> year + 1 to 1
+            else -> throw IllegalArgumentException("Unsupported grouping $grouping")
+        }
 
     override fun duplicateBudget(id: Long): BudgetDto {
         val existing = repository.loadBudget(id) ?: throw ApiException(

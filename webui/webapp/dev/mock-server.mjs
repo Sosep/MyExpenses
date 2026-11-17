@@ -106,6 +106,7 @@ const budgets = [
     accountName: 'Everyday',
     isDefault: false,
     uuid: 'budget-groceries',
+    allocationMinor: 40000,
   },
   {
     id: 2,
@@ -121,6 +122,7 @@ const budgets = [
     accountName: 'Everyday',
     isDefault: false,
     uuid: 'budget-restaurants',
+    allocationMinor: 12000,
   },
   {
     id: 3,
@@ -136,6 +138,7 @@ const budgets = [
     accountName: 'Joint',
     isDefault: false,
     uuid: 'budget-fuel',
+    allocationMinor: 18000,
   },
   {
     id: 4,
@@ -151,6 +154,7 @@ const budgets = [
     accountName: 'Everyday',
     isDefault: false,
     uuid: 'budget-household',
+    allocationMinor: 25000,
   },
 ]
 
@@ -488,6 +492,22 @@ function serveAppIndex(response) {
                 document.querySelector('.budget-edit')?.click()
               }, 900)
             }
+            if (q.get('periodOverride') === '1') {
+              setTimeout(function(){ document.querySelector('.budget-edit')?.click() }, 900)
+              setTimeout(function(){
+                document.querySelector('[data-action="period-override"]')?.click()
+              }, 1500)
+              setTimeout(function(){
+                var input = document.querySelector('[data-role="period-amount"]')
+                var setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set
+                if (!input) return
+                if (setter) setter.call(input, '500')
+                input.dispatchEvent(new Event('input', { bubbles: true }))
+              }, 1800)
+              setTimeout(function(){
+                document.querySelector('.editor-actions .btn.primary')?.click()
+              }, 2200)
+            }
           }
           if (q.get('view') === 'files') {
             setTimeout(function(){ document.querySelector('button[data-view="files"]')?.click() }, 250)
@@ -806,6 +826,11 @@ createServer(async (request, response) => {
             })
           }
         }
+        for (const allocation of body.allocations ?? []) {
+          if (allocation.categoryId !== 0) continue
+          if (allocation.amountMinor === null) delete budgetProgresses[id].periodAllocated
+          else budgetProgresses[id].periodAllocated = allocation.amountMinor
+        }
         for (const rollover of body.rollover ?? []) {
           const row = rows.find((item) => item.categoryId === rollover.categoryId)
           if (row) row.rolloverNextMinor = rollover.amountMinor
@@ -901,11 +926,12 @@ createServer(async (request, response) => {
         periodStart,
         periodEnd,
         periodDescription: monthName,
-        allocatedMinor: values.allocated,
+        allocatedMinor: values.periodAllocated ?? values.allocated,
         spentMinor: values.spent,
-        remainingMinor: values.allocated - values.spent,
+        remainingMinor: (values.periodAllocated ?? values.allocated) - values.spent,
         totalDays,
         currentDay: now.getDate(),
+        periodAllocationMinor: values.periodAllocated ?? null,
       })
     }
 
