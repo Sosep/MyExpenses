@@ -426,6 +426,43 @@ class ApiRoutesTest {
     }
 
     @Test
+    fun `repeated ids, text, amounts, status and transfer reach the data source`() =
+        testApplication {
+            val fake = FakeDataSource()
+            installRoutes(fake)
+            val response = client.get(
+                "/api/v1/transactions?accountId=1&categoryId=2&categoryId=5" +
+                    "&tagId=1&q=cafe&amountMin=100&amountMax=5000" +
+                    "&status=CLEARED&status=RECONCILED&transfer=false"
+            )
+            assertEquals(HttpStatusCode.OK, response.status)
+            val filters = fake.lastQueryFilters
+            assertEquals(listOf(2L, 5L), filters.categoryIds)
+            assertEquals(listOf(1L), filters.tagIds)
+            assertEquals("cafe", filters.text)
+            assertEquals(100L, filters.amountMin)
+            assertEquals(5000L, filters.amountMax)
+            assertEquals(listOf("CLEARED", "RECONCILED"), filters.statuses)
+            assertEquals(false, filters.transfer)
+        }
+
+    @Test
+    fun `an unknown status is a 400`() = testApplication {
+        installRoutes(FakeDataSource())
+        val response = client.get("/api/v1/transactions?accountId=1&status=NOPE")
+        assertEquals(HttpStatusCode.BadRequest, response.status)
+        assertTrue(response.bodyAsText().contains("invalid_status"))
+    }
+
+    @Test
+    fun `an inverted amount range is a 400`() = testApplication {
+        installRoutes(FakeDataSource())
+        val response = client.get("/api/v1/transactions?accountId=1&amountMin=500&amountMax=100")
+        assertEquals(HttpStatusCode.BadRequest, response.status)
+        assertTrue(response.bodyAsText().contains("invalid_range"))
+    }
+
+    @Test
     fun `breakdown accepts all accounts`() = testApplication {
         installRoutes(FakeDataSource())
         val response = client.get(
@@ -479,6 +516,7 @@ private class FakeDataSource : WebApiDataSource {
     var savedBudget: BudgetWriteDto? = null
     var savedAllocations: BudgetAllocationsWriteDto? = null
     var lastFilters: Map<String, Long?> = emptyMap()
+    var lastQueryFilters: TransactionQueryFilters = TransactionQueryFilters()
     private val sample = sampleTransaction()
 
     override fun meta() = MetaDto(
@@ -521,19 +559,17 @@ private class FakeDataSource : WebApiDataSource {
         from: LocalDate?,
         to: LocalDate?,
         type: String?,
-        categoryId: Long?,
-        payeeId: Long?,
-        tagId: Long?,
-        methodId: Long?,
+        filters: TransactionQueryFilters,
         limit: Int,
         offset: Int
     ): PageDto<TransactionDto> {
         lastFilters = mapOf(
-            "categoryId" to categoryId,
-            "payeeId" to payeeId,
-            "tagId" to tagId,
-            "methodId" to methodId
+            "categoryId" to filters.categoryIds.firstOrNull(),
+            "payeeId" to filters.payeeIds.firstOrNull(),
+            "tagId" to filters.tagIds.firstOrNull(),
+            "methodId" to filters.methodIds.firstOrNull()
         )
+        lastQueryFilters = filters
         return PageDto(
             items = listOf(sample),
             total = 1,
