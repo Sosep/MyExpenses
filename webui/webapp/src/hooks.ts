@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import type { UseQueryResult } from '@tanstack/react-query'
 
 interface AsyncState<T> {
   data?: T
@@ -6,36 +7,26 @@ interface AsyncState<T> {
   loading: boolean
 }
 
+/**
+ * Thin adapter over TanStack Query so screens keep their small `useAsync` API.
+ * The dependency array doubles as the query key; callers prefix it with a
+ * stable name (for example `['budgets', dataVersion]`).
+ */
 export function useAsync<T>(
   loader: () => Promise<T>,
   deps: unknown[],
-): AsyncState<T> & { reload: () => void } {
-  const [state, setState] = useState<AsyncState<T>>({ loading: true })
-  const [reloadKey, setReloadKey] = useState(0)
-
-  useEffect(() => {
-    let cancelled = false
-    setState({ loading: true })
-    loader()
-      .then((data) => {
-        if (!cancelled) setState({ data, loading: false })
-      })
-      .catch((error: unknown) => {
-        if (!cancelled) {
-          setState({
-            error: error instanceof Error ? error : new Error(String(error)),
-            loading: false,
-          })
-        }
-      })
-    return () => {
-      cancelled = true
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [...deps, reloadKey])
-
+): AsyncState<T> & { reload: () => void; query: UseQueryResult<T, Error> } {
+  const query = useQuery<T, Error>({
+    queryKey: deps,
+    queryFn: loader,
+  })
   return {
-    ...state,
-    reload: () => setReloadKey((key) => key + 1),
+    data: query.data,
+    error: query.error ?? undefined,
+    loading: query.isPending,
+    reload: () => {
+      void query.refetch()
+    },
+    query,
   }
 }

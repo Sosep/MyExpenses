@@ -64,7 +64,7 @@
   --radius-pill: 999px;
 
   /* Tipografía */
-  --font-sans: 'Geist', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-sans: 'Geist Sans', 'Geist', system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
 [data-theme='dark'] {

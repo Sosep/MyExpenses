@@ -1,7 +1,10 @@
+import { t } from '@lingui/core/macro'
+import { i18n } from './i18n'
 import type { Category } from './types'
 
-// The UI is English; Lingui will supply the active locale once i18n lands.
-const LOCALE = 'en-GB'
+function uiLocale(): string {
+  return i18n.locale === 'es' ? 'es-ES' : 'en-GB'
+}
 
 export function pad2(value: number): string {
   return String(value).padStart(2, '0')
@@ -14,7 +17,7 @@ export function formatMoney(
   showSign = false,
 ): string {
   const value = amountMinor / Math.pow(10, fractionDigits)
-  const formatted = new Intl.NumberFormat(LOCALE, {
+  const formatted = new Intl.NumberFormat(uiLocale(), {
     style: 'currency',
     currency,
     minimumFractionDigits: fractionDigits,
@@ -34,17 +37,17 @@ export function formatDate(
   iso: string,
   options: Intl.DateTimeFormatOptions = { day: '2-digit', month: 'short' },
 ): string {
-  return new Intl.DateTimeFormat(LOCALE, options).format(parseIsoDate(iso))
+  return new Intl.DateTimeFormat(uiLocale(), options).format(parseIsoDate(iso))
 }
 
 export function formatMonth(year: number, second: number): string {
-  return new Intl.DateTimeFormat(LOCALE, { month: 'long', year: 'numeric' }).format(
+  return new Intl.DateTimeFormat(uiLocale(), { month: 'long', year: 'numeric' }).format(
     new Date(year, second - 1, 1),
   )
 }
 
 export function formatMonthShort(year: number, second: number): string {
-  return new Intl.DateTimeFormat(LOCALE, { month: 'short' }).format(
+  return new Intl.DateTimeFormat(uiLocale(), { month: 'short' }).format(
     new Date(year, second - 1, 1),
   )
 }
@@ -79,24 +82,24 @@ export function lastMonths(count: number): { from: string; to: string } {
 export function kindLabel(kind: string): string {
   switch (kind) {
     case 'TRANSFER':
-      return 'Transfer'
+      return t`Transfer`
     case 'SPLIT':
-      return 'Split transaction'
+      return t`Split transaction`
     default:
-      return 'Transaction'
+      return t`Transaction`
   }
 }
 
 export function statusLabel(status: string): string {
   switch (status) {
     case 'CLEARED':
-      return 'Cleared'
+      return t`Cleared`
     case 'RECONCILED':
-      return 'Reconciled'
+      return t`Reconciled`
     case 'VOID':
-      return 'Void'
+      return t`Void`
     default:
-      return 'Unreconciled'
+      return t`Unreconciled`
   }
 }
 
@@ -139,7 +142,7 @@ export function amountInputValue(amountMinor: number, fractionDigits: number): s
 }
 
 export function currencySymbol(currency: string): string {
-  const parts = new Intl.NumberFormat(LOCALE, {
+  const parts = new Intl.NumberFormat(uiLocale(), {
     style: 'currency',
     currency,
   }).formatToParts(0)
@@ -190,7 +193,7 @@ export function formatBytes(size: number): string {
 }
 
 export function formatTimestamp(epochMillis: number): string {
-  return new Intl.DateTimeFormat(LOCALE, {
+  return new Intl.DateTimeFormat(uiLocale(), {
     day: '2-digit',
     month: 'short',
     year: 'numeric',

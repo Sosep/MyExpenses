@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import type { Account } from '../types'
 import { deleteTransaction, getTransaction } from '../api'
 import { formatDate, formatMoney, kindLabel, statusLabel } from '../format'
+import { t } from '@lingui/core/macro'
 import { useAsync } from '../hooks'
 import { IconX } from './Icons'
 
@@ -30,7 +31,7 @@ export function TransactionPanel({
   onEdit,
   onDeleted,
 }: PanelProps) {
-  const detail = useAsync(() => getTransaction(id), [id])
+  const detail = useAsync(() => getTransaction(id), ['transaction', id])
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
@@ -63,7 +64,7 @@ export function TransactionPanel({
       await deleteTransaction(transaction.id)
       onDeleted()
     } catch (cause) {
-      setDeleteError(cause instanceof Error ? cause.message : 'Could not delete the transaction.')
+      setDeleteError(cause instanceof Error ? cause.message : t`Could not delete the transaction.`)
       setDeleting(false)
     }
   }
@@ -71,19 +72,19 @@ export function TransactionPanel({
   return (
     <>
       <div className="overlay" onClick={onClose} />
-      <aside className="panel" role="dialog" aria-modal="true" aria-label="Transaction details">
+      <aside className="panel" role="dialog" aria-modal="true" aria-label={t`Transaction details`}>
         <div className="panel-head">
           <div>
             <div className="panel-kicker">
-              {transaction ? kindLabel(transaction.kind) : 'Transaction'}
+              {transaction ? kindLabel(transaction.kind) : t`Transaction`}
             </div>
-            <h2>Details</h2>
+            <h2>{t`Details`}</h2>
           </div>
           <button
             type="button"
             className="icon-btn"
             onClick={onClose}
-            aria-label="Close details"
+            aria-label={t`Close details`}
             autoFocus
           >
             <IconX />
@@ -146,7 +147,7 @@ export function TransactionPanel({
 
               <div className="detail-grid">
                 {transaction.valueDate !== transaction.date ? (
-                  <Field label="Value date">
+                  <Field label={t`Value date`}>
                     {formatDate(transaction.valueDate, {
                       day: '2-digit',
                       month: 'long',
@@ -154,15 +155,15 @@ export function TransactionPanel({
                     })}
                   </Field>
                 ) : null}
-                <Field label="Account">
+                <Field label={t`Account`}>
                   {transaction.accountId === account.id ? account.label : `#${transaction.accountId}`}
                 </Field>
-                <Field label="Payee">{transaction.payee?.label || '—'}</Field>
-                <Field label="Category">{transaction.category?.path || '—'}</Field>
-                <Field label="Method">{transaction.method?.label || '—'}</Field>
-                <Field label="Reference">{transaction.referenceNumber || '—'}</Field>
-                <Field label="Status">{statusLabel(transaction.crStatus)}</Field>
-                <Field label="Tags">
+                <Field label={t`Payee`}>{transaction.payee?.label || '—'}</Field>
+                <Field label={t`Category`}>{transaction.category?.path || '—'}</Field>
+                <Field label={t`Method`}>{transaction.method?.label || '—'}</Field>
+                <Field label={t`Reference`}>{transaction.referenceNumber || '—'}</Field>
+                <Field label={t`Status`}>{statusLabel(transaction.crStatus)}</Field>
+                <Field label={t`Tags`}>
                   {transaction.tags.length > 0
                     ? transaction.tags.map((tag) => (
                         <span className="tag" key={tag.id}>
@@ -172,19 +173,19 @@ export function TransactionPanel({
                     : '—'}
                 </Field>
                 {transaction.comment ? (
-                  <Field label="Note">{transaction.comment}</Field>
+                  <Field label={t`Note`}>{transaction.comment}</Field>
                 ) : null}
               </div>
 
               {transaction.kind === 'SPLIT' && transaction.splitParts ? (
                 <div>
-                  <h3 className="section-title">Parts</h3>
+                  <h3 className="section-title">{t`Parts`}</h3>
                   <table className="parts-table">
                     <thead>
                       <tr>
-                        <th>Category</th>
-                        <th>Payee</th>
-                        <th className="num">Amount</th>
+                        <th>{t`Category`}</th>
+                        <th>{t`Payee`}</th>
+                        <th className="num">{t`Amount`}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -207,7 +208,7 @@ export function TransactionPanel({
                     </tbody>
                   </table>
                   <div className="parts-total">
-                    <span>Total</span>
+                    <span>{t`Total`}</span>
                     <b>
                       {formatMoney(
                         transaction.amountMinor,
@@ -230,10 +231,10 @@ export function TransactionPanel({
                 <p>
                   Delete this transaction?{' '}
                   {transaction.kind === 'SPLIT'
-                    ? 'Its parts are deleted too.'
+                    ? t`Its parts are deleted too.`
                     : transaction.kind === 'TRANSFER'
-                      ? 'The linked side is deleted too.'
-                      : 'This cannot be undone.'}
+                      ? t`The linked side is deleted too.`
+                      : t`This cannot be undone.`}
                 </p>
                 <div className="confirm-actions">
                   <button
@@ -250,14 +251,14 @@ export function TransactionPanel({
                     onClick={() => void remove()}
                     disabled={deleting}
                   >
-                    {deleting ? 'Deleting…' : 'Delete'}
+                    {deleting ? t`Deleting…` : t`Delete`}
                   </button>
                 </div>
               </div>
             ) : (
               <div className="panel-actions">
                 <button type="button" className="btn ghost" onClick={() => onEdit(transaction.id)}>
-                  Edit
+                  {t`Edit`}
                 </button>
                 <button
                   type="button"

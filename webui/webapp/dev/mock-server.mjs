@@ -435,13 +435,14 @@ function serveAppIndex(response) {
         } else {
           document.cookie = 'myexpenses_session=mock; path=/'
         }
+        if (q.get('locale')) localStorage.setItem('myexpenses.locale', q.get('locale'))
         localStorage.setItem('myexpenses.theme','light')
         window.addEventListener('load', function(){
           if (q.get('theme') === 'dark') {
             setTimeout(function(){ document.querySelector('button[aria-label="Switch to dark"]')?.click() }, 120)
           }
           if (q.get('view') === 'reports') {
-            setTimeout(function(){ document.querySelector('button[aria-label="Reports"]')?.click() }, 250)
+            setTimeout(function(){ document.querySelector('button[data-view="reports"]')?.click() }, 250)
             ;[['reportBy', 900], ['reportType', 1000]].forEach(function(entry){
               var value = q.get(entry[0])
               if (!value) return
@@ -457,7 +458,7 @@ function serveAppIndex(response) {
             })
           }
           if (q.get('view') === 'budgets') {
-            setTimeout(function(){ document.querySelector('button[aria-label="Budgets"]')?.click() }, 250)
+            setTimeout(function(){ document.querySelector('button[data-view="budgets"]')?.click() }, 250)
             if (q.get('new') === '1') {
               setTimeout(function(){
                 var buttons = document.querySelectorAll('button')
@@ -482,10 +483,10 @@ function serveAppIndex(response) {
             }
           }
           if (q.get('view') === 'files') {
-            setTimeout(function(){ document.querySelector('button[aria-label="Files"]')?.click() }, 250)
+            setTimeout(function(){ document.querySelector('button[data-view="files"]')?.click() }, 250)
           }
           if (q.get('view') === 'transactions') {
-            setTimeout(function(){ document.querySelector('button[aria-label="Transactions"]')?.click() }, 250)
+            setTimeout(function(){ document.querySelector('button[data-view="transactions"]')?.click() }, 250)
             var panel = q.get('panel')
             if (panel) {
               setTimeout(function(){
@@ -505,25 +506,12 @@ function serveAppIndex(response) {
           var kind = q.get('kind')
           if (q.get('new') === '1') {
             setTimeout(function(){
-              var buttons = document.querySelectorAll('button')
-              for (var i = 0; i < buttons.length; i++) {
-                if (buttons[i].textContent && buttons[i].textContent.trim() === 'New transaction') {
-                  buttons[i].click()
-                  break
-                }
-              }
+              document.querySelector('button.btn.primary')?.click()
             }, 350)
             if (kind) {
               setTimeout(function(){
-                var label = kind === 'transfer' ? 'Transfer' : kind === 'split' ? 'Split transaction' : 'Transaction'
-                var choices = document.querySelectorAll('.kind-choice')
-                for (var i = 0; i < choices.length; i++) {
-                  var title = choices[i].querySelector('strong')
-                  if (title && title.textContent.trim() === label) {
-                    choices[i].click()
-                    break
-                  }
-                }
+                var value = kind === 'transfer' ? 'TRANSFER' : kind === 'split' ? 'SPLIT' : 'SIMPLE'
+                document.querySelector('.kind-choice[data-kind="' + value + '"]')?.click()
               }, 700)
             }
           }
@@ -547,30 +535,17 @@ function serveAppIndex(response) {
           if (q.get('save') === '1' && (!kind || kind === 'simple')) {
             if (!kind) {
               setTimeout(function(){
-                var choices = document.querySelectorAll('.kind-choice')
-                for (var i = 0; i < choices.length; i++) {
-                  var title = choices[i].querySelector('strong')
-                  if (title && title.textContent.trim() === 'Transaction') {
-                    choices[i].click()
-                    break
-                  }
-                }
+                document.querySelector('.kind-choice[data-kind="SIMPLE"]')?.click()
               }, 700)
             }
             setTimeout(function(){
-              var input = document.querySelector('input[aria-label="Amount"]')
+              var input = document.querySelector('input.amount-input')
               if (!input) return
               var setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set
               if (setter) setter.call(input, '12.34')
               input.dispatchEvent(new Event('input', { bubbles: true }))
               setTimeout(function(){
-                var buttons = document.querySelectorAll('button')
-                for (var i = 0; i < buttons.length; i++) {
-                  if (buttons[i].textContent && buttons[i].textContent.trim() === 'Save') {
-                    buttons[i].click()
-                    break
-                  }
-                }
+                document.querySelector('.editor-actions .btn.primary')?.click()
               }, 300)
             }, 1800)
           }

@@ -7,9 +7,18 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "mock": "node dev/mock-server.mjs"
+    "mock": "node dev/mock-server.mjs",
+    "i18n:extract": "lingui extract",
+    "i18n:compile": "lingui compile --strict"
   },
   "dependencies": {
+    "@fontsource/geist-sans": "^5.3.0",
+    "@lingui/cli": "^6.12.0",
+    "@lingui/core": "^6.12.0",
+    "@lingui/format-po": "^6.12.0",
+    "@lingui/react": "^6.12.0",
+    "@lingui/vite-plugin": "^6.12.0",
+    "@tanstack/react-query": "^5.107.2",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },

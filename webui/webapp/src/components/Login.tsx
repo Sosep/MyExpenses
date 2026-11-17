@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { t } from '@lingui/core/macro'
 
 interface LoginProps {
   onSubmit: (password: string) => Promise<void>
@@ -16,7 +17,7 @@ export function Login({ onSubmit, error }: LoginProps) {
     try {
       await onSubmit(password)
     } catch (cause) {
-      setLocalError(cause instanceof Error ? cause.message : 'Could not sign in')
+      setLocalError(cause instanceof Error ? cause.message : t`Could not sign in`)
     } finally {
       setSubmitting(false)
     }
@@ -32,8 +33,8 @@ export function Login({ onSubmit, error }: LoginProps) {
           <span>My Expenses</span>
         </div>
         <div>
-          <h1>Sign in</h1>
-          <p>Enter the password configured in the Android app.</p>
+          <h1>{t`Sign in`}</h1>
+          <p>{t`Enter the password configured in the Android app.`}</p>
         </div>
         <form
           className="login-form"
@@ -43,11 +44,11 @@ export function Login({ onSubmit, error }: LoginProps) {
           }}
         >
           <label className="field" htmlFor="password">
-            <span className="field-label">Password</span>
+            <span className="field-label">{t`Password`}</span>
             <input
               id="password"
               name="password"
-              aria-label="Password"
+              aria-label={t`Password`}
               className="input"
               type="password"
               value={password}
@@ -58,10 +59,10 @@ export function Login({ onSubmit, error }: LoginProps) {
           </label>
           {message ? <p className="error-text">{message}</p> : null}
           <button type="submit" className="btn primary login-submit" disabled={submitting}>
-            {submitting ? 'Signing in…' : 'Sign in'}
+            {submitting ? t`Signing in…` : t`Sign in`}
           </button>
         </form>
-        <p className="hint">Leave the password empty if you have not set one.</p>
+        <p className="hint">{t`Leave the password empty if you have not set one.`}</p>
       </div>
     </div>
   )

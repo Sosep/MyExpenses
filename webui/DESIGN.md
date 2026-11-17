@@ -853,3 +853,4 @@ src/
 | 2026-11-17 | 1.5 | Presupuestos: resumen condicional y tarjetas con progreso, sobregiro y periodo propio. |
 | 2026-11-17 | 1.6 | Presupuestos: alta, edición y borrado con asignación por defecto; cuenta y periodo fijos al editar. |
 | 2026-11-17 | 1.7 | Informes: resumen y desglose por categoría, beneficiario o etiqueta con barras y porcentajes. |
+| 2026-11-17 | 1.8 | Lingui EN/ES, selector de idioma, Geist Sans empaquetada, caché TanStack y avisos PWA. |

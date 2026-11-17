@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { t } from '@lingui/core/macro'
 import type { Account, Budget, BudgetProgress, BudgetWrite } from '../types'
 import { ApiError, createBudget, deleteBudget, updateBudget } from '../api'
 import { amountInputValue, currencySymbol, parseAmountMinor, todayIso } from '../format'
@@ -25,13 +26,22 @@ interface BudgetState {
   isDefault: boolean
 }
 
-const GROUPINGS = [
-  { value: 'MONTH', label: 'Monthly' },
-  { value: 'WEEK', label: 'Weekly' },
-  { value: 'YEAR', label: 'Yearly' },
-  { value: 'DAY', label: 'Daily' },
-  { value: 'NONE', label: 'One-time period' },
-]
+const GROUPINGS = ['MONTH', 'WEEK', 'YEAR', 'DAY', 'NONE'] as const
+
+function groupingLabel(grouping: string): string {
+  switch (grouping) {
+    case 'MONTH':
+      return t`Monthly`
+    case 'WEEK':
+      return t`Weekly`
+    case 'YEAR':
+      return t`Yearly`
+    case 'DAY':
+      return t`Daily`
+    default:
+      return t`One-time period`
+  }
+}
 
 function initialState(
   budget: Budget | undefined,
@@ -99,20 +109,20 @@ export function BudgetEditor({
   }
 
   function requestClose() {
-    if (dirty && !window.confirm('Discard changes?')) return
+    if (dirty && !window.confirm(t`Discard changes?`)) return
     onClose()
   }
 
   async function save() {
     const nextErrors: Record<string, string> = {}
     const amount = parseAmountMinor(state.amount, fractionDigits)
-    if (!state.title.trim()) nextErrors.title = 'Required.'
-    if (amount === null) nextErrors.amount = 'Enter an amount.'
+    if (!state.title.trim()) nextErrors.title = t`Required.`
+    if (amount === null) nextErrors.amount = t`Enter an amount.`
     if (state.grouping === 'NONE') {
-      if (!state.start) nextErrors.start = 'Required.'
-      if (!state.end) nextErrors.end = 'Required.'
+      if (!state.start) nextErrors.start = t`Required.`
+      if (!state.end) nextErrors.end = t`Required.`
       if (state.start && state.end && state.end < state.start) {
-        nextErrors.end = 'Must be on or after the start.'
+        nextErrors.end = t`Must be on or after the start.`
       }
     }
     setErrors(nextErrors)
@@ -136,13 +146,13 @@ export function BudgetEditor({
       } else if (budget) {
         await updateBudget(budget.id, payload)
       }
-      onSaved(mode === 'create' ? 'Budget created.' : 'Budget saved.')
+      onSaved(mode === 'create' ? t`Budget created.` : t`Budget saved.`)
     } catch (cause) {
       if (cause instanceof ApiError) {
         setSubmitError(cause.message)
         if (cause.fields) setErrors(cause.fields)
       } else {
-        setSubmitError(cause instanceof Error ? cause.message : 'Could not save the budget.')
+        setSubmitError(cause instanceof Error ? cause.message : t`Could not save the budget.`)
       }
     } finally {
       setSaving(false)
@@ -151,14 +161,14 @@ export function BudgetEditor({
 
   async function remove() {
     if (!budget) return
-    if (!window.confirm(`Delete the budget “${budget.title}”?`)) return
+    if (!window.confirm(t`Delete the budget “${budget.title}”?`)) return
     setSaving(true)
     setSubmitError(null)
     try {
       await deleteBudget(budget.id)
-      onSaved('Budget deleted.')
+      onSaved(t`Budget deleted.`)
     } catch (cause) {
-      setSubmitError(cause instanceof Error ? cause.message : 'Could not delete the budget.')
+      setSubmitError(cause instanceof Error ? cause.message : t`Could not delete the budget.`)
     } finally {
       setSaving(false)
     }
@@ -186,14 +196,14 @@ export function BudgetEditor({
         className="panel editor-panel"
         role="dialog"
         aria-modal="true"
-        aria-label={mode === 'create' ? 'New budget' : 'Edit budget'}
+        aria-label={mode === 'create' ? t`New budget` : t`Edit budget`}
       >
         <div className="panel-head">
           <div>
-            <div className="panel-kicker">{mode === 'create' ? 'New' : 'Edit'}</div>
-            <h2>{mode === 'create' ? 'Budget' : 'Edit budget'}</h2>
+            <div className="panel-kicker">{mode === 'create' ? t`New` : t`Edit`}</div>
+            <h2>{mode === 'create' ? t`Budget` : t`Edit budget`}</h2>
           </div>
-          <button type="button" className="icon-btn" onClick={requestClose} aria-label="Close editor">
+          <button type="button" className="icon-btn" onClick={requestClose} aria-label={t`Close editor`}>
             <IconX />
           </button>
         </div>
@@ -205,10 +215,10 @@ export function BudgetEditor({
           ) : null}
 
           <label className="field">
-            <span className="field-label">Title</span>
+            <span className="field-label">{t`Title`}</span>
             <input
               className={`input ${errors.title ? 'invalid' : ''}`}
-              aria-label="Budget title"
+              aria-label={t`Budget title`}
               value={state.title}
               onChange={(event) => update('title', event.target.value)}
               autoFocus={mode === 'create'}
@@ -218,10 +228,10 @@ export function BudgetEditor({
 
           <div className="form-row">
             <label className="field">
-              <span className="field-label">Account</span>
+              <span className="field-label">{t`Account`}</span>
               <select
                 className="input"
-                aria-label="Budget account"
+                aria-label={t`Budget account`}
                 value={state.accountId}
                 disabled={mode === 'edit'}
                 onChange={(event) => update('accountId', Number(event.target.value))}
@@ -234,17 +244,17 @@ export function BudgetEditor({
               </select>
             </label>
             <label className="field">
-              <span className="field-label">Period</span>
+              <span className="field-label">{t`Period`}</span>
               <select
                 className="input"
-                aria-label="Budget period"
+                aria-label={t`Budget period`}
                 value={state.grouping}
                 disabled={mode === 'edit'}
                 onChange={(event) => update('grouping', event.target.value)}
               >
                 {GROUPINGS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
+                  <option key={option} value={option}>
+                    {groupingLabel(option)}
                   </option>
                 ))}
               </select>
@@ -253,19 +263,18 @@ export function BudgetEditor({
 
           {mode === 'edit' ? (
             <p className="card-note">
-              Account and period type are fixed after creation. Category allocations and
-              rollover are edited in the Android app.
+              {t`Account and period type are fixed after creation. Category allocations and rollover are edited in the Android app.`}
             </p>
           ) : null}
 
           <label className="field">
             <span className="field-label">
-              {mode === 'edit' ? 'Default amount' : 'Amount'}
+              {mode === 'edit' ? t`Default amount` : t`Amount`}
             </span>
             <div className="amount-field">
               <input
                 className={`input amount-input ${errors.amount ? 'invalid' : ''}`}
-                aria-label="Budget amount"
+                aria-label={t`Budget amount`}
                 inputMode="decimal"
                 value={state.amount}
                 onChange={(event) =>
@@ -283,10 +292,10 @@ export function BudgetEditor({
           {state.grouping === 'NONE' ? (
             <div className="form-row">
               <label className="field">
-                <span className="field-label">Start</span>
+                <span className="field-label">{t`Start`}</span>
                 <input
                   className={`input ${errors.start ? 'invalid' : ''}`}
-                  aria-label="Budget start"
+                  aria-label={t`Budget start`}
                   type="date"
                   value={state.start}
                   onChange={(event) => update('start', event.target.value)}
@@ -294,10 +303,10 @@ export function BudgetEditor({
                 {errors.start ? <span className="field-error">{errors.start}</span> : null}
               </label>
               <label className="field">
-                <span className="field-label">End</span>
+                <span className="field-label">{t`End`}</span>
                 <input
                   className={`input ${errors.end ? 'invalid' : ''}`}
-                  aria-label="Budget end"
+                  aria-label={t`Budget end`}
                   type="date"
                   value={state.end}
                   min={state.start || todayIso()}
@@ -310,19 +319,19 @@ export function BudgetEditor({
             <label className="check-row">
               <input
                 type="checkbox"
-                aria-label="Default budget"
+                aria-label={t`Default budget`}
                 checked={state.isDefault}
                 onChange={(event) => update('isDefault', event.target.checked)}
               />
-              <span>Use as default budget for this account and period</span>
+              <span>{t`Use as default budget for this account and period`}</span>
             </label>
           )}
 
           <label className="field">
-            <span className="field-label">Note</span>
+            <span className="field-label">{t`Note`}</span>
             <textarea
               className="input textarea"
-              aria-label="Budget note"
+              aria-label={t`Budget note`}
               value={state.description}
               onChange={(event) => update('description', event.target.value)}
             />
@@ -348,7 +357,7 @@ export function BudgetEditor({
             onClick={() => void save()}
             disabled={saving}
           >
-            {saving ? 'Saving…' : 'Save'}
+            {saving ? t`Saving…` : t`Save`}
           </button>
         </div>
       </aside>

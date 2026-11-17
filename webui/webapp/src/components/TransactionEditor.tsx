@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { t } from '@lingui/core/macro'
 import type { ReactNode } from 'react'
 import type {
   Account,
@@ -157,7 +158,7 @@ function EditorFrame({
             type="button"
             className="icon-btn"
             onClick={onClose}
-            aria-label="Close editor"
+            aria-label={t`Close editor`}
           >
             <IconX />
           </button>
@@ -186,11 +187,11 @@ export function TransactionEditor({
       getMethods(),
     ])
     return { categories, payees, tags, methods }
-  }, [])
+  }, ['references'])
 
   const detail = useAsync(
     () => (mode === 'edit' && id ? getTransaction(id) : Promise.resolve(null)),
-    [mode, id],
+    ['transaction-editor', mode, id],
   )
 
   useEffect(() => {
@@ -203,19 +204,19 @@ export function TransactionEditor({
 
   if (mode === 'create' && createKind === null) {
     return (
-      <EditorFrame kicker="New" title="What do you want to add?" onClose={onClose}>
+      <EditorFrame kicker={t`New`} title={t`What do you want to add?`} onClose={onClose}>
         <div className="kind-choices">
-          <button type="button" className="kind-choice" onClick={() => setCreateKind('SIMPLE')}>
-            <strong>Transaction</strong>
-            <span>A single income or expense.</span>
+          <button type="button" className="kind-choice" data-kind="SIMPLE" onClick={() => setCreateKind('SIMPLE')}>
+            <strong>{t`Transaction`}</strong>
+            <span>{t`A single income or expense.`}</span>
           </button>
-          <button type="button" className="kind-choice" onClick={() => setCreateKind('TRANSFER')}>
-            <strong>Transfer</strong>
-            <span>Move money between two accounts.</span>
+          <button type="button" className="kind-choice" data-kind="TRANSFER" onClick={() => setCreateKind('TRANSFER')}>
+            <strong>{t`Transfer`}</strong>
+            <span>{t`Move money between two accounts.`}</span>
           </button>
-          <button type="button" className="kind-choice" onClick={() => setCreateKind('SPLIT')}>
-            <strong>Split transaction</strong>
-            <span>Divide one amount into categorized parts.</span>
+          <button type="button" className="kind-choice" data-kind="SPLIT" onClick={() => setCreateKind('SPLIT')}>
+            <strong>{t`Split transaction`}</strong>
+            <span>{t`Divide one amount into categorized parts.`}</span>
           </button>
         </div>
       </EditorFrame>
@@ -226,8 +227,8 @@ export function TransactionEditor({
   if (error) {
     return (
       <EditorFrame
-        kicker={mode === 'create' ? 'New' : 'Edit'}
-        title={mode === 'create' ? 'Transaction' : 'Edit transaction'}
+        kicker={mode === 'create' ? t`New` : t`Edit`}
+        title={mode === 'create' ? t`Transaction` : t`Edit transaction`}
         onClose={onClose}
       >
         <div className="banner" role="alert">
@@ -240,7 +241,7 @@ export function TransactionEditor({
               detail.reload()
             }}
           >
-            Retry
+            {t`Retry`}
           </button>
         </div>
       </EditorFrame>
@@ -250,8 +251,8 @@ export function TransactionEditor({
   if (references.loading || detail.loading || !references.data) {
     return (
       <EditorFrame
-        kicker={mode === 'create' ? 'New' : 'Edit'}
-        title={mode === 'create' ? 'Transaction' : 'Edit transaction'}
+        kicker={mode === 'create' ? t`New` : t`Edit`}
+        title={mode === 'create' ? t`Transaction` : t`Edit transaction`}
         onClose={onClose}
       >
         <div className="panel-loading">
@@ -267,9 +268,9 @@ export function TransactionEditor({
 
   if (mode === 'edit' && !detail.data) {
     return (
-      <EditorFrame kicker="Edit" title="Edit transaction" onClose={onClose}>
+      <EditorFrame kicker={t`Edit`} title={t`Edit transaction`} onClose={onClose}>
         <div className="banner" role="alert">
-          <span>The transaction could not be loaded.</span>
+          <span>{t`The transaction could not be loaded.`}</span>
         </div>
       </EditorFrame>
     )
@@ -352,7 +353,7 @@ function TransactionForm({
   }
 
   function requestClose() {
-    if (dirty && !window.confirm('Discard changes?')) return
+    if (dirty && !window.confirm(t`Discard changes?`)) return
     onClose()
   }
 
@@ -395,10 +396,10 @@ function TransactionForm({
   async function save() {
     const parsed = parseAmountMinor(state.amount, fractionDigits)
     const nextErrors: Record<string, string> = {}
-    if (parsed === null) nextErrors.amount = 'Enter an amount greater than zero.'
-    if (!state.date) nextErrors.date = 'Required.'
-    if (dateMode === 'dateTime' && !state.time) nextErrors.time = 'Required.'
-    if (dateMode === 'bookingValue' && !state.valueDate) nextErrors.valueDate = 'Required.'
+    if (parsed === null) nextErrors.amount = t`Enter an amount greater than zero.`
+    if (!state.date) nextErrors.date = t`Required.`
+    if (dateMode === 'dateTime' && !state.time) nextErrors.time = t`Required.`
+    if (dateMode === 'bookingValue' && !state.valueDate) nextErrors.valueDate = t`Required.`
     setErrors(nextErrors)
     if (Object.keys(nextErrors).length > 0 || parsed === null) return
 
@@ -437,7 +438,7 @@ function TransactionForm({
           setErrors(mapped)
         }
       } else {
-        setSubmitError(cause instanceof Error ? cause.message : 'Could not save the transaction.')
+        setSubmitError(cause instanceof Error ? cause.message : t`Could not save the transaction.`)
       }
     } finally {
       setSaving(false)
@@ -466,18 +467,18 @@ function TransactionForm({
         className="panel editor-panel"
         role="dialog"
         aria-modal="true"
-        aria-label={mode === 'create' ? 'New transaction' : 'Edit transaction'}
+        aria-label={mode === 'create' ? t`New transaction` : t`Edit transaction`}
       >
         <div className="panel-head">
           <div>
-            <div className="panel-kicker">{mode === 'create' ? 'New' : 'Edit'}</div>
-            <h2>{mode === 'create' ? 'Transaction' : 'Edit transaction'}</h2>
+            <div className="panel-kicker">{mode === 'create' ? t`New` : t`Edit`}</div>
+            <h2>{mode === 'create' ? t`Transaction` : t`Edit transaction`}</h2>
           </div>
           <button
             type="button"
             className="icon-btn"
             onClick={requestClose}
-            aria-label="Close editor"
+            aria-label={t`Close editor`}
           >
             <IconX />
           </button>
@@ -490,14 +491,14 @@ function TransactionForm({
           ) : null}
 
           <div className="amount-row">
-            <div className="segmented sign-toggle" role="group" aria-label="Type">
+            <div className="segmented sign-toggle" role="group" aria-label={t`Type`}>
               <button
                 type="button"
                 className={state.sign === -1 ? 'active' : ''}
                 aria-pressed={state.sign === -1}
                 onClick={() => setSign(-1)}
               >
-                Expense
+                {t`Expense`}
               </button>
               <button
                 type="button"
@@ -505,7 +506,7 @@ function TransactionForm({
                 aria-pressed={state.sign === 1}
                 onClick={() => setSign(1)}
               >
-                Income
+                {t`Income`}
               </button>
             </div>
             <div className="amount-field">
@@ -517,7 +518,7 @@ function TransactionForm({
                   update('amount', event.target.value.replace(/[^\d.,]/g, ''))
                 }
                 placeholder="0.00"
-                aria-label="Amount"
+                aria-label={t`Amount`}
                 autoFocus
               />
               <span className="amount-currency">{currencySymbol(account?.currency ?? 'EUR')}</span>
@@ -527,10 +528,10 @@ function TransactionForm({
 
           <div className="form-row">
             <label className="field">
-              <span className="field-label">Account</span>
+              <span className="field-label">{t`Account`}</span>
               <select
                 className="input"
-                aria-label="Account"
+                aria-label={t`Account`}
                 value={state.accountId}
                 onChange={(event) => setAccount(Number(event.target.value))}
               >
@@ -542,10 +543,10 @@ function TransactionForm({
               </select>
             </label>
             <label className="field">
-              <span className="field-label">Date</span>
+              <span className="field-label">{t`Date`}</span>
               <input
                 className={`input ${errors.date ? 'invalid' : ''}`}
-                aria-label="Date"
+                aria-label={t`Date`}
                 type="date"
                 value={state.date}
                 onChange={(event) => update('date', event.target.value)}
@@ -556,10 +557,10 @@ function TransactionForm({
 
           {dateMode === 'dateTime' ? (
             <label className="field">
-              <span className="field-label">Time</span>
+              <span className="field-label">{t`Time`}</span>
               <input
                 className={`input ${errors.time ? 'invalid' : ''}`}
-                aria-label="Time"
+                aria-label={t`Time`}
                 type="time"
                 value={state.time}
                 onChange={(event) => update('time', event.target.value)}
@@ -570,10 +571,10 @@ function TransactionForm({
 
           {dateMode === 'bookingValue' ? (
             <label className="field">
-              <span className="field-label">Value date</span>
+              <span className="field-label">{t`Value date`}</span>
               <input
                 className={`input ${errors.valueDate ? 'invalid' : ''}`}
-                aria-label="Value date"
+                aria-label={t`Value date`}
                 type="date"
                 value={state.valueDate}
                 onChange={(event) => update('valueDate', event.target.value)}
@@ -584,16 +585,16 @@ function TransactionForm({
 
           <div className="form-row">
             <label className="field">
-              <span className="field-label">Payee</span>
+              <span className="field-label">{t`Payee`}</span>
               <select
                 className="input"
-                aria-label="Payee"
+                aria-label={t`Payee`}
                 value={state.payeeId ?? ''}
                 onChange={(event) =>
                   update('payeeId', event.target.value ? Number(event.target.value) : null)
                 }
               >
-                <option value="">None</option>
+                <option value="">{t`None`}</option>
                 {refs.payees.map((payee) => (
                   <option key={payee.id} value={payee.id}>
                     {payee.name}
@@ -603,16 +604,16 @@ function TransactionForm({
             </label>
             {methods.length > 0 ? (
               <label className="field">
-                <span className="field-label">Method</span>
+                <span className="field-label">{t`Method`}</span>
                 <select
                   className="input"
-                  aria-label="Method"
+                  aria-label={t`Method`}
                   value={state.methodId ?? ''}
                   onChange={(event) =>
                     update('methodId', event.target.value ? Number(event.target.value) : null)
                   }
                 >
-                  <option value="">None</option>
+                  <option value="">{t`None`}</option>
                   {methods.map((method) => (
                     <option key={method.id} value={method.id}>
                       {method.label}
@@ -624,16 +625,16 @@ function TransactionForm({
           </div>
 
           <label className="field">
-            <span className="field-label">Category</span>
+            <span className="field-label">{t`Category`}</span>
             <select
               className="input"
-              aria-label="Category"
+              aria-label={t`Category`}
               value={state.categoryId ?? ''}
               onChange={(event) =>
                 update('categoryId', event.target.value ? Number(event.target.value) : null)
               }
             >
-              <option value="">No category</option>
+              <option value="">{t`No category`}</option>
               {categories.map((category) => (
                 <option key={category.id} value={category.id}>
                   {paths.get(category.id) ?? category.label}
@@ -644,7 +645,7 @@ function TransactionForm({
 
           {refs.tags.length > 0 ? (
             <div className="field">
-              <span className="field-label">Tags</span>
+              <span className="field-label">{t`Tags`}</span>
               <div className="tag-picker">
                 {refs.tags.map((tag) => (
                   <button
@@ -663,20 +664,20 @@ function TransactionForm({
           ) : null}
 
           <label className="field">
-            <span className="field-label">Reference</span>
+            <span className="field-label">{t`Reference`}</span>
             <input
               className="input"
-              aria-label="Reference"
+              aria-label={t`Reference`}
               value={state.referenceNumber}
               onChange={(event) => update('referenceNumber', event.target.value)}
             />
           </label>
 
           <label className="field">
-            <span className="field-label">Note</span>
+            <span className="field-label">{t`Note`}</span>
             <textarea
               className="input textarea"
-              aria-label="Note"
+              aria-label={t`Note`}
               value={state.comment}
               onChange={(event) => update('comment', event.target.value)}
             />
@@ -684,7 +685,7 @@ function TransactionForm({
         </div>
         <div className="editor-actions">
           <button type="button" className="btn ghost" onClick={requestClose}>
-            Cancel
+            {t`Cancel`}
           </button>
           <button
             type="button"
@@ -692,7 +693,7 @@ function TransactionForm({
             onClick={() => void save()}
             disabled={saving}
           >
-            {saving ? 'Saving…' : 'Save'}
+            {saving ? t`Saving…` : t`Save`}
           </button>
         </div>
       </aside>
@@ -795,7 +796,7 @@ function TransferForm({
   }
 
   function requestClose() {
-    if (dirty && !window.confirm('Discard changes?')) return
+    if (dirty && !window.confirm(t`Discard changes?`)) return
     onClose()
   }
 
@@ -811,13 +812,13 @@ function TransferForm({
   async function save() {
     const parsed = parseAmountMinor(state.amount, fractionDigits)
     const nextErrors: Record<string, string> = {}
-    if (parsed === null) nextErrors.amount = 'Enter an amount greater than zero.'
+    if (parsed === null) nextErrors.amount = t`Enter an amount greater than zero.`
     if (state.fromAccountId === state.toAccountId) {
-      nextErrors.toAccountId = 'Choose two different accounts.'
+      nextErrors.toAccountId = t`Choose two different accounts.`
     }
-    if (!state.date) nextErrors.date = 'Required.'
-    if (dateMode === 'dateTime' && !state.time) nextErrors.time = 'Required.'
-    if (dateMode === 'bookingValue' && !state.valueDate) nextErrors.valueDate = 'Required.'
+    if (!state.date) nextErrors.date = t`Required.`
+    if (dateMode === 'dateTime' && !state.time) nextErrors.time = t`Required.`
+    if (dateMode === 'bookingValue' && !state.valueDate) nextErrors.valueDate = t`Required.`
     setErrors(nextErrors)
     if (Object.keys(nextErrors).length > 0 || parsed === null) return
 
@@ -847,7 +848,7 @@ function TransferForm({
         setSubmitError(cause.message)
         if (cause.fields) setErrors(cause.fields)
       } else {
-        setSubmitError(cause instanceof Error ? cause.message : 'Could not save the transfer.')
+        setSubmitError(cause instanceof Error ? cause.message : t`Could not save the transfer.`)
       }
     } finally {
       setSaving(false)
@@ -871,16 +872,16 @@ function TransferForm({
 
   return (
     <FormPanel
-      kicker={mode === 'create' ? 'New' : 'Edit'}
-      title={mode === 'create' ? 'Transfer' : 'Edit transfer'}
+      kicker={mode === 'create' ? t`New` : t`Edit`}
+      title={mode === 'create' ? t`Transfer` : t`Edit transfer`}
       onClose={requestClose}
       footer={
         <>
           <button type="button" className="btn ghost" onClick={requestClose}>
-            Cancel
+            {t`Cancel`}
           </button>
           <button type="button" className="btn primary" onClick={() => void save()} disabled={saving}>
-            {saving ? 'Saving…' : 'Save'}
+            {saving ? t`Saving…` : t`Save`}
           </button>
         </>
       }
@@ -899,7 +900,7 @@ function TransferForm({
             value={state.amount}
             onChange={(event) => update('amount', event.target.value.replace(/[^\d.,]/g, ''))}
             placeholder="0.00"
-            aria-label="Amount"
+            aria-label={t`Amount`}
             autoFocus
           />
           <span className="amount-currency">{currencySymbol(fromAccount?.currency ?? 'EUR')}</span>
@@ -909,10 +910,10 @@ function TransferForm({
 
       <div className="form-row">
         <label className="field">
-          <span className="field-label">From</span>
+          <span className="field-label">{t`From`}</span>
           <select
             className="input"
-            aria-label="From account"
+            aria-label={t`From account`}
             value={state.fromAccountId}
             onChange={(event) => setFromAccount(Number(event.target.value))}
           >
@@ -924,10 +925,10 @@ function TransferForm({
           </select>
         </label>
         <label className="field">
-          <span className="field-label">To</span>
+          <span className="field-label">{t`To`}</span>
           <select
             className={`input ${errors.toAccountId ? 'invalid' : ''}`}
-            aria-label="To account"
+            aria-label={t`To account`}
             value={state.toAccountId}
             onChange={(event) => update('toAccountId', Number(event.target.value))}
           >
@@ -943,10 +944,10 @@ function TransferForm({
 
       <div className="form-row">
         <label className="field">
-          <span className="field-label">Date</span>
+          <span className="field-label">{t`Date`}</span>
           <input
             className={`input ${errors.date ? 'invalid' : ''}`}
-            aria-label="Date"
+            aria-label={t`Date`}
             type="date"
             value={state.date}
             onChange={(event) => update('date', event.target.value)}
@@ -955,10 +956,10 @@ function TransferForm({
         </label>
         {dateMode === 'bookingValue' ? (
           <label className="field">
-            <span className="field-label">Value date</span>
+            <span className="field-label">{t`Value date`}</span>
             <input
               className={`input ${errors.valueDate ? 'invalid' : ''}`}
-              aria-label="Value date"
+              aria-label={t`Value date`}
               type="date"
               value={state.valueDate}
               onChange={(event) => update('valueDate', event.target.value)}
@@ -967,10 +968,10 @@ function TransferForm({
           </label>
         ) : dateMode === 'dateTime' ? (
           <label className="field">
-            <span className="field-label">Time</span>
+            <span className="field-label">{t`Time`}</span>
             <input
               className={`input ${errors.time ? 'invalid' : ''}`}
-              aria-label="Time"
+              aria-label={t`Time`}
               type="time"
               value={state.time}
               onChange={(event) => update('time', event.target.value)}
@@ -982,16 +983,16 @@ function TransferForm({
 
       <div className="form-row">
         <label className="field">
-          <span className="field-label">Payee</span>
+          <span className="field-label">{t`Payee`}</span>
           <select
             className="input"
-            aria-label="Payee"
+            aria-label={t`Payee`}
             value={state.payeeId ?? ''}
             onChange={(event) =>
               update('payeeId', event.target.value ? Number(event.target.value) : null)
             }
           >
-            <option value="">None</option>
+            <option value="">{t`None`}</option>
             {refs.payees.map((payee) => (
               <option key={payee.id} value={payee.id}>
                 {payee.name}
@@ -1001,16 +1002,16 @@ function TransferForm({
         </label>
         {methods.length > 0 ? (
           <label className="field">
-            <span className="field-label">Method</span>
+            <span className="field-label">{t`Method`}</span>
             <select
               className="input"
-              aria-label="Method"
+              aria-label={t`Method`}
               value={state.methodId ?? ''}
               onChange={(event) =>
                 update('methodId', event.target.value ? Number(event.target.value) : null)
               }
             >
-              <option value="">None</option>
+              <option value="">{t`None`}</option>
               {methods.map((method) => (
                 <option key={method.id} value={method.id}>
                   {method.label}
@@ -1022,20 +1023,20 @@ function TransferForm({
       </div>
 
       <label className="field">
-        <span className="field-label">Reference</span>
+        <span className="field-label">{t`Reference`}</span>
         <input
           className="input"
-          aria-label="Reference"
+          aria-label={t`Reference`}
           value={state.referenceNumber}
           onChange={(event) => update('referenceNumber', event.target.value)}
         />
       </label>
 
       <label className="field">
-        <span className="field-label">Note</span>
+        <span className="field-label">{t`Note`}</span>
         <textarea
           className="input textarea"
-          aria-label="Note"
+          aria-label={t`Note`}
           value={state.comment}
           onChange={(event) => update('comment', event.target.value)}
         />
@@ -1215,7 +1216,7 @@ function SplitForm({
   }
 
   function requestClose() {
-    if (dirty && !window.confirm('Discard changes?')) return
+    if (dirty && !window.confirm(t`Discard changes?`)) return
     onClose()
   }
 
@@ -1242,15 +1243,15 @@ function SplitForm({
 
   async function save() {
     const nextErrors: Record<string, string> = {}
-    if (parentMinor === null) nextErrors.amount = 'Enter the total amount.'
+    if (parentMinor === null) nextErrors.amount = t`Enter the total amount.`
     if (partValues.some((value) => value === null)) {
-      nextErrors.parts = 'Enter a valid amount for every part.'
+      nextErrors.parts = t`Enter a valid amount for every part.`
     } else if (parentMinor !== null && remaining !== 0) {
-      nextErrors.parts = 'The parts must add up to the total.'
+      nextErrors.parts = t`The parts must add up to the total.`
     }
-    if (!state.date) nextErrors.date = 'Required.'
-    if (dateMode === 'dateTime' && !state.time) nextErrors.time = 'Required.'
-    if (dateMode === 'bookingValue' && !state.valueDate) nextErrors.valueDate = 'Required.'
+    if (!state.date) nextErrors.date = t`Required.`
+    if (dateMode === 'dateTime' && !state.time) nextErrors.time = t`Required.`
+    if (dateMode === 'bookingValue' && !state.valueDate) nextErrors.valueDate = t`Required.`
     setErrors(nextErrors)
     if (Object.keys(nextErrors).length > 0 || parentMinor === null) return
 
@@ -1290,7 +1291,7 @@ function SplitForm({
         setSubmitError(cause.message)
         if (cause.fields) setErrors(cause.fields)
       } else {
-        setSubmitError(cause instanceof Error ? cause.message : 'Could not save the split.')
+        setSubmitError(cause instanceof Error ? cause.message : t`Could not save the split.`)
       }
     } finally {
       setSaving(false)
@@ -1314,24 +1315,24 @@ function SplitForm({
 
   return (
     <FormPanel
-      kicker={mode === 'create' ? 'New' : 'Edit'}
-      title={mode === 'create' ? 'Split transaction' : 'Edit split transaction'}
+      kicker={mode === 'create' ? t`New` : t`Edit`}
+      title={mode === 'create' ? t`Split transaction` : t`Edit split transaction`}
       onClose={requestClose}
       wide
       footer={
         <>
           <span className={`split-balance ${balanced ? 'balanced' : 'unbalanced'}`}>
             {balanced
-              ? 'Balanced'
+              ? t`Balanced`
               : remaining === null
-                ? 'Enter the total'
-                : `${formatMoney(remaining, account?.currency ?? 'EUR', fractionDigits, true)} left`}
+                ? t`Enter the total`
+                : t`${formatMoney(remaining, account?.currency ?? 'EUR', fractionDigits, true)} left`}
           </span>
           <button type="button" className="btn ghost" onClick={requestClose}>
-            Cancel
+            {t`Cancel`}
           </button>
           <button type="button" className="btn primary" onClick={() => void save()} disabled={saving}>
-            {saving ? 'Saving…' : 'Save'}
+            {saving ? t`Saving…` : t`Save`}
           </button>
         </>
       }
@@ -1345,13 +1346,13 @@ function SplitForm({
       <div className="split-grid">
         <div className="split-left">
           <section className="split-section">
-            <h3>Transaction</h3>
+            <h3>{t`Transaction`}</h3>
             <div className="form-row">
               <label className="field">
-                <span className="field-label">Account</span>
+                <span className="field-label">{t`Account`}</span>
                 <select
                   className="input"
-                  aria-label="Account"
+                  aria-label={t`Account`}
                   value={state.accountId}
                   disabled={mode === 'edit'}
                   onChange={(event) => setAccount(Number(event.target.value))}
@@ -1364,10 +1365,10 @@ function SplitForm({
                 </select>
               </label>
               <label className="field">
-                <span className="field-label">Date</span>
+                <span className="field-label">{t`Date`}</span>
                 <input
                   className={`input ${errors.date ? 'invalid' : ''}`}
-                  aria-label="Date"
+                  aria-label={t`Date`}
                   type="date"
                   value={state.date}
                   onChange={(event) => update('date', event.target.value)}
@@ -1378,10 +1379,10 @@ function SplitForm({
 
             <div className="form-row">
               <label className="field">
-                <span className="field-label">Total (signed)</span>
+                <span className="field-label">{t`Total (signed)`}</span>
                 <input
                   className={`input ${errors.amount ? 'invalid' : ''}`}
-                  aria-label="Total amount"
+                  aria-label={t`Total amount`}
                   inputMode="decimal"
                   value={state.amount}
                   onChange={(event) =>
@@ -1393,10 +1394,10 @@ function SplitForm({
               </label>
               {dateMode === 'bookingValue' ? (
                 <label className="field">
-                  <span className="field-label">Value date</span>
+                  <span className="field-label">{t`Value date`}</span>
                   <input
                     className={`input ${errors.valueDate ? 'invalid' : ''}`}
-                    aria-label="Value date"
+                    aria-label={t`Value date`}
                     type="date"
                     value={state.valueDate}
                     onChange={(event) => update('valueDate', event.target.value)}
@@ -1404,10 +1405,10 @@ function SplitForm({
                 </label>
               ) : dateMode === 'dateTime' ? (
                 <label className="field">
-                  <span className="field-label">Time</span>
+                  <span className="field-label">{t`Time`}</span>
                   <input
                     className={`input ${errors.time ? 'invalid' : ''}`}
-                    aria-label="Time"
+                    aria-label={t`Time`}
                     type="time"
                     value={state.time}
                     onChange={(event) => update('time', event.target.value)}
@@ -1418,16 +1419,16 @@ function SplitForm({
 
             <div className="form-row">
               <label className="field">
-                <span className="field-label">Payee</span>
+                <span className="field-label">{t`Payee`}</span>
                 <select
                   className="input"
-                  aria-label="Payee"
+                  aria-label={t`Payee`}
                   value={state.payeeId ?? ''}
                   onChange={(event) =>
                     update('payeeId', event.target.value ? Number(event.target.value) : null)
                   }
                 >
-                  <option value="">None</option>
+                  <option value="">{t`None`}</option>
                   {refs.payees.map((payee) => (
                     <option key={payee.id} value={payee.id}>
                       {payee.name}
@@ -1437,16 +1438,16 @@ function SplitForm({
               </label>
               {methods.length > 0 ? (
                 <label className="field">
-                  <span className="field-label">Method</span>
+                  <span className="field-label">{t`Method`}</span>
                   <select
                     className="input"
-                    aria-label="Method"
+                    aria-label={t`Method`}
                     value={state.methodId ?? ''}
                     onChange={(event) =>
                       update('methodId', event.target.value ? Number(event.target.value) : null)
                     }
                   >
-                    <option value="">None</option>
+                    <option value="">{t`None`}</option>
                     {methods.map((method) => (
                       <option key={method.id} value={method.id}>
                         {method.label}
@@ -1459,7 +1460,7 @@ function SplitForm({
 
             {refs.tags.length > 0 ? (
               <div className="field">
-                <span className="field-label">Tags</span>
+                <span className="field-label">{t`Tags`}</span>
                 <div className="tag-picker">
                   {refs.tags.map((tag) => (
                     <button
@@ -1484,10 +1485,10 @@ function SplitForm({
             ) : null}
 
             <label className="field">
-              <span className="field-label">Note</span>
+              <span className="field-label">{t`Note`}</span>
               <textarea
                 className="input textarea"
-                aria-label="Note"
+                aria-label={t`Note`}
                 value={state.comment}
                 onChange={(event) => update('comment', event.target.value)}
               />
@@ -1496,7 +1497,7 @@ function SplitForm({
 
           <section className="split-section">
             <div className="split-header">
-              <h3>Parts</h3>
+              <h3>{t`Parts`}</h3>
               {errors.parts ? <span className="field-error">{errors.parts}</span> : null}
             </div>
             <div className="part-list">
@@ -1508,7 +1509,7 @@ function SplitForm({
                   onClick={() => setSelectedKey(part.key)}
                 >
                   <span className="part-cat">
-                    {part.categoryId ? paths.get(part.categoryId) : 'No category'}
+                    {part.categoryId ? paths.get(part.categoryId) : t`No category`}
                   </span>
                   <span className="part-payee">
                     {part.payeeId
@@ -1520,19 +1521,19 @@ function SplitForm({
               ))}
             </div>
             <button type="button" className="btn ghost add-part" onClick={addPart}>
-              + Add part
+              {t`+ Add part`}
             </button>
           </section>
         </div>
 
         <aside className="split-right">
           <section className="split-section">
-            <h3>Part {selectedIndex + 1}</h3>
+            <h3>{t`Part ${selectedIndex + 1}`}</h3>
             <label className="field">
-              <span className="field-label">Amount (signed)</span>
+              <span className="field-label">{t`Amount (signed)`}</span>
               <input
                 className="input"
-                aria-label="Part amount"
+                aria-label={t`Part amount`}
                 inputMode="decimal"
                 value={selected.amount}
                 onChange={(event) =>
@@ -1542,10 +1543,10 @@ function SplitForm({
               />
             </label>
             <label className="field">
-              <span className="field-label">Category</span>
+              <span className="field-label">{t`Category`}</span>
               <select
                 className="input"
-                aria-label="Part category"
+                aria-label={t`Part category`}
                 value={selected.categoryId ?? ''}
                 onChange={(event) =>
                   updatePart(
@@ -1554,7 +1555,7 @@ function SplitForm({
                   )
                 }
               >
-                <option value="">No category</option>
+                <option value="">{t`No category`}</option>
                 {categories.map((category) => (
                   <option key={category.id} value={category.id}>
                     {paths.get(category.id) ?? category.label}
@@ -1563,10 +1564,10 @@ function SplitForm({
               </select>
             </label>
             <label className="field">
-              <span className="field-label">Payee</span>
+              <span className="field-label">{t`Payee`}</span>
               <select
                 className="input"
-                aria-label="Part payee"
+                aria-label={t`Part payee`}
                 value={selected.payeeId ?? ''}
                 onChange={(event) =>
                   updatePart(
@@ -1575,7 +1576,7 @@ function SplitForm({
                   )
                 }
               >
-                <option value="">None</option>
+                <option value="">{t`None`}</option>
                 {refs.payees.map((payee) => (
                   <option key={payee.id} value={payee.id}>
                     {payee.name}
@@ -1585,10 +1586,10 @@ function SplitForm({
             </label>
             {methods.length > 0 ? (
               <label className="field">
-                <span className="field-label">Method</span>
+                <span className="field-label">{t`Method`}</span>
                 <select
                   className="input"
-                  aria-label="Part method"
+                  aria-label={t`Part method`}
                   value={selected.methodId ?? ''}
                   onChange={(event) =>
                     updatePart(
@@ -1597,7 +1598,7 @@ function SplitForm({
                     )
                   }
                 >
-                  <option value="">None</option>
+                  <option value="">{t`None`}</option>
                   {methods.map((method) => (
                     <option key={method.id} value={method.id}>
                       {method.label}
@@ -1608,7 +1609,7 @@ function SplitForm({
             ) : null}
             {refs.tags.length > 0 ? (
               <div className="field">
-                <span className="field-label">Tags</span>
+                <span className="field-label">{t`Tags`}</span>
                 <div className="tag-picker">
                   {refs.tags.map((tag) => (
                     <button
@@ -1632,19 +1633,19 @@ function SplitForm({
               </div>
             ) : null}
             <label className="field">
-              <span className="field-label">Note</span>
+              <span className="field-label">{t`Note`}</span>
               <textarea
                 className="input textarea"
-                aria-label="Part note"
+                aria-label={t`Part note`}
                 value={selected.comment}
                 onChange={(event) => updatePart('comment', event.target.value)}
               />
             </label>
             <label className="field">
-              <span className="field-label">Reference</span>
+              <span className="field-label">{t`Reference`}</span>
               <input
                 className="input"
-                aria-label="Part reference"
+                aria-label={t`Part reference`}
                 value={selected.referenceNumber}
                 onChange={(event) => updatePart('referenceNumber', event.target.value)}
               />
@@ -1655,7 +1656,7 @@ function SplitForm({
               onClick={removePart}
               disabled={state.parts.length <= 1}
             >
-              Remove part
+              {t`Remove part`}
             </button>
           </section>
         </aside>
@@ -1693,7 +1694,7 @@ function FormPanel({
             <div className="panel-kicker">{kicker}</div>
             <h2>{title}</h2>
           </div>
-          <button type="button" className="icon-btn" onClick={onClose} aria-label="Close editor">
+          <button type="button" className="icon-btn" onClick={onClose} aria-label={t`Close editor`}>
             <IconX />
           </button>
         </div>

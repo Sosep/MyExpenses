@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { t } from '@lingui/core/macro'
 import type { Account } from '../types'
 import { getBreakdown, getReportSummary } from '../api'
 import {
@@ -13,32 +14,34 @@ import { IconChevronLeft, IconChevronRight } from './Icons'
 
 interface ReportsProps {
   account: Account
-  dataVersion: number
 }
 
 type By = 'category' | 'payee' | 'tag'
 type Type = 'expense' | 'income' | 'both'
 
-const BY_OPTIONS: { value: By; label: string }[] = [
-  { value: 'category', label: 'Category' },
-  { value: 'payee', label: 'Payee' },
-  { value: 'tag', label: 'Tag' },
-]
+const BY_OPTIONS = ['category', 'payee', 'tag'] as const
+const TYPE_OPTIONS = ['expense', 'income', 'both'] as const
 
-const TYPE_OPTIONS: { value: Type; label: string }[] = [
-  { value: 'expense', label: 'Expenses' },
-  { value: 'income', label: 'Income' },
-  { value: 'both', label: 'Both' },
-]
-
-function titleFor(by: By, type: Type): string {
-  const noun = by === 'category' ? 'category' : by === 'payee' ? 'payee' : 'tag'
-  if (type === 'income') return `Income by ${noun}`
-  if (type === 'both') return `Activity by ${noun}`
-  return `Spending by ${noun}`
+function byLabel(by: By): string {
+  if (by === 'category') return t`Category`
+  if (by === 'payee') return t`Payee`
+  return t`Tag`
 }
 
-export function Reports({ account, dataVersion }: ReportsProps) {
+function typeLabel(type: Type): string {
+  if (type === 'expense') return t`Expenses`
+  if (type === 'income') return t`Income`
+  return t`Both`
+}
+
+function titleFor(by: By, type: Type): string {
+  const noun = by === 'category' ? t`category` : by === 'payee' ? t`payee` : t`tag`
+  if (type === 'income') return t`Income by ${noun}`
+  if (type === 'both') return t`Activity by ${noun}`
+  return t`Spending by ${noun}`
+}
+
+export function Reports({ account }: ReportsProps) {
   const [month, setMonth] = useState(currentMonth())
   const [by, setBy] = useState<By>('category')
   const [type, setType] = useState<Type>('expense')
@@ -47,11 +50,11 @@ export function Reports({ account, dataVersion }: ReportsProps) {
 
   const summary = useAsync(
     () => getReportSummary(account.id, range.from, range.to),
-    [account.id, range.from, range.to, dataVersion],
+    ['report-summary', account.id, range.from, range.to],
   )
   const breakdown = useAsync(
     () => getBreakdown(account.id, by, type, range.from, range.to),
-    [account.id, by, type, range.from, range.to, dataVersion],
+    ['report-breakdown', account.id, by, type, range.from, range.to],
   )
 
   const data = breakdown.data
@@ -63,7 +66,7 @@ export function Reports({ account, dataVersion }: ReportsProps) {
     <>
       <div className="page-head">
         <div>
-          <h1>Reports</h1>
+          <h1>{t`Reports`}</h1>
           <p>
             {account.label} · {formatMonth(year, monthNumber)}
           </p>
@@ -74,7 +77,7 @@ export function Reports({ account, dataVersion }: ReportsProps) {
               type="button"
               className="icon-btn"
               onClick={() => setMonth(addMonths(month, -1))}
-              aria-label="Previous month"
+              aria-label={t`Previous month`}
             >
               <IconChevronLeft />
             </button>
@@ -83,7 +86,7 @@ export function Reports({ account, dataVersion }: ReportsProps) {
               type="button"
               className="icon-btn"
               onClick={() => setMonth(addMonths(month, 1))}
-              aria-label="Next month"
+              aria-label={t`Next month`}
             >
               <IconChevronRight />
             </button>
@@ -97,7 +100,7 @@ export function Reports({ account, dataVersion }: ReportsProps) {
             }}
             disabled={summary.loading || breakdown.loading}
           >
-            Refresh
+            {t`Refresh`}
           </button>
         </div>
       </div>
@@ -119,29 +122,29 @@ export function Reports({ account, dataVersion }: ReportsProps) {
       ) : null}
 
       <div className="report-controls">
-        <div className="segmented" role="group" aria-label="Breakdown by">
+        <div className="segmented" role="group" aria-label={t`Breakdown by`}>
           {BY_OPTIONS.map((option) => (
             <button
-              key={option.value}
+              key={option}
               type="button"
-              className={by === option.value ? 'active' : ''}
-              aria-pressed={by === option.value}
-              onClick={() => setBy(option.value)}
+              className={by === option ? 'active' : ''}
+              aria-pressed={by === option}
+              onClick={() => setBy(option)}
             >
-              {option.label}
+              {byLabel(option)}
             </button>
           ))}
         </div>
-        <div className="segmented" role="group" aria-label="Transaction type">
+        <div className="segmented" role="group" aria-label={t`Transaction type`}>
           {TYPE_OPTIONS.map((option) => (
             <button
-              key={option.value}
+              key={option}
               type="button"
-              className={type === option.value ? 'active' : ''}
-              aria-pressed={type === option.value}
-              onClick={() => setType(option.value)}
+              className={type === option ? 'active' : ''}
+              aria-pressed={type === option}
+              onClick={() => setType(option)}
             >
-              {option.label}
+              {typeLabel(option)}
             </button>
           ))}
         </div>
@@ -149,21 +152,21 @@ export function Reports({ account, dataVersion }: ReportsProps) {
 
       {loading ? (
         <div className="card">
-          <p className="card-note">Loading report…</p>
+          <p className="card-note">{t`Loading report…`}</p>
         </div>
       ) : (
         <>
           {totals ? (
             <div className="kpis">
               <div className="kpi mint">
-                <div className="kpi-label">Income</div>
+                <div className="kpi-label">{t`Income`}</div>
                 <div className="kpi-value">
                   {formatMoney(totals.incomeMinor, totals.currency, totals.fractionDigits)}
                 </div>
-                <div className="kpi-foot">This month</div>
+                <div className="kpi-foot">{t`This month`}</div>
               </div>
               <div className="kpi rose">
-                <div className="kpi-label">Expenses</div>
+                <div className="kpi-label">{t`Expenses`}</div>
                 <div className="kpi-value">
                   {formatMoney(
                     Math.abs(totals.expensesMinor),
@@ -171,19 +174,19 @@ export function Reports({ account, dataVersion }: ReportsProps) {
                     totals.fractionDigits,
                   )}
                 </div>
-                <div className="kpi-foot">This month</div>
+                <div className="kpi-foot">{t`This month`}</div>
               </div>
               <div className="kpi lav">
-                <div className="kpi-label">Net</div>
+                <div className="kpi-label">{t`Net`}</div>
                 <div className="kpi-value">
                   {formatMoney(totals.netMinor, totals.currency, totals.fractionDigits, true)}
                 </div>
-                <div className="kpi-foot">Income minus expenses</div>
+                <div className="kpi-foot">{t`Income minus expenses`}</div>
               </div>
               <div className="kpi">
-                <div className="kpi-label">Transactions</div>
+                <div className="kpi-label">{t`Transactions`}</div>
                 <div className="kpi-value">{totals.count}</div>
-                <div className="kpi-foot">In this month</div>
+                <div className="kpi-foot">{t`In this month`}</div>
               </div>
             </div>
           ) : null}
@@ -194,14 +197,12 @@ export function Reports({ account, dataVersion }: ReportsProps) {
                 <h2>{titleFor(by, type)}</h2>
                 <p>
                   {data && data.items.length > 0
-                    ? `${data.items.length} ${
-                        data.items.length === 1 ? 'group' : 'groups'
-                      } · ${formatMoney(
+                    ? t`${data.items.length} groups · ${formatMoney(
                         data.totalMinor,
                         account.currency,
                         account.fractionDigits,
                       )} total`
-                    : 'No activity for this selection'}
+                    : t`No activity for this selection`}
                 </p>
               </div>
             </div>
@@ -228,16 +229,14 @@ export function Reports({ account, dataVersion }: ReportsProps) {
                     </div>
                     <div className="breakdown-meta">
                       <span>{item.share.toFixed(1)}%</span>
-                      <span>
-                        {item.count} {item.count === 1 ? 'transaction' : 'transactions'}
-                      </span>
+                      <span>{t`${item.count} transactions`}</span>
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
               <p className="card-note">
-                Nothing was recorded for this month. Try another month or change the type.
+                {t`Nothing was recorded for this month. Try another month or change the type.`}
               </p>
             )}
           </div>

@@ -27,7 +27,25 @@ presupuestos e informes.
 - Informes: KPIs del mes y desglose por categoría, beneficiario o etiqueta, con
   tipo gasto/ingreso/ambos, importe, número y porcentaje.
 - PWA: manifiesto, iconos y service worker. Cachea el shell de `/app` y trata el
-  API como solo red; sin el móvil no hay datos.
+  API como solo red; avisa sin conexión y cuando hay una versión nueva.
+- i18n: inglés y español con Lingui (`.po`). Selector de idioma en la barra
+  superior; el idioma se recuerda en `localStorage`.
+- Datos de servidor con TanStack Query: caché compartida y refresco por
+  invalidación tras cada escritura.
+- Geist Sans empaquetada (`@fontsource/geist-sans`), sin depender de la red.
+
+## Traducciones
+
+Los textos visibles usan macros de Lingui (`t` y `<Trans>`). Los catálogos viven
+en `src/locales/{en,es}/messages.po`.
+
+```bash
+npm run i18n:extract   # añade textos nuevos a los .po
+npm run i18n:compile   # comprueba que no falta ninguna traducción
+```
+
+Al añadir copy, ejecuta `i18n:extract` y rellena el `msgstr` español en el mismo
+commit. El build usa `@lingui/vite-plugin` y compila los catálogos al vuelo.
 
 ## Desarrollo
 

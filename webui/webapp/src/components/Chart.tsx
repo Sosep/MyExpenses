@@ -1,3 +1,4 @@
+import { t } from '@lingui/core/macro'
 import type { Group } from '../types'
 import { formatMoney, formatMonth, formatMonthShort } from '../format'
 
@@ -17,8 +18,8 @@ export function Chart({ series, currency, fractionDigits }: ChartProps) {
   if (series.length === 0 || max === 0) {
     return (
       <div className="empty">
-        <h3>No activity yet</h3>
-        <p>Transactions will appear here as soon as you record them in the app.</p>
+        <h3>{t`No activity yet`}</h3>
+        <p>{t`Transactions will appear here as soon as you record them in the app.`}</p>
       </div>
     )
   }
@@ -33,13 +34,13 @@ export function Chart({ series, currency, fractionDigits }: ChartProps) {
       <div
         className="chart"
         role="img"
-        aria-label="Income and expenses over the last twelve months"
+        aria-label={t`Income and expenses over the last twelve months`}
       >
         {series.map((group) => (
           <div
             className="chart-col"
             key={`${group.year}-${group.second}`}
-            title={`${formatMonth(group.year, group.second)} — income ${formatMoney(
+            title={t`${formatMonth(group.year, group.second)} — income ${formatMoney(
               group.incomeMinor,
               currency,
               fractionDigits,
@@ -66,11 +67,11 @@ export function Chart({ series, currency, fractionDigits }: ChartProps) {
       <div className="chart-legend">
         <span>
           <i className="dot dot-positive" />
-          Income
+          {t`Income`}
         </span>
         <span>
           <i className="dot dot-negative" />
-          Expenses
+          {t`Expenses`}
         </span>
       </div>
     </div>

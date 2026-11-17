@@ -1,10 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { t } from '@lingui/core/macro'
+import type { Locale } from './i18n'
+import { activateLocale, initialLocale, LOCALES } from './i18n'
 import type { Account, Meta } from './types'
 import { ApiError, getAccounts, getMeta, login, logout, UNAUTHORIZED_EVENT } from './api'
 import { Budgets } from './components/Budgets'
 import { Dashboard } from './components/Dashboard'
 import { Files } from './components/Files'
 import { Login } from './components/Login'
+import { Pwa } from './components/Pwa'
 import { Reports } from './components/Reports'
 import { Shell } from './components/Shell'
 import type { View } from './components/Shell'
@@ -28,7 +33,7 @@ function initialAccountId(): number | null {
   return Number.isFinite(parsed) ? parsed : null
 }
 
-export default function App() {
+export default function App({ initialLocale: initial }: { initialLocale: Locale }) {
   const [status, setStatus] = useState<Status>('checking')
   const [authError, setAuthError] = useState<string | null>(null)
   const [meta, setMeta] = useState<Meta | null>(null)
@@ -37,9 +42,14 @@ export default function App() {
   const [view, setView] = useState<View>('dashboard')
   const [theme, setTheme] = useState<'light' | 'dark'>(initialTheme)
   const [editor, setEditor] = useState<EditorState | null>(null)
-  const [dataVersion, setDataVersion] = useState(0)
   const [toast, setToast] = useState<string | null>(null)
+  const [locale, setLocale] = useState<Locale>(() => initial ?? initialLocale())
   const wasReady = useRef(false)
+  const queryClient = useQueryClient()
+
+  useEffect(() => {
+    activateLocale(locale)
+  }, [locale])
 
   useEffect(() => {
     wasReady.current = status === 'ready'
@@ -122,7 +132,7 @@ export default function App() {
   }
 
   function refreshData(message?: string) {
-    setDataVersion((version) => version + 1)
+    void queryClient.invalidateQueries()
     getAccounts().then(setAccounts).catch(() => {})
     if (message) setToast(message)
   }
@@ -131,7 +141,7 @@ export default function App() {
     return (
       <div className="boot">
         <span className="mark">Σ</span>
-        <span>Connecting to My Expenses…</span>
+        <span>{t`Connecting to My Expenses…`}</span>
       </div>
     )
   }
@@ -144,7 +154,7 @@ export default function App() {
     return (
       <div className="boot">
         <span className="mark">Σ</span>
-        <span>Loading…</span>
+        <span>{t`Loading…`}</span>
       </div>
     )
   }
@@ -161,48 +171,48 @@ export default function App() {
         onAccount={setAccountId}
         theme={theme}
         onTheme={() => setTheme((current) => (current === 'dark' ? 'light' : 'dark'))}
+        locale={locale}
+        locales={LOCALES}
+        onLocale={setLocale}
         onLogout={handleLogout}
         meta={meta}
       >
         {accounts.length === 0 ? (
           <div className="empty-page">
             <div className="card empty-card">
-              <h2>No accounts yet</h2>
-              <p>Create an account in the Android app and reload this page.</p>
+              <h2>{t`No accounts yet`}</h2>
+              <p>{t`Create an account in the Android app and reload this page.`}</p>
             </div>
           </div>
         ) : account ? (
           view === 'dashboard' ? (
             <Dashboard
               account={account}
-              dataVersion={dataVersion}
               onOpenTransactions={() => setView('transactions')}
               onNewTransaction={() => setEditor({ mode: 'create' })}
             />
           ) : view === 'reports' ? (
-            <Reports account={account} dataVersion={dataVersion} />
+            <Reports account={account} />
           ) : view === 'files' ? (
             <Files />
           ) : view === 'budgets' ? (
             <Budgets
               accounts={accounts}
               defaultAccountId={account?.id ?? accountId ?? accounts[0]?.id ?? 0}
-              dataVersion={dataVersion}
               onDataChanged={refreshData}
             />
           ) : (
             <Transactions
               account={account}
-              dataVersion={dataVersion}
               onNewTransaction={() => setEditor({ mode: 'create' })}
               onEditTransaction={(id) => setEditor({ mode: 'edit', id })}
-              onDataChanged={() => refreshData('Transaction deleted.')}
+              onDataChanged={() => refreshData(t`Transaction deleted.`)}
             />
           )
         ) : (
           <div className="boot">
             <span className="mark">Σ</span>
-            <span>Loading…</span>
+            <span>{t`Loading…`}</span>
           </div>
         )}
       </Shell>
@@ -216,7 +226,7 @@ export default function App() {
           onClose={() => setEditor(null)}
           onSaved={() => {
             setEditor(null)
-            refreshData('Transaction saved.')
+            refreshData(t`Transaction saved.`)
           }}
         />
       ) : null}
@@ -225,6 +235,7 @@ export default function App() {
           {toast}
         </div>
       ) : null}
+      <Pwa />
     </>
   )
 }

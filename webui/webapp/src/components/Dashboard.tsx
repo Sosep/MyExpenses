@@ -11,12 +11,12 @@ import {
   lastMonths,
   monthRange,
 } from '../format'
+import { t } from '@lingui/core/macro'
 import { useAsync } from '../hooks'
 import { Chart } from './Chart'
 
 interface DashboardProps {
   account: Account
-  dataVersion: number
   onOpenTransactions: () => void
   onNewTransaction: () => void
 }
@@ -49,7 +49,6 @@ function description(transaction: Transaction): string {
 
 export function Dashboard({
   account,
-  dataVersion,
   onOpenTransactions,
   onNewTransaction,
 }: DashboardProps) {
@@ -57,12 +56,12 @@ export function Dashboard({
   const fromMonth = months.from.slice(0, 7)
   const groups = useAsync(
     () => getGrouped(account.id, months.from, months.to),
-    [account.id, months.from, months.to, dataVersion],
+    ['dashboard-groups', account.id, months.from, months.to],
   )
   const thisMonth = monthRange(currentMonth())
   const recent = useAsync(
     () => getTransactions(account.id, thisMonth.from, thisMonth.to, 'both', 8, 0),
-    [account.id, thisMonth.from, thisMonth.to, dataVersion],
+    ['dashboard-recent', account.id, thisMonth.from, thisMonth.to],
   )
 
   const series = useMemo(
@@ -81,14 +80,14 @@ export function Dashboard({
     <>
       <div className="page-head">
         <div>
-          <h1>Overview</h1>
+          <h1>{t`Overview`}</h1>
           <p>
             {formatMonth(year, second)} · {account.label}
           </p>
         </div>
         <div className="page-actions">
           <button type="button" className="btn ghost" onClick={onOpenTransactions}>
-            Transactions
+            {t`Transactions`}
           </button>
           <button
             type="button"
@@ -98,10 +97,10 @@ export function Dashboard({
               recent.reload()
             }}
           >
-            Refresh
+            {t`Refresh`}
           </button>
           <button type="button" className="btn primary" onClick={onNewTransaction}>
-            New transaction
+            {t`New transaction`}
           </button>
         </div>
       </div>
@@ -117,7 +116,7 @@ export function Dashboard({
               recent.reload()
             }}
           >
-            Retry
+            {t`Retry`}
           </button>
         </div>
       ) : null}
@@ -125,7 +124,7 @@ export function Dashboard({
       <div className="kpis">
         <div className="hero">
           <div className="accent-bar" />
-          <div className="kpi-label">Net worth</div>
+          <div className="kpi-label">{t`Net worth`}</div>
           <div className="hero-value">
             {formatMoney(account.currentBalanceMinor, account.currency, account.fractionDigits)}
           </div>
@@ -133,43 +132,43 @@ export function Dashboard({
             <span className={saved >= 0 ? 'amount-pos' : 'amount-neg'}>
               {formatMoney(saved, account.currency, account.fractionDigits, true)}
             </span>{' '}
-            saved this month
+            {t`saved this month`}
           </div>
         </div>
         <div className="kpi mint">
-          <div className="kpi-label">Income</div>
+          <div className="kpi-label">{t`Income`}</div>
           <div className="kpi-value">
             {loading
               ? '—'
               : formatMoney(income, account.currency, account.fractionDigits)}
           </div>
-          <div className="kpi-foot">This month</div>
+          <div className="kpi-foot">{t`This month`}</div>
         </div>
         <div className="kpi rose">
-          <div className="kpi-label">Expenses</div>
+          <div className="kpi-label">{t`Expenses`}</div>
           <div className="kpi-value">
             {loading
               ? '—'
               : formatMoney(expenses, account.currency, account.fractionDigits)}
           </div>
-          <div className="kpi-foot">This month</div>
+          <div className="kpi-foot">{t`This month`}</div>
         </div>
         <div className="kpi lav">
-          <div className="kpi-label">Saved</div>
+          <div className="kpi-label">{t`Saved`}</div>
           <div className="kpi-value">
             {loading
               ? '—'
               : formatMoney(saved, account.currency, account.fractionDigits, true)}
           </div>
-          <div className="kpi-foot">Income minus expenses</div>
+          <div className="kpi-foot">{t`Income minus expenses`}</div>
         </div>
       </div>
 
       <section className="card">
         <div className="card-head">
           <div>
-            <h2>Income and expenses</h2>
-            <p>Last 12 months</p>
+            <h2>{t`Income and expenses`}</h2>
+            <p>{t`Last 12 months`}</p>
           </div>
           <span className="card-note">{account.currency}</span>
         </div>
@@ -189,20 +188,20 @@ export function Dashboard({
       <section className="card">
         <div className="card-head">
           <div>
-            <h2>Recent transactions</h2>
+            <h2>{t`Recent transactions`}</h2>
             <p>{formatMonth(year, second)}</p>
           </div>
           <button type="button" className="link" onClick={onOpenTransactions}>
-            View all
+            {t`View all`}
           </button>
         </div>
         <table className="table">
           <thead>
             <tr>
-              <th>Date</th>
-              <th>Description</th>
-              <th className="hide-sm">Category</th>
-              <th className="num">Amount</th>
+              <th>{t`Date`}</th>
+              <th>{t`Description`}</th>
+              <th className="hide-sm">{t`Category`}</th>
+              <th className="num">{t`Amount`}</th>
             </tr>
           </thead>
           <tbody>
@@ -246,8 +245,8 @@ export function Dashboard({
               <tr>
                 <td colSpan={4}>
                   <div className="empty">
-                    <h3>No transactions this month</h3>
-                    <p>Record one in the app and it will show up here.</p>
+                    <h3>{t`No transactions this month`}</h3>
+                    <p>{t`Record one in the app and it will show up here.`}</p>
                   </div>
                 </td>
               </tr>

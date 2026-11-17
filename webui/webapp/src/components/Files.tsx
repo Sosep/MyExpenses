@@ -2,11 +2,12 @@ import { useState } from 'react'
 import type { FileEntry } from '../types'
 import { downloadFile, getFiles } from '../api'
 import { formatBytes, formatTimestamp } from '../format'
+import { t } from '@lingui/core/macro'
 import { useAsync } from '../hooks'
 import { IconDownload } from './Icons'
 
 export function Files() {
-  const files = useAsync(() => getFiles(), [])
+  const files = useAsync(() => getFiles(), ['files'])
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const items = files.data ?? []
@@ -26,7 +27,7 @@ export function Files() {
       anchor.remove()
       URL.revokeObjectURL(url)
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not download the file.')
+      setError(cause instanceof Error ? cause.message : t`Could not download the file.`)
     } finally {
       setBusy(null)
     }
@@ -36,8 +37,8 @@ export function Files() {
     <>
       <div className="page-head">
         <div>
-          <h1>Files</h1>
-          <p>Backups and exports stored on the phone</p>
+          <h1>{t`Files`}</h1>
+          <p>{t`Backups and exports stored on the phone`}</p>
         </div>
         <div className="page-actions">
           <button
@@ -46,7 +47,7 @@ export function Files() {
             onClick={files.reload}
             disabled={files.loading}
           >
-            {files.loading ? 'Refreshing…' : 'Refresh'}
+            {files.loading ? t`Refreshing…` : t`Refresh`}
           </button>
         </div>
       </div>
@@ -55,7 +56,7 @@ export function Files() {
         <div className="banner" role="alert">
           <span>{files.error.message}</span>
           <button type="button" className="btn ghost" onClick={files.reload}>
-            Try again
+            {t`Try again`}
           </button>
         </div>
       ) : null}
@@ -68,15 +69,14 @@ export function Files() {
 
       {loading ? (
         <div className="card">
-          <p className="card-note">Loading files…</p>
+          <p className="card-note">{t`Loading files…`}</p>
         </div>
       ) : items.length === 0 ? (
         <div className="empty-page">
           <div className="card empty-card">
-            <h2>No files yet</h2>
+            <h2>{t`No files yet`}</h2>
             <p>
-              Create a backup or export in the Android app. The file will show up here and
-              can be downloaded to this computer.
+              {t`Create a backup or export in the Android app. The file will show up here and can be downloaded to this computer.`}
             </p>
           </div>
         </div>
@@ -85,11 +85,11 @@ export function Files() {
           <table className="table">
             <thead>
               <tr>
-                <th>Name</th>
-                <th className="num">Size</th>
-                <th>Modified</th>
+                <th>{t`Name`}</th>
+                <th className="num">{t`Size`}</th>
+                <th>{t`Modified`}</th>
                 <th className="file-action-head">
-                  <span className="sr-only">Actions</span>
+                  <span className="sr-only">{t`Actions`}</span>
                 </th>
               </tr>
             </thead>
@@ -107,7 +107,7 @@ export function Files() {
                       disabled={busy === file.name}
                     >
                       <IconDownload />
-                      {busy === file.name ? 'Downloading…' : 'Download'}
+                      {busy === file.name ? t`Downloading…` : t`Download`}
                     </button>
                   </td>
                 </tr>

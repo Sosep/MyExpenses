@@ -1,4 +1,6 @@
 import type { ReactNode } from 'react'
+import { t } from '@lingui/core/macro'
+import type { Locale } from '../i18n'
 import type { Account, Meta } from '../types'
 import {
   IconChart,
@@ -22,6 +24,9 @@ interface ShellProps {
   onAccount: (id: number) => void
   theme: 'light' | 'dark'
   onTheme: () => void
+  locale: Locale
+  locales: readonly { value: Locale; label: string }[]
+  onLocale: (locale: Locale) => void
   onLogout: () => void
   meta: Meta
   children: ReactNode
@@ -35,10 +40,24 @@ export function Shell({
   onAccount,
   theme,
   onTheme,
+  locale,
+  locales,
+  onLocale,
   onLogout,
   meta,
   children,
 }: ShellProps) {
+  const crumb =
+    view === 'dashboard'
+      ? t`Overview`
+      : view === 'files'
+        ? t`Files`
+        : view === 'budgets'
+          ? t`Budgets`
+          : view === 'reports'
+            ? t`Reports`
+            : t`Transactions`
+
   return (
     <div className="app">
       <header className="topbar">
@@ -46,21 +65,11 @@ export function Shell({
           <span className="mark">Σ</span>
           <span>My Expenses</span>
         </div>
-        <span className="crumb">
-          {view === 'dashboard'
-            ? 'Overview'
-            : view === 'files'
-              ? 'Files'
-              : view === 'budgets'
-                ? 'Budgets'
-                : view === 'reports'
-                  ? 'Reports'
-                  : 'Transactions'}
-        </span>
+        <span className="crumb">{crumb}</span>
         <div className="top-right">
           {view === 'dashboard' || view === 'transactions' || view === 'reports' ? (
             <label className="account-picker">
-              <span className="sr-only">Account</span>
+              <span className="sr-only">{t`Account`}</span>
               <select
                 className="account-select"
                 value={accountId ?? ''}
@@ -74,12 +83,27 @@ export function Shell({
               </select>
             </label>
           ) : null}
+          <label className="account-picker locale-picker">
+            <span className="sr-only">{t`Language`}</span>
+            <select
+              className="account-select"
+              aria-label={t`Language`}
+              value={locale}
+              onChange={(event) => onLocale(event.target.value as Locale)}
+            >
+              {locales.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
           <button
             type="button"
             className="icon-btn"
             onClick={onTheme}
-            title={theme === 'dark' ? 'Switch to bright' : 'Switch to dark'}
-            aria-label={theme === 'dark' ? 'Switch to bright' : 'Switch to dark'}
+            title={theme === 'dark' ? t`Switch to bright` : t`Switch to dark`}
+            aria-label={theme === 'dark' ? t`Switch to bright` : t`Switch to dark`}
           >
             {theme === 'dark' ? <IconSun /> : <IconMoon />}
           </button>
@@ -87,21 +111,22 @@ export function Shell({
             type="button"
             className="icon-btn"
             onClick={onLogout}
-            title="Sign out"
-            aria-label="Sign out"
+            title={t`Sign out`}
+            aria-label={t`Sign out`}
           >
             <IconLogOut />
           </button>
         </div>
       </header>
       <div className="body">
-        <nav className="rail" aria-label="Sections">
+        <nav className="rail" aria-label={t`Sections`}>
           <button
             type="button"
             className={`rail-item ${view === 'dashboard' ? 'active' : ''}`}
+            data-view="dashboard"
             onClick={() => onView('dashboard')}
-            title="Overview"
-            aria-label="Overview"
+            title={t`Overview`}
+            aria-label={t`Overview`}
             aria-current={view === 'dashboard' ? 'page' : undefined}
           >
             <IconGrid />
@@ -109,9 +134,10 @@ export function Shell({
           <button
             type="button"
             className={`rail-item ${view === 'transactions' ? 'active' : ''}`}
+            data-view="transactions"
             onClick={() => onView('transactions')}
-            title="Transactions"
-            aria-label="Transactions"
+            title={t`Transactions`}
+            aria-label={t`Transactions`}
             aria-current={view === 'transactions' ? 'page' : undefined}
           >
             <IconList />
@@ -119,9 +145,10 @@ export function Shell({
           <button
             type="button"
             className={`rail-item ${view === 'files' ? 'active' : ''}`}
+            data-view="files"
             onClick={() => onView('files')}
-            title="Files"
-            aria-label="Files"
+            title={t`Files`}
+            aria-label={t`Files`}
             aria-current={view === 'files' ? 'page' : undefined}
           >
             <IconFile />
@@ -129,9 +156,10 @@ export function Shell({
           <button
             type="button"
             className={`rail-item ${view === 'reports' ? 'active' : ''}`}
+            data-view="reports"
             onClick={() => onView('reports')}
-            title="Reports"
-            aria-label="Reports"
+            title={t`Reports`}
+            aria-label={t`Reports`}
             aria-current={view === 'reports' ? 'page' : undefined}
           >
             <IconChart />
@@ -139,9 +167,10 @@ export function Shell({
           <button
             type="button"
             className={`rail-item ${view === 'budgets' ? 'active' : ''}`}
+            data-view="budgets"
             onClick={() => onView('budgets')}
-            title="Budgets"
-            aria-label="Budgets"
+            title={t`Budgets`}
+            aria-label={t`Budgets`}
             aria-current={view === 'budgets' ? 'page' : undefined}
           >
             <IconPie />
@@ -151,8 +180,8 @@ export function Shell({
             type="button"
             className="rail-item"
             disabled
-            title="Settings (next milestone)"
-            aria-label="Settings (next milestone)"
+            title={t`Settings (next milestone)`}
+            aria-label={t`Settings (next milestone)`}
           >
             <IconSettings />
           </button>

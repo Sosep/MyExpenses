@@ -1778,3 +1778,28 @@ button:disabled {
   font-size: 11px;
   color: var(--text-muted);
 }
+
+.locale-picker .account-select {
+  min-width: 92px;
+}
+
+/* PWA status */
+
+.pwa-banner {
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: min(560px, calc(100vw - 32px));
+  padding: 10px 14px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  font-size: 12px;
+}

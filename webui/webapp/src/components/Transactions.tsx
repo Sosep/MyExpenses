@@ -12,13 +12,13 @@ import {
   statusClass,
   statusLabel,
 } from '../format'
+import { t } from '@lingui/core/macro'
 import { useAsync } from '../hooks'
 import { IconChevronLeft, IconChevronRight } from './Icons'
 import { TransactionPanel } from './TransactionPanel'
 
 interface TransactionsProps {
   account: Account
-  dataVersion: number
   onNewTransaction: () => void
   onEditTransaction: (id: number) => void
   onDataChanged: () => void
@@ -39,7 +39,6 @@ function amountClass(transaction: Transaction): string {
 
 export function Transactions({
   account,
-  dataVersion,
   onNewTransaction,
   onEditTransaction,
   onDataChanged,
@@ -55,11 +54,11 @@ export function Transactions({
   const apiType = type === 'all' ? 'both' : type
   const summary = useAsync(
     () => getGrouped(account.id, range.from, range.to),
-    [account.id, range.from, range.to, dataVersion],
+    ['transaction-summary', account.id, range.from, range.to],
   )
   const page = useAsync(
     () => getTransactions(account.id, range.from, range.to, apiType, 50, 0),
-    [account.id, range.from, range.to, apiType, dataVersion],
+    ['transaction-page', account.id, range.from, range.to, apiType],
   )
 
   useEffect(() => {
@@ -100,9 +99,9 @@ export function Transactions({
     <>
       <div className="page-head">
         <div>
-          <h1>Transactions</h1>
+          <h1>{t`Transactions`}</h1>
           <p>
-            {account.label} · {total} transactions
+            {account.label} · {t`${total} transactions`}
           </p>
         </div>
         <div className="page-actions">
@@ -111,7 +110,7 @@ export function Transactions({
               type="button"
               className="icon-btn"
               onClick={() => setMonth(addMonths(month, -1))}
-              aria-label="Previous month"
+              aria-label={t`Previous month`}
             >
               <IconChevronLeft />
             </button>
@@ -120,24 +119,24 @@ export function Transactions({
               type="button"
               className="icon-btn"
               onClick={() => setMonth(addMonths(month, 1))}
-              aria-label="Next month"
+              aria-label={t`Next month`}
             >
               <IconChevronRight />
             </button>
           </div>
           <button type="button" className="btn primary" onClick={onNewTransaction}>
-            New transaction
+            {t`New transaction`}
           </button>
         </div>
       </div>
 
       <div className="filter-bar">
-        <div className="segmented" role="group" aria-label="Type">
+        <div className="segmented" role="group" aria-label={t`Type`}>
           {(
             [
-              ['all', 'All'],
-              ['expense', 'Expenses'],
-              ['income', 'Income'],
+              ['all', t`All`],
+              ['expense', t`Expenses`],
+              ['income', t`Income`],
             ] as const
           ).map(([value, label]) => (
             <button
@@ -153,7 +152,7 @@ export function Transactions({
         </div>
         <div className="summary-strip">
           <div>
-            <span>Income</span>
+            <span>{t`Income`}</span>
             <b className="amount-pos">
               {summary.loading
                 ? '—'
@@ -161,7 +160,7 @@ export function Transactions({
             </b>
           </div>
           <div>
-            <span>Expenses</span>
+            <span>{t`Expenses`}</span>
             <b className="amount-neg">
               {summary.loading
                 ? '—'
@@ -169,7 +168,7 @@ export function Transactions({
             </b>
           </div>
           <div>
-            <span>Net</span>
+            <span>{t`Net`}</span>
             <b className={net >= 0 ? 'amount-pos' : 'amount-neg'}>
               {summary.loading
                 ? '—'
@@ -187,7 +186,7 @@ export function Transactions({
             className="btn ghost banner-action"
             onClick={() => page.reload()}
           >
-            Retry
+            {t`Retry`}
           </button>
         </div>
       ) : null}
@@ -196,11 +195,11 @@ export function Transactions({
         <table className="table">
           <thead>
             <tr>
-              <th>Date</th>
-              <th>Description</th>
-              <th className="hide-sm">Category</th>
-              <th className="hide-sm">Tags</th>
-              <th className="num">Amount</th>
+              <th>{t`Date`}</th>
+              <th>{t`Description`}</th>
+              <th className="hide-sm">{t`Category`}</th>
+              <th className="hide-sm">{t`Tags`}</th>
+              <th className="num">{t`Amount`}</th>
             </tr>
           </thead>
           <tbody>
@@ -218,7 +217,7 @@ export function Transactions({
                   key={transaction.id}
                   className="clickable"
                   tabIndex={0}
-                  aria-label={`Open transaction: ${description(transaction)}`}
+                  aria-label={t`Open transaction: ${description(transaction)}`}
                   onClick={() => setSelectedId(transaction.id)}
                   onKeyDown={(event) => {
                     if (event.key === 'Enter' || event.key === ' ') {
@@ -269,8 +268,8 @@ export function Transactions({
               <tr>
                 <td colSpan={5}>
                   <div className="empty">
-                    <h3>No transactions in {formatMonth(year, monthNumber)}</h3>
-                    <p>Record one in the app and it will show up here.</p>
+                    <h3>{t`No transactions in ${formatMonth(year, monthNumber)}`}</h3>
+                    <p>{t`Record one in the app and it will show up here.`}</p>
                   </div>
                 </td>
               </tr>
@@ -286,7 +285,7 @@ export function Transactions({
               onClick={() => void loadMore()}
               disabled={loadingMore}
             >
-              {loadingMore ? 'Loading…' : `Load more (${total - items.length})`}
+              {loadingMore ? t`Loading…` : t`Load more (${total - items.length})`}
             </button>
           </div>
         ) : null}

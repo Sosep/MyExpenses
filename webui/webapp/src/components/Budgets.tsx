@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { t } from '@lingui/core/macro'
 import type { Account, Budget, BudgetProgress } from '../types'
 import { getBudgetProgress, getBudgets } from '../api'
 import { formatMoney } from '../format'
@@ -13,20 +14,24 @@ interface BudgetEntry {
 interface BudgetsProps {
   accounts: Account[]
   defaultAccountId: number
-  dataVersion: number
   onDataChanged: (message: string) => void
 }
 
-const GROUPING_LABELS: Record<string, string> = {
-  DAY: 'Daily',
-  WEEK: 'Weekly',
-  MONTH: 'Monthly',
-  YEAR: 'Yearly',
-  NONE: 'One-time',
-}
-
 function groupingLabel(grouping: string): string {
-  return GROUPING_LABELS[grouping] ?? grouping
+  switch (grouping) {
+    case 'DAY':
+      return t`Daily`
+    case 'WEEK':
+      return t`Weekly`
+    case 'MONTH':
+      return t`Monthly`
+    case 'YEAR':
+      return t`Yearly`
+    case 'NONE':
+      return t`One-time`
+    default:
+      return grouping
+  }
 }
 
 function progressRatio(progress: BudgetProgress): number {
@@ -42,7 +47,6 @@ function daysLeft(progress: BudgetProgress): number | null {
 export function Budgets({
   accounts,
   defaultAccountId,
-  dataVersion,
   onDataChanged,
 }: BudgetsProps) {
   const [editor, setEditor] = useState<
@@ -56,7 +60,7 @@ export function Budgets({
     return budgets
       .map((budget, index) => ({ budget, progress: progress[index] }))
       .filter((entry) => Boolean(entry.progress))
-  }, [dataVersion])
+  }, ['budgets'])
 
   const items = entries.data ?? []
   const loading = entries.loading && !entries.data
@@ -94,11 +98,11 @@ export function Budgets({
     <>
       <div className="page-head">
         <div>
-          <h1>Budgets</h1>
+          <h1>{t`Budgets`}</h1>
           <p>
             {items.length === 0
-              ? 'Spending limits per account and period'
-              : `${items.length} ${items.length === 1 ? 'budget' : 'budgets'}`}
+              ? t`Spending limits per account and period`
+              : t`${items.length} budgets`}
           </p>
         </div>
         <div className="page-actions">
@@ -108,10 +112,10 @@ export function Budgets({
             onClick={entries.reload}
             disabled={entries.loading}
           >
-            {entries.loading ? 'Refreshing…' : 'Refresh'}
+            {entries.loading ? t`Refreshing…` : t`Refresh`}
           </button>
           <button type="button" className="btn primary" onClick={() => setEditor({ mode: 'create' })}>
-            New budget
+            {t`New budget`}
           </button>
         </div>
       </div>
@@ -120,22 +124,21 @@ export function Budgets({
         <div className="banner" role="alert">
           <span>{entries.error.message}</span>
           <button type="button" className="btn ghost" onClick={entries.reload}>
-            Try again
+            {t`Try again`}
           </button>
         </div>
       ) : null}
 
       {loading ? (
         <div className="card">
-          <p className="card-note">Loading budgets…</p>
+          <p className="card-note">{t`Loading budgets…`}</p>
         </div>
       ) : items.length === 0 ? (
         <div className="empty-page">
           <div className="card empty-card">
-            <h2>No budgets yet</h2>
+            <h2>{t`No budgets yet`}</h2>
             <p>
-              Create a budget in the Android app. Its progress for the current period will
-              show up here.
+              {t`Create a budget in the Android app. Its progress for the current period will show up here.`}
             </p>
           </div>
         </div>
@@ -145,24 +148,28 @@ export function Budgets({
             <div className="budget-summary">
               <div className="budget-summary-head">
                 <span>{summary.period}</span>
-                <span className="muted">All budgets</span>
+                <span className="muted">{t`All budgets`}</span>
               </div>
               <div className="budget-summary-figures">
                 <span>
-                  <strong>{formatMoney(summary.spent, summary.currency, summary.fractionDigits)}</strong> spent
+                  <strong>{formatMoney(summary.spent, summary.currency, summary.fractionDigits)}</strong> {t`spent`}
                 </span>
                 <span>
                   <strong>{formatMoney(summary.allocated, summary.currency, summary.fractionDigits)}</strong>{' '}
-                  allocated
+                  {t`allocated`}
                 </span>
                 <span className={summary.remaining < 0 ? 'over' : 'positive'}>
                   {summary.remaining < 0
-                    ? `${formatMoney(
+                    ? t`${formatMoney(
                         Math.abs(summary.remaining),
                         summary.currency,
                         summary.fractionDigits,
                       )} over`
-                    : `${formatMoney(summary.remaining, summary.currency, summary.fractionDigits)} left`}
+                    : t`${formatMoney(
+                        summary.remaining,
+                        summary.currency,
+                        summary.fractionDigits,
+                      )} left`}
                 </span>
               </div>
               <div className="budget-bar">
@@ -190,10 +197,10 @@ export function Budgets({
                     <div>
                       <h2>{budget.title}</h2>
                       <p>
-                        {budget.accountName ?? 'Account'} · {groupingLabel(budget.grouping)}
+                        {budget.accountName ?? t`Account`} · {groupingLabel(budget.grouping)}
                       </p>
                     </div>
-                    {over ? <span className="budget-chip over">Over</span> : null}
+                    {over ? <span className="budget-chip over">{t`Over`}</span> : null}
                   </header>
 
                   <div className="budget-period">{progress.periodDescription}</div>
@@ -205,7 +212,7 @@ export function Budgets({
                         progress.currency,
                         progress.fractionDigits,
                       )}{' '}
-                      of{' '}
+                      {t`of`}{' '}
                       {formatMoney(
                         progress.allocatedMinor,
                         progress.currency,
@@ -214,12 +221,12 @@ export function Budgets({
                     </span>
                     <span className={over ? 'over' : 'positive'}>
                       {over
-                        ? `Over by ${formatMoney(
+                        ? t`Over by ${formatMoney(
                             Math.abs(progress.remainingMinor),
                             progress.currency,
                             progress.fractionDigits,
                           )}`
-                        : `${formatMoney(
+                        : t`${formatMoney(
                             progress.remainingMinor,
                             progress.currency,
                             progress.fractionDigits,
@@ -233,7 +240,7 @@ export function Budgets({
                     aria-valuemin={0}
                     aria-valuemax={100}
                     aria-valuenow={Math.round(ratio * 100)}
-                    aria-label={`${budget.title} spent`}
+                    aria-label={t`${budget.title} spent`}
                   >
                     <div
                       className={`budget-fill ${over ? 'over' : ''}`}
@@ -242,10 +249,10 @@ export function Budgets({
                   </div>
 
                   <footer className="budget-card-foot">
-                    <span>{Math.round(ratio * 100)}% used</span>
+                    <span>{t`${Math.round(ratio * 100)}% used`}</span>
                     {days !== null ? (
                       <span>
-                        {days} {days === 1 ? 'day' : 'days'} left
+                        {t`${days} days left`}
                       </span>
                     ) : null}
                     <button
@@ -253,7 +260,7 @@ export function Budgets({
                       className="btn ghost budget-edit"
                       onClick={() => setEditor({ mode: 'edit', entry: { budget, progress } })}
                     >
-                      Edit
+                      {t`Edit`}
                     </button>
                   </footer>
 
@@ -267,7 +274,7 @@ export function Budgets({
 
           {!summary ? (
             <p className="budget-note">
-              Budgets with different currencies or periods are shown separately.
+              {t`Budgets with different currencies or periods are shown separately.`}
             </p>
           ) : null}
         </>

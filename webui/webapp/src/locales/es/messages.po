@@ -1,0 +1,937 @@
+msgid ""
+msgstr ""
+"Language: es\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#. placeholder {0}: formatMonth(group.year, group.second)
+#. placeholder {1}: formatMoney( group.incomeMinor, currency, fractionDigits, )
+#. placeholder {2}: formatMoney( group.expensesMinor, currency, fractionDigits, )
+#: src/components/Chart.tsx
+msgid "{0} — income {1}, expenses {2}"
+msgstr "{0} — ingresos {1}, gastos {2}"
+
+#. placeholder {0}: items.length
+#: src/components/Budgets.tsx
+msgid "{0} budgets"
+msgstr "{0} presupuestos"
+
+#. placeholder {0}: data.items.length
+#. placeholder {1}: formatMoney( data.totalMinor, account.currency, account.fractionDigits, )
+#: src/components/Reports.tsx
+msgid "{0} groups · {1} total"
+msgstr "{0} grupos · {1} en total"
+
+#. placeholder {0}: formatMoney( progress.remainingMinor, progress.currency, progress.fractionDigits, )
+#. placeholder {0}: formatMoney( summary.remaining, summary.currency, summary.fractionDigits, )
+#. placeholder {0}: formatMoney(remaining, account?.currency ?? 'EUR', fractionDigits, true)
+#: src/components/Budgets.tsx
+#: src/components/TransactionEditor.tsx
+msgid "{0} left"
+msgstr "Quedan {0}"
+
+#. placeholder {0}: formatMoney( Math.abs(summary.remaining), summary.currency, summary.fractionDigits, )
+#: src/components/Budgets.tsx
+msgid "{0} over"
+msgstr "{0} de exceso"
+
+#. placeholder {0}: budget.title
+#: src/components/Budgets.tsx
+msgid "{0} spent"
+msgstr "{0} gastado"
+
+#. placeholder {0}: item.count
+#: src/components/Reports.tsx
+msgid "{0} transactions"
+msgstr "{0} transacciones"
+
+#. placeholder {0}: Math.round(ratio * 100)
+#: src/components/Budgets.tsx
+msgid "{0}% used"
+msgstr "{0}% usado"
+
+#: src/components/Budgets.tsx
+msgid "{days} days left"
+msgstr "Quedan {days} días"
+
+#: src/components/Transactions.tsx
+msgid "{total} transactions"
+msgstr "{total} transacciones"
+
+#: src/components/TransactionEditor.tsx
+msgid "+ Add part"
+msgstr "+ Añadir parte"
+
+#: src/components/Pwa.tsx
+msgid "A new version is available."
+msgstr "Hay una versión nueva disponible."
+
+#: src/components/TransactionEditor.tsx
+msgid "A single income or expense."
+msgstr "Un ingreso o gasto único."
+
+#: src/components/BudgetEditor.tsx
+#: src/components/Budgets.tsx
+#: src/components/Shell.tsx
+#: src/components/TransactionEditor.tsx
+#: src/components/TransactionPanel.tsx
+msgid "Account"
+msgstr "Cuenta"
+
+#: src/components/BudgetEditor.tsx
+msgid "Account and period type are fixed after creation. Category allocations and rollover are edited in the Android app."
+msgstr "La cuenta y el tipo de periodo no se pueden cambiar después de crear el presupuesto. Las asignaciones por categoría y el rollover se editan en la app Android."
+
+#: src/components/Files.tsx
+msgid "Actions"
+msgstr "Acciones"
+
+#: src/components/Reports.tsx
+msgid "Activity by {noun}"
+msgstr "Actividad por {noun}"
+
+#: src/components/Transactions.tsx
+msgid "All"
+msgstr "Todos"
+
+#: src/components/Budgets.tsx
+msgid "All budgets"
+msgstr "Todos los presupuestos"
+
+#: src/components/Budgets.tsx
+msgid "allocated"
+msgstr "asignado"
+
+#: src/components/BudgetEditor.tsx
+#: src/components/Dashboard.tsx
+#: src/components/TransactionEditor.tsx
+#: src/components/TransactionPanel.tsx
+#: src/components/Transactions.tsx
+msgid "Amount"
+msgstr "Importe"
+
+#: src/components/TransactionEditor.tsx
+msgid "Amount (signed)"
+msgstr "Importe (con signo)"
+
+#: src/components/Files.tsx
+msgid "Backups and exports stored on the phone"
+msgstr "Copias de seguridad y exportaciones guardadas en el teléfono"
+
+#: src/components/TransactionEditor.tsx
+msgid "Balanced"
+msgstr "Cuadrado"
+
+#: src/components/Reports.tsx
+msgid "Both"
+msgstr "Ambos"
+
+#: src/components/Reports.tsx
+msgid "Breakdown by"
+msgstr "Desglosar por"
+
+#: src/components/BudgetEditor.tsx
+msgid "Budget"
+msgstr "Presupuesto"
+
+#: src/components/BudgetEditor.tsx
+msgid "Budget account"
+msgstr "Cuenta del presupuesto"
+
+#: src/components/BudgetEditor.tsx
+msgid "Budget amount"
+msgstr "Importe del presupuesto"
+
+#: src/components/BudgetEditor.tsx
+msgid "Budget created."
+msgstr "Presupuesto creado."
+
+#: src/components/BudgetEditor.tsx
+msgid "Budget deleted."
+msgstr "Presupuesto eliminado."
+
+#: src/components/BudgetEditor.tsx
+msgid "Budget end"
+msgstr "Fin del presupuesto"
+
+#: src/components/BudgetEditor.tsx
+msgid "Budget note"
+msgstr "Nota del presupuesto"
+
+#: src/components/BudgetEditor.tsx
+msgid "Budget period"
+msgstr "Periodo del presupuesto"
+
+#: src/components/BudgetEditor.tsx
+msgid "Budget saved."
+msgstr "Presupuesto guardado."
+
+#: src/components/BudgetEditor.tsx
+msgid "Budget start"
+msgstr "Inicio del presupuesto"
+
+#: src/components/BudgetEditor.tsx
+msgid "Budget title"
+msgstr "Título del presupuesto"
+
+#: src/components/Budgets.tsx
+#: src/components/Shell.tsx
+msgid "Budgets"
+msgstr "Presupuestos"
+
+#: src/components/Budgets.tsx
+msgid "Budgets with different currencies or periods are shown separately."
+msgstr "Los presupuestos con divisas o periodos distintos se muestran por separado."
+
+#: src/components/TransactionEditor.tsx
+msgid "Cancel"
+msgstr "Cancelar"
+
+#: src/components/Reports.tsx
+msgid "category"
+msgstr "categoría"
+
+#: src/components/Dashboard.tsx
+#: src/components/Reports.tsx
+#: src/components/TransactionEditor.tsx
+#: src/components/TransactionPanel.tsx
+#: src/components/Transactions.tsx
+msgid "Category"
+msgstr "Categoría"
+
+#: src/components/TransactionEditor.tsx
+msgid "Choose two different accounts."
+msgstr "Elige dos cuentas distintas."
+
+#: src/format.ts
+msgid "Cleared"
+msgstr "Compensado"
+
+#: src/components/TransactionPanel.tsx
+msgid "Close details"
+msgstr "Cerrar detalles"
+
+#: src/components/BudgetEditor.tsx
+#: src/components/TransactionEditor.tsx
+msgid "Close editor"
+msgstr "Cerrar editor"
+
+#: src/App.tsx
+msgid "Connecting to My Expenses…"
+msgstr "Conectando con My Expenses…"
+
+#: src/components/BudgetEditor.tsx
+msgid "Could not delete the budget."
+msgstr "No se pudo eliminar el presupuesto."
+
+#: src/components/TransactionPanel.tsx
+msgid "Could not delete the transaction."
+msgstr "No se pudo eliminar la transacción."
+
+#: src/components/Files.tsx
+msgid "Could not download the file."
+msgstr "No se pudo descargar el fichero."
+
+#: src/components/BudgetEditor.tsx
+msgid "Could not save the budget."
+msgstr "No se pudo guardar el presupuesto."
+
+#: src/components/TransactionEditor.tsx
+msgid "Could not save the split."
+msgstr "No se pudo guardar la transacción dividida."
+
+#: src/components/TransactionEditor.tsx
+msgid "Could not save the transaction."
+msgstr "No se pudo guardar la transacción."
+
+#: src/components/TransactionEditor.tsx
+msgid "Could not save the transfer."
+msgstr "No se pudo guardar la transferencia."
+
+#: src/components/Login.tsx
+msgid "Could not sign in"
+msgstr "No se pudo iniciar sesión"
+
+#: src/components/Files.tsx
+msgid "Create a backup or export in the Android app. The file will show up here and can be downloaded to this computer."
+msgstr "Crea una copia de seguridad o exportación en la app Android. El fichero aparecerá aquí y podrás descargarlo a este ordenador."
+
+#: src/components/Budgets.tsx
+msgid "Create a budget in the Android app. Its progress for the current period will show up here."
+msgstr "Crea un presupuesto en la app Android. Su progreso del periodo actual aparecerá aquí."
+
+#: src/App.tsx
+msgid "Create an account in the Android app and reload this page."
+msgstr "Crea una cuenta en la app Android y recarga esta página."
+
+#: src/components/BudgetEditor.tsx
+#: src/components/Budgets.tsx
+msgid "Daily"
+msgstr "Diario"
+
+#: src/components/Dashboard.tsx
+#: src/components/TransactionEditor.tsx
+#: src/components/Transactions.tsx
+msgid "Date"
+msgstr "Fecha"
+
+#: src/components/BudgetEditor.tsx
+msgid "Default amount"
+msgstr "Importe por defecto"
+
+#: src/components/BudgetEditor.tsx
+msgid "Default budget"
+msgstr "Presupuesto por defecto"
+
+#: src/components/TransactionPanel.tsx
+msgid "Delete"
+msgstr "Eliminar"
+
+#. placeholder {0}: budget.title
+#: src/components/BudgetEditor.tsx
+msgid "Delete the budget “{0}”?"
+msgstr "¿Eliminar el presupuesto «{0}»?"
+
+#: src/components/TransactionPanel.tsx
+msgid "Deleting…"
+msgstr "Eliminando…"
+
+#: src/components/Dashboard.tsx
+#: src/components/Transactions.tsx
+msgid "Description"
+msgstr "Descripción"
+
+#: src/components/TransactionPanel.tsx
+msgid "Details"
+msgstr "Detalles"
+
+#: src/components/BudgetEditor.tsx
+#: src/components/TransactionEditor.tsx
+msgid "Discard changes?"
+msgstr "¿Descartar los cambios?"
+
+#: src/components/TransactionEditor.tsx
+msgid "Divide one amount into categorized parts."
+msgstr "Divide un importe en partes categorizadas."
+
+#: src/components/Files.tsx
+msgid "Download"
+msgstr "Descargar"
+
+#: src/components/Files.tsx
+msgid "Downloading…"
+msgstr "Descargando…"
+
+#: src/components/BudgetEditor.tsx
+#: src/components/Budgets.tsx
+#: src/components/TransactionEditor.tsx
+#: src/components/TransactionPanel.tsx
+msgid "Edit"
+msgstr "Editar"
+
+#: src/components/BudgetEditor.tsx
+msgid "Edit budget"
+msgstr "Editar presupuesto"
+
+#: src/components/TransactionEditor.tsx
+msgid "Edit split transaction"
+msgstr "Editar transacción dividida"
+
+#: src/components/TransactionEditor.tsx
+msgid "Edit transaction"
+msgstr "Editar transacción"
+
+#: src/components/TransactionEditor.tsx
+msgid "Edit transfer"
+msgstr "Editar transferencia"
+
+#: src/components/BudgetEditor.tsx
+msgid "End"
+msgstr "Fin"
+
+#: src/components/TransactionEditor.tsx
+msgid "Enter a valid amount for every part."
+msgstr "Introduce un importe válido en cada parte."
+
+#: src/components/TransactionEditor.tsx
+msgid "Enter an amount greater than zero."
+msgstr "Introduce un importe mayor que cero."
+
+#: src/components/BudgetEditor.tsx
+msgid "Enter an amount."
+msgstr "Introduce un importe."
+
+#: src/components/Login.tsx
+msgid "Enter the password configured in the Android app."
+msgstr "Introduce la contraseña configurada en la app Android."
+
+#: src/components/TransactionEditor.tsx
+msgid "Enter the total"
+msgstr "Introduce el total"
+
+#: src/components/TransactionEditor.tsx
+msgid "Enter the total amount."
+msgstr "Introduce el importe total."
+
+#: src/components/TransactionEditor.tsx
+msgid "Expense"
+msgstr "Gasto"
+
+#: src/components/Chart.tsx
+#: src/components/Dashboard.tsx
+#: src/components/Reports.tsx
+#: src/components/Transactions.tsx
+msgid "Expenses"
+msgstr "Gastos"
+
+#: src/components/Files.tsx
+#: src/components/Shell.tsx
+msgid "Files"
+msgstr "Ficheros"
+
+#: src/components/TransactionEditor.tsx
+msgid "From"
+msgstr "Desde"
+
+#: src/components/TransactionEditor.tsx
+msgid "From account"
+msgstr "Cuenta de origen"
+
+#: src/components/Reports.tsx
+msgid "In this month"
+msgstr "Este mes"
+
+#: src/components/Chart.tsx
+#: src/components/Dashboard.tsx
+#: src/components/Reports.tsx
+#: src/components/TransactionEditor.tsx
+#: src/components/Transactions.tsx
+msgid "Income"
+msgstr "Ingresos"
+
+#: src/components/Dashboard.tsx
+msgid "Income and expenses"
+msgstr "Ingresos y gastos"
+
+#: src/components/Chart.tsx
+msgid "Income and expenses over the last twelve months"
+msgstr "Ingresos y gastos de los últimos doce meses"
+
+#: src/components/Reports.tsx
+msgid "Income by {noun}"
+msgstr "Ingresos por {noun}"
+
+#: src/components/Dashboard.tsx
+#: src/components/Reports.tsx
+msgid "Income minus expenses"
+msgstr "Ingresos menos gastos"
+
+#: src/components/TransactionPanel.tsx
+msgid "Its parts are deleted too."
+msgstr "Sus partes también se eliminan."
+
+#: src/components/Shell.tsx
+msgid "Language"
+msgstr "Idioma"
+
+#: src/components/Dashboard.tsx
+msgid "Last 12 months"
+msgstr "Últimos 12 meses"
+
+#: src/components/Login.tsx
+msgid "Leave the password empty if you have not set one."
+msgstr "Deja la contraseña vacía si no has configurado ninguna."
+
+#. placeholder {0}: total - items.length
+#: src/components/Transactions.tsx
+msgid "Load more ({0})"
+msgstr "Cargar más ({0})"
+
+#: src/components/Budgets.tsx
+msgid "Loading budgets…"
+msgstr "Cargando presupuestos…"
+
+#: src/components/Files.tsx
+msgid "Loading files…"
+msgstr "Cargando ficheros…"
+
+#: src/components/Reports.tsx
+msgid "Loading report…"
+msgstr "Cargando informe…"
+
+#: src/App.tsx
+#: src/components/Transactions.tsx
+msgid "Loading…"
+msgstr "Cargando…"
+
+#: src/components/TransactionEditor.tsx
+#: src/components/TransactionPanel.tsx
+msgid "Method"
+msgstr "Método"
+
+#: src/components/Files.tsx
+msgid "Modified"
+msgstr "Modificado"
+
+#: src/components/BudgetEditor.tsx
+#: src/components/Budgets.tsx
+msgid "Monthly"
+msgstr "Mensual"
+
+#: src/components/TransactionEditor.tsx
+msgid "Move money between two accounts."
+msgstr "Mueve dinero entre dos cuentas."
+
+#: src/components/BudgetEditor.tsx
+msgid "Must be on or after the start."
+msgstr "Debe ser igual o posterior al inicio."
+
+#: src/components/Files.tsx
+msgid "Name"
+msgstr "Nombre"
+
+#: src/components/Reports.tsx
+#: src/components/Transactions.tsx
+msgid "Net"
+msgstr "Neto"
+
+#: src/components/Dashboard.tsx
+msgid "Net worth"
+msgstr "Patrimonio"
+
+#: src/components/BudgetEditor.tsx
+#: src/components/TransactionEditor.tsx
+msgid "New"
+msgstr "Nuevo"
+
+#: src/components/BudgetEditor.tsx
+#: src/components/Budgets.tsx
+msgid "New budget"
+msgstr "Nuevo presupuesto"
+
+#: src/components/Dashboard.tsx
+#: src/components/TransactionEditor.tsx
+#: src/components/Transactions.tsx
+msgid "New transaction"
+msgstr "Nueva transacción"
+
+#: src/components/Reports.tsx
+#: src/components/Transactions.tsx
+msgid "Next month"
+msgstr "Mes siguiente"
+
+#: src/App.tsx
+msgid "No accounts yet"
+msgstr "Todavía no hay cuentas"
+
+#: src/components/Reports.tsx
+msgid "No activity for this selection"
+msgstr "Sin actividad para esta selección"
+
+#: src/components/Chart.tsx
+msgid "No activity yet"
+msgstr "Todavía no hay actividad"
+
+#: src/components/Budgets.tsx
+msgid "No budgets yet"
+msgstr "Todavía no hay presupuestos"
+
+#: src/components/TransactionEditor.tsx
+msgid "No category"
+msgstr "Sin categoría"
+
+#: src/components/Files.tsx
+msgid "No files yet"
+msgstr "Todavía no hay ficheros"
+
+#. placeholder {0}: formatMonth(year, monthNumber)
+#: src/components/Transactions.tsx
+msgid "No transactions in {0}"
+msgstr "No hay transacciones en {0}"
+
+#: src/components/Dashboard.tsx
+msgid "No transactions this month"
+msgstr "No hay transacciones este mes"
+
+#: src/components/TransactionEditor.tsx
+msgid "None"
+msgstr "Ninguno"
+
+#: src/components/BudgetEditor.tsx
+#: src/components/TransactionEditor.tsx
+#: src/components/TransactionPanel.tsx
+msgid "Note"
+msgstr "Nota"
+
+#: src/components/Reports.tsx
+msgid "Nothing was recorded for this month. Try another month or change the type."
+msgstr "No se registró nada este mes. Prueba otro mes o cambia el tipo."
+
+#: src/components/Budgets.tsx
+msgid "of"
+msgstr "de"
+
+#: src/components/Budgets.tsx
+msgid "One-time"
+msgstr "Único"
+
+#: src/components/BudgetEditor.tsx
+msgid "One-time period"
+msgstr "Periodo único"
+
+#. placeholder {0}: description(transaction)
+#: src/components/Transactions.tsx
+msgid "Open transaction: {0}"
+msgstr "Abrir transacción: {0}"
+
+#: src/components/Budgets.tsx
+msgid "Over"
+msgstr "Excedido"
+
+#. placeholder {0}: formatMoney( Math.abs(progress.remainingMinor), progress.currency, progress.fractionDigits, )
+#: src/components/Budgets.tsx
+msgid "Over by {0}"
+msgstr "Excedido en {0}"
+
+#: src/components/Dashboard.tsx
+#: src/components/Shell.tsx
+msgid "Overview"
+msgstr "Resumen"
+
+#. placeholder {0}: selectedIndex + 1
+#: src/components/TransactionEditor.tsx
+msgid "Part {0}"
+msgstr "Parte {0}"
+
+#: src/components/TransactionEditor.tsx
+msgid "Part amount"
+msgstr "Importe de la parte"
+
+#: src/components/TransactionEditor.tsx
+msgid "Part category"
+msgstr "Categoría de la parte"
+
+#: src/components/TransactionEditor.tsx
+msgid "Part method"
+msgstr "Método de la parte"
+
+#: src/components/TransactionEditor.tsx
+msgid "Part note"
+msgstr "Nota de la parte"
+
+#: src/components/TransactionEditor.tsx
+msgid "Part payee"
+msgstr "Beneficiario de la parte"
+
+#: src/components/TransactionEditor.tsx
+msgid "Part reference"
+msgstr "Referencia de la parte"
+
+#: src/components/TransactionEditor.tsx
+#: src/components/TransactionPanel.tsx
+msgid "Parts"
+msgstr "Partes"
+
+#: src/components/Login.tsx
+msgid "Password"
+msgstr "Contraseña"
+
+#: src/components/Reports.tsx
+msgid "payee"
+msgstr "beneficiario"
+
+#: src/components/Reports.tsx
+#: src/components/TransactionEditor.tsx
+#: src/components/TransactionPanel.tsx
+msgid "Payee"
+msgstr "Beneficiario"
+
+#: src/components/BudgetEditor.tsx
+msgid "Period"
+msgstr "Periodo"
+
+#: src/components/Reports.tsx
+#: src/components/Transactions.tsx
+msgid "Previous month"
+msgstr "Mes anterior"
+
+#: src/components/Dashboard.tsx
+msgid "Recent transactions"
+msgstr "Transacciones recientes"
+
+#: src/format.ts
+msgid "Reconciled"
+msgstr "Conciliado"
+
+#: src/components/Dashboard.tsx
+#: src/components/Transactions.tsx
+msgid "Record one in the app and it will show up here."
+msgstr "Registra una en la app y aparecerá aquí."
+
+#: src/components/TransactionEditor.tsx
+#: src/components/TransactionPanel.tsx
+msgid "Reference"
+msgstr "Referencia"
+
+#: src/components/Budgets.tsx
+#: src/components/Dashboard.tsx
+#: src/components/Files.tsx
+#: src/components/Reports.tsx
+msgid "Refresh"
+msgstr "Actualizar"
+
+#: src/components/Budgets.tsx
+#: src/components/Files.tsx
+msgid "Refreshing…"
+msgstr "Actualizando…"
+
+#: src/components/Pwa.tsx
+msgid "Reload"
+msgstr "Recargar"
+
+#: src/components/TransactionEditor.tsx
+msgid "Remove part"
+msgstr "Eliminar parte"
+
+#: src/components/Reports.tsx
+#: src/components/Shell.tsx
+msgid "Reports"
+msgstr "Informes"
+
+#: src/components/BudgetEditor.tsx
+#: src/components/TransactionEditor.tsx
+msgid "Required."
+msgstr "Obligatorio."
+
+#: src/components/Dashboard.tsx
+#: src/components/TransactionEditor.tsx
+#: src/components/Transactions.tsx
+msgid "Retry"
+msgstr "Reintentar"
+
+#: src/components/BudgetEditor.tsx
+#: src/components/TransactionEditor.tsx
+msgid "Save"
+msgstr "Guardar"
+
+#: src/components/Dashboard.tsx
+msgid "Saved"
+msgstr "Ahorrado"
+
+#: src/components/Dashboard.tsx
+msgid "saved this month"
+msgstr "ahorrado este mes"
+
+#: src/components/BudgetEditor.tsx
+#: src/components/TransactionEditor.tsx
+msgid "Saving…"
+msgstr "Guardando…"
+
+#: src/components/Shell.tsx
+msgid "Sections"
+msgstr "Secciones"
+
+#: src/components/Shell.tsx
+msgid "Settings (next milestone)"
+msgstr "Ajustes (próximo hito)"
+
+#: src/components/Login.tsx
+msgid "Sign in"
+msgstr "Iniciar sesión"
+
+#: src/components/Shell.tsx
+msgid "Sign out"
+msgstr "Cerrar sesión"
+
+#: src/components/Login.tsx
+msgid "Signing in…"
+msgstr "Iniciando sesión…"
+
+#: src/components/Files.tsx
+msgid "Size"
+msgstr "Tamaño"
+
+#: src/components/Reports.tsx
+msgid "Spending by {noun}"
+msgstr "Gastos por {noun}"
+
+#: src/components/Budgets.tsx
+msgid "Spending limits per account and period"
+msgstr "Límites de gasto por cuenta y periodo"
+
+#: src/components/Budgets.tsx
+msgid "spent"
+msgstr "gastado"
+
+#: src/components/TransactionEditor.tsx
+#: src/format.ts
+msgid "Split transaction"
+msgstr "Transacción dividida"
+
+#: src/components/BudgetEditor.tsx
+msgid "Start"
+msgstr "Inicio"
+
+#: src/components/TransactionPanel.tsx
+msgid "Status"
+msgstr "Estado"
+
+#: src/components/Shell.tsx
+msgid "Switch to bright"
+msgstr "Cambiar a claro"
+
+#: src/components/Shell.tsx
+msgid "Switch to dark"
+msgstr "Cambiar a oscuro"
+
+#: src/components/Reports.tsx
+msgid "tag"
+msgstr "etiqueta"
+
+#: src/components/Reports.tsx
+msgid "Tag"
+msgstr "Etiqueta"
+
+#: src/components/TransactionEditor.tsx
+#: src/components/TransactionPanel.tsx
+#: src/components/Transactions.tsx
+msgid "Tags"
+msgstr "Etiquetas"
+
+#: src/components/TransactionPanel.tsx
+msgid "The linked side is deleted too."
+msgstr "El lado enlazado también se elimina."
+
+#: src/components/TransactionEditor.tsx
+msgid "The parts must add up to the total."
+msgstr "Las partes deben sumar el total."
+
+#: src/components/TransactionEditor.tsx
+msgid "The transaction could not be loaded."
+msgstr "No se pudo cargar la transacción."
+
+#: src/components/TransactionPanel.tsx
+msgid "This cannot be undone."
+msgstr "Esto no se puede deshacer."
+
+#: src/components/Dashboard.tsx
+#: src/components/Reports.tsx
+msgid "This month"
+msgstr "Este mes"
+
+#: src/components/TransactionEditor.tsx
+msgid "Time"
+msgstr "Hora"
+
+#: src/components/BudgetEditor.tsx
+msgid "Title"
+msgstr "Título"
+
+#: src/components/TransactionEditor.tsx
+msgid "To"
+msgstr "Hasta"
+
+#: src/components/TransactionEditor.tsx
+msgid "To account"
+msgstr "Cuenta de destino"
+
+#: src/components/TransactionPanel.tsx
+msgid "Total"
+msgstr "Total"
+
+#: src/components/TransactionEditor.tsx
+msgid "Total (signed)"
+msgstr "Total (con signo)"
+
+#: src/components/TransactionEditor.tsx
+msgid "Total amount"
+msgstr "Importe total"
+
+#: src/components/TransactionEditor.tsx
+#: src/components/TransactionPanel.tsx
+#: src/format.ts
+msgid "Transaction"
+msgstr "Transacción"
+
+#: src/App.tsx
+msgid "Transaction deleted."
+msgstr "Transacción eliminada."
+
+#: src/components/TransactionPanel.tsx
+msgid "Transaction details"
+msgstr "Detalles de la transacción"
+
+#: src/App.tsx
+msgid "Transaction saved."
+msgstr "Transacción guardada."
+
+#: src/components/Reports.tsx
+msgid "Transaction type"
+msgstr "Tipo de transacción"
+
+#: src/components/Dashboard.tsx
+#: src/components/Reports.tsx
+#: src/components/Shell.tsx
+#: src/components/Transactions.tsx
+msgid "Transactions"
+msgstr "Transacciones"
+
+#: src/components/Chart.tsx
+msgid "Transactions will appear here as soon as you record them in the app."
+msgstr "Las transacciones aparecerán aquí en cuanto las registres en la app."
+
+#: src/components/TransactionEditor.tsx
+#: src/format.ts
+msgid "Transfer"
+msgstr "Transferencia"
+
+#: src/components/Budgets.tsx
+#: src/components/Files.tsx
+msgid "Try again"
+msgstr "Reintentar"
+
+#: src/components/TransactionEditor.tsx
+#: src/components/Transactions.tsx
+msgid "Type"
+msgstr "Tipo"
+
+#: src/format.ts
+msgid "Unreconciled"
+msgstr "Sin conciliar"
+
+#: src/components/BudgetEditor.tsx
+msgid "Use as default budget for this account and period"
+msgstr "Usar como presupuesto por defecto para esta cuenta y periodo"
+
+#: src/components/TransactionEditor.tsx
+#: src/components/TransactionPanel.tsx
+msgid "Value date"
+msgstr "Fecha valor"
+
+#: src/components/Dashboard.tsx
+msgid "View all"
+msgstr "Ver todo"
+
+#: src/format.ts
+msgid "Void"
+msgstr "Anulado"
+
+#: src/components/BudgetEditor.tsx
+#: src/components/Budgets.tsx
+msgid "Weekly"
+msgstr "Semanal"
+
+#: src/components/TransactionEditor.tsx
+msgid "What do you want to add?"
+msgstr "¿Qué quieres añadir?"
+
+#: src/components/BudgetEditor.tsx
+#: src/components/Budgets.tsx
+msgid "Yearly"
+msgstr "Anual"
+
+#: src/components/Pwa.tsx
+msgid "You are offline. The phone is not reachable; showing cached screens only."
+msgstr "Sin conexión. No se puede contactar con el teléfono; solo se muestran las pantallas en caché."

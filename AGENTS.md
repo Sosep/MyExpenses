@@ -28,7 +28,12 @@ Read this before changing code. Detailed sources:
   public shell; `/api/v1` and downloads require the cookie when a password is
   set. Basic and the legacy HTML form are gone; `/` redirects to `/app/`.
 - PWA: `manifest.webmanifest`, PNG icons and `sw.js` cache the `/app` shell; the
-  API is network-only, so the app still needs the phone for data.
+  API is network-only, so the app still needs the phone for data. The SPA shows
+  offline and update banners.
+- i18n: Lingui `t`/`Trans` with `src/locales/{en,es}/messages.po`; the top bar
+  has an English/Spanish switch. Dates and money follow the active locale.
+- Server data uses TanStack Query; writes invalidate the cache instead of bumping
+  a version counter. Geist Sans is bundled through `@fontsource/geist-sans`.
 - Reports: `/reports/summary` and `/reports/breakdown` (category, payee or tag;
   expense, income or both) compute amounts and shares on the server. The SPA
   shows month KPIs and ranked bars. Category breakdown uses split parts; payee
@@ -82,6 +87,8 @@ assets.
 - Split amounts are signed and must sum to the parent; the account is fixed when
   editing a split. Transfer amounts are a positive magnitude; the server builds
   both sides.
+- All visible copy goes through Lingui `t`/`<Trans>`; after adding text run
+  `cd webui/webapp && npm run i18n:extract` and fill the Spanish `msgstr`.
 - Add write UI only after the API endpoint and contract exist.
 
 ## Style and gotchas
@@ -100,7 +107,8 @@ assets.
 
 `webui/webapp/dev/mock-server.mjs` (`npm run mock`) serves the built SPA and an
 in-memory v1 API with 60 transactions, including `POST/PUT/DELETE`. QA switches:
-`?login=1` (clears the mock session cookie), `?view=transactions`, `?view=budgets`,
+`?login=1` (clears the mock session cookie), `?locale=es`, `?view=transactions`,
+`?view=budgets`,
 `?view=budgets&new=1`,
 `?view=budgets&edit=1`, `?view=reports`, `?view=reports&reportBy=Payee&reportType=Both`,
 `?view=files`, `?panel=split`, `?panel=transfer`, `?new=1`,
@@ -129,7 +137,7 @@ Update the docs while the change is fresh; do not defer them to a later commit.
 - Budget category allocations, rollover and duplication (app-only today).
 - Reports v2: period presets, drill-down into filtered transactions, method
   breakdown and all-account aggregation.
-- Then Lingui `.po`, TanStack/Tailwind/Geist, and the remaining PWA polish
-  (offline messaging, update prompt).
+- Tailwind adoption remains: the app still uses the token-based CSS. Migrating it
+  is a separate visual change and needs a decision on scope.
 - Files are device-level: the route lives in `WebInputService` (`AppDirHelper`),
   so `ApiRoutesTest` does not cover it; verify on the phone.
