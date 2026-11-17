@@ -9,12 +9,12 @@ Read this before changing code. Detailed sources:
 
 ## Current state
 
-- `/api/v1`: read endpoints and simple create/update/delete.
-- API routes covered on the JVM by `ApiRoutesTest` with a fake `WebApiDataSource`
-  and Ktor `testApplication`.
-- SPA: dashboard, transactions, detail and the simple transaction editor.
-- Transfers and split transactions: read-only; their write endpoints and editors
-  are the next slice.
+- `/api/v1`: read endpoints plus create/update/delete for simple transactions,
+  transfers and splits.
+- API routes covered on the JVM by 15 `ApiRoutesTest` tests with a fake
+  `WebApiDataSource` and Ktor `testApplication`.
+- SPA: dashboard, transactions, detail, and the simple, transfer and split
+  editors. The split editor uses signed amounts, a parts list and a part panel.
 
 ## Build and verify
 
@@ -61,6 +61,9 @@ assets.
   string, preserve `crStatus` and `uuid` on update, and reject non-simple edits
   with `409`. After a mutation bump `dataVersion` and refetch accounts; never
   sum transactions in the client.
+- Split amounts are signed and must sum to the parent; the account is fixed when
+  editing a split. Transfer amounts are a positive magnitude; the server builds
+  both sides.
 - Add write UI only after the API endpoint and contract exist.
 
 ## Style and gotchas
@@ -79,9 +82,11 @@ assets.
 
 `webui/webapp/dev/mock-server.mjs` (`npm run mock`) serves the built SPA and an
 in-memory v1 API with 60 transactions, including `POST/PUT/DELETE`. QA switches:
-`?login=1`, `?view=transactions`, `?panel=split`, `?new=1`, `?edit=simple`,
-`?new=1&save=1`, `?theme=dark`, `?metrics=1`. It tests the SPA and the contract, not the Kotlin
-queries; the real API needs the phone or the JVM harness below.
+`?login=1`, `?view=transactions`, `?panel=split`, `?panel=transfer`, `?new=1`,
+`?new=1&kind=transfer`, `?new=1&kind=split`, `?edit=simple`, `?edit=split`,
+`?edit=transfer`, `?new=1&save=1`, `?theme=dark`, `?metrics=1`. The mock writes
+simple transactions only; transfer/split saves need the real phone API. It tests
+the SPA and the contract, not the Kotlin queries.
 
 ## Documentation is part of done
 
@@ -99,7 +104,6 @@ Update the docs while the change is fresh; do not defer them to a later commit.
 
 ## Open work
 
-- Transfer and split write endpoints and editors (the split editor and part
-  panel are already designed in `DESIGN.md`); use `ApiRoutesTest` for the new
-  routes and the sum/peer rules.
-- Then budgets, reports, files, Lingui `.po`, cookie session and bundled Geist.
+- Budgets, reports and files (API and screens).
+- Then Lingui `.po`, cookie session, TanStack/Tailwind/Geist, PWA and the legacy
+  form cleanup (`/` → `/app`).

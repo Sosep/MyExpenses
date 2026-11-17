@@ -5,16 +5,17 @@ React + TypeScript + Vite, con los tokens de [`../DESIGN.md`](../DESIGN.md).
 
 ## Estado
 
-Primer corte, **solo lectura**:
+Corte actual: lectura y escritura simple, transferencias y divididas.
 
 - Login con la contraseña del Web UI (HTTP Basic).
 - Dashboard: patrimonio de la cuenta, ingresos/gastos/ahorro del mes,
   tendencia de 12 meses y últimas transacciones.
 - Transacciones: navegación por mes, filtro ingreso/gasto, paginación,
   detalle con partes de una dividida y transferencias enlazadas.
-- Alta, edición y borrado de transacciones **simples** desde el panel lateral.
-  Las transferencias y divididas se leen, pero su edición llega en el siguiente
-  corte (la API responde `409`).
+- Alta, edición y borrado de transacciones **simples**, **transferencias** y
+  **divididas** desde paneles laterales. La dividida usa un panel ancho con la
+  lista de partes y el editor de la parte seleccionada; los importes van con
+  signo y la cuenta queda fija al editar.
 
 Todavía no hay presupuestos, informes desglosados ni ficheros. Esas pantallas
 llegan en los siguientes cortes.
@@ -46,18 +47,21 @@ npm run mock
 # abre http://localhost:4173/app/
 ```
 
-El mock sirve el build y el API en el mismo origen, e implementa
-`POST/PUT/DELETE` en memoria (recalcula saldo y totales del mes). No sustituye a
-probar contra el teléfono. Acepta estos parámetros para QA visual:
+El mock sirve el build y el API en el mismo origen, e implementa `POST/PUT/DELETE`
+de transacciones **simples** en memoria (recalcula saldo y totales del mes). Las
+transferencias y divididas se pueden abrir y editar visualmente, pero su guardado
+se prueba contra el API real del teléfono. Acepta estos parámetros para QA visual:
 
 | Parámetro | Efecto |
 |---|---|
 | `?login=1` | Muestra la pantalla de login en vez de saltar la auth |
 | `?view=transactions` | Abre Transacciones |
-| `?panel=split` | Abre el detalle de la dividida |
-| `?new=1` | Abre el editor de alta |
+| `?panel=split` / `?panel=transfer` | Abre el detalle de la dividida / transferencia |
+| `?new=1` | Abre el selector de tipo de alta |
+| `?new=1&kind=transfer` / `&kind=split` | Abre el editor de transferencia / dividida |
 | `?edit=simple` | Abre un gasto simple en el editor |
-| `?new=1&save=1` | Crea una transacción de prueba contra el mock |
+| `?edit=split` / `?edit=transfer` | Abre la dividida / transferencia en su editor |
+| `?new=1&save=1` | Crea una transacción simple de prueba contra el mock |
 | `?theme=dark` | Activa el tema oscuro |
 | `?metrics=1` | Añade un badge con `scrollHeight`/`clientHeight` y filas |
 
@@ -95,6 +99,8 @@ de Node en CI; si se cambia la app, hay que volver a ejecutar el build.
   API nunca recibe un `Float`.
 - Tras una escritura se refrescan las cuentas, el resumen y la lista con una
   `dataVersion`; no se suman transacciones en cliente.
+- El editor de divididas usa importes firmados y exige que la suma de partes
+  cuadre con el total; el API lo revalida. La cuenta no se puede mover al editar.
 - Esta iteración usa CSS con los tokens, sin Tailwind todavía; TanStack Query y
   el router llegarán con las pantallas de escritura.
 - Geist no está empaquetado aún: la pila cae a `system-ui`. Se añadirá el woff2

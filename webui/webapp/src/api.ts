@@ -6,9 +6,11 @@ import type {
   Method,
   Page,
   Payee,
+  SplitWrite,
   Tag,
   Transaction,
   TransactionWrite,
+  TransferWrite,
 } from './types'
 
 const AUTH_KEY = 'myexpenses.auth'
@@ -163,3 +165,15 @@ export const updateTransaction = (id: number, payload: TransactionWrite) =>
 
 export const deleteTransaction = (id: number) =>
   request<void>(`/transactions/${id}`, { method: 'DELETE' })
+
+export const createTransfer = (payload: TransferWrite) =>
+  request<Transaction>('/transfers', { method: 'POST', body: payload })
+
+export const updateTransfer = (id: number, payload: TransferWrite) =>
+  request<Transaction>(`/transfers/${id}`, { method: 'PUT', body: payload })
+
+export const createSplit = (payload: SplitWrite) =>
+  request<Transaction>('/split-transactions', { method: 'POST', body: payload })
+
+export const updateSplit = (id: number, payload: SplitWrite) =>
+  request<Transaction>(`/split-transactions/${id}`, { method: 'PUT', body: payload })

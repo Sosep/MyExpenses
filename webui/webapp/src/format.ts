@@ -163,3 +163,16 @@ export function categoryPathMap(categories: Category[]): Map<number, string> {
   categories.forEach((category) => resolve(category.id))
   return paths
 }
+
+export function parseSignedAmountMinor(value: string, fractionDigits: number): number | null {
+  const normalized = value.trim().replace(/\s/g, '').replace(',', '.')
+  const negative = normalized.startsWith('-')
+  const digits = normalized.replace(/^-/, '')
+  const minor = parseAmountMinor(digits, fractionDigits)
+  if (minor === null) return null
+  return negative ? -minor : minor
+}
+
+export function signedAmountInput(amountMinor: number, fractionDigits: number): string {
+  return (amountMinor / 10 ** fractionDigits).toFixed(fractionDigits)
+}

@@ -256,13 +256,9 @@ export function TransactionPanel({
               </div>
             ) : (
               <div className="panel-actions">
-                {transaction.kind === 'SIMPLE' ? (
-                  <button type="button" className="btn ghost" onClick={() => onEdit(transaction.id)}>
-                    Edit
-                  </button>
-                ) : (
-                  <span className="hint">Editing transfers and splits comes next.</span>
-                )}
+                <button type="button" className="btn ghost" onClick={() => onEdit(transaction.id)}>
+                  Edit
+                </button>
                 <button
                   type="button"
                   className="btn ghost danger"

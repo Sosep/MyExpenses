@@ -69,6 +69,7 @@ export interface Transaction {
   referenceNumber: string | null
   crStatus: string
   transferPeerId: number | null
+  transferAccountId: number | null
   splitParts: SplitPart[] | null
 }
 
@@ -127,4 +128,43 @@ export interface TransactionWrite {
   comment: string
   methodId?: number | null
   referenceNumber?: string | null
+}
+
+export interface TransferWrite {
+  fromAccountId: number
+  toAccountId: number
+  amountMinor: number
+  date: string
+  time?: string | null
+  valueDate?: string | null
+  payeeId?: number | null
+  comment: string
+  methodId?: number | null
+  referenceNumber?: string | null
+  tagIds?: number[] | null
+}
+
+export interface SplitPartWrite {
+  id?: number
+  amountMinor: number
+  categoryId?: number | null
+  payeeId?: number | null
+  tagIds?: number[] | null
+  comment?: string
+  methodId?: number | null
+  referenceNumber?: string | null
+}
+
+export interface SplitWrite {
+  accountId: number
+  amountMinor: number
+  date: string
+  time?: string | null
+  valueDate?: string | null
+  payeeId?: number | null
+  comment: string
+  methodId?: number | null
+  referenceNumber?: string | null
+  tagIds?: number[] | null
+  parts: SplitPartWrite[]
 }

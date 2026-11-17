@@ -150,6 +150,7 @@ const tx = (over) => ({
   referenceNumber: null,
   crStatus: 'UNRECONCILED',
   transferPeerId: null,
+  transferAccountId: null,
   splitParts: null,
   ...over,
 })
@@ -184,6 +185,7 @@ const special = [
     valueDate: iso(12),
     comment: 'Savings transfer',
     transferPeerId: 22,
+    transferAccountId: 2,
   }),
   tx({
     id: 13,
@@ -266,6 +268,7 @@ const splitParts = [
     method: null,
     referenceNumber: null,
     transferPeerId: null,
+    transferAccountId: null,
   },
   {
     id: 132,
@@ -277,6 +280,7 @@ const splitParts = [
     method: null,
     referenceNumber: null,
     transferPeerId: null,
+    transferAccountId: null,
   },
   {
     id: 133,
@@ -288,6 +292,7 @@ const splitParts = [
     method: null,
     referenceNumber: null,
     transferPeerId: null,
+    transferAccountId: null,
   },
 ]
 
@@ -339,8 +344,9 @@ function serveAppIndex(response) {
               setTimeout(function(){
                 var rows = document.querySelectorAll('tbody tr')
                 var target = null
+                var needle = panel === 'transfer' ? 'Transfer' : 'Split transaction'
                 for (var i = 0; i < rows.length; i++) {
-                  if (rows[i].textContent && rows[i].textContent.indexOf('Split transaction') >= 0) {
+                  if (rows[i].textContent && rows[i].textContent.indexOf(needle) >= 0) {
                     target = rows[i]
                     break
                   }
@@ -349,6 +355,7 @@ function serveAppIndex(response) {
               }, 900)
             }
           }
+          var kind = q.get('kind')
           if (q.get('new') === '1') {
             setTimeout(function(){
               var buttons = document.querySelectorAll('button')
@@ -359,6 +366,19 @@ function serveAppIndex(response) {
                 }
               }
             }, 350)
+            if (kind) {
+              setTimeout(function(){
+                var label = kind === 'transfer' ? 'Transfer' : kind === 'split' ? 'Split transaction' : 'Transaction'
+                var choices = document.querySelectorAll('.kind-choice')
+                for (var i = 0; i < choices.length; i++) {
+                  var title = choices[i].querySelector('strong')
+                  if (title && title.textContent.trim() === label) {
+                    choices[i].click()
+                    break
+                  }
+                }
+              }, 700)
+            }
           }
           var edit = q.get('edit')
           if (edit) {
@@ -377,7 +397,19 @@ function serveAppIndex(response) {
               }
             }, 1400)
           }
-          if (q.get('save') === '1') {
+          if (q.get('save') === '1' && (!kind || kind === 'simple')) {
+            if (!kind) {
+              setTimeout(function(){
+                var choices = document.querySelectorAll('.kind-choice')
+                for (var i = 0; i < choices.length; i++) {
+                  var title = choices[i].querySelector('strong')
+                  if (title && title.textContent.trim() === 'Transaction') {
+                    choices[i].click()
+                    break
+                  }
+                }
+              }, 700)
+            }
             setTimeout(function(){
               var input = document.querySelector('input[aria-label="Amount"]')
               if (!input) return
@@ -393,7 +425,7 @@ function serveAppIndex(response) {
                   }
                 }
               }, 300)
-            }, 1500)
+            }, 1800)
           }
           if (q.get('metrics') === '1') {
             setTimeout(function(){

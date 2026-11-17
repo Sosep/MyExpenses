@@ -406,8 +406,29 @@ Filters: [search] [account] [All|Expenses|Income] [Month]
   cierra y confirma si hay cambios.
 - Tras guardar se refrescan cuenta(s), resumen y lista, y se muestra un toast
   breve. El editor no recarga la página.
-- Las transferencias y divididas no se editan aquí en este corte; el detalle lo
-  indica y conserva su lectura.
+- Transferencias y divididas tienen editores propios; este formulario no mezcla
+  tipos.
+
+### Transferencia (editor)
+
+```text
+┌ Transfer ────────────────────────────────────┐
+│ [ 0.00                              EUR ]    │
+│ From [Everyday]          To [Joint]          │
+│ Date [17 Nov 2026]       Time / Value date   │
+│ Payee [None]             Method [Card]       │
+│ Reference [________]                         │
+│ Note [________________________]             │
+│                          Cancel   Save      │
+└─────────────────────────────────────────────┘
+```
+
+- El importe es una magnitud positiva; el servidor crea las dos caras con el
+  mismo `uuid` y las enlaza.
+- Origen y destino deben ser cuentas distintas. Se pueden cambiar al editar.
+- Fecha, hora y fecha valor siguen las preferencias y la cuenta de origen.
+- No hay categoría: una transferencia no es ingreso ni gasto.
+- Tras guardar se refresca la lista; la otra cara aparece en su cuenta.
 
 ### Transacción dividida
 
@@ -425,10 +446,17 @@ Filters: [search] [account] [All|Expenses|Income] [Month]
 └──────────────────────────────────────┴──────────────────┘
 ```
 
-- Mismo formulario para crear y editar; al crear, una parte vacía y total 0.
-- La suma se valida en vivo; el botón Save se deshabilita con el motivo visible.
-- "Split equally" como acción secundaria cuando todas las partes son del mismo
-  signo.
+- El editor es un panel ancho (`760px`) con el padre y las partes a la izquierda
+  y la parte seleccionada a la derecha; en móvil se apila.
+- Mismo formulario para crear y editar; al crear, una parte vacía y el total sin
+  rellenar. Al editar, las partes existentes conservan su `id`; las nuevas no
+  llevan `id` y las omitidas se borran.
+- Los importes del padre y de las partes van **con signo** para no perder
+  divididas mixtas. La suma se valida en vivo con el indicador `Balanced` o
+  `X left`; el servidor la revalida y devuelve `422` si no cuadra.
+- La cuenta del padre queda fija al editar (`422` si se intenta mover); el
+  servidor mantiene todas las partes en la misma cuenta.
+- "Split equally" queda como acción secundaria pendiente.
 - La parte seleccionada se edita en el panel derecho; el contexto del padre
   permanece visible.
 - Las partes con transferencia se añaden en v2 y se marcan como tales.
@@ -759,3 +787,4 @@ src/
 | 2026-11-17 | 1.0 | Dirección inicial: Soft Ledger, tokens claro/oscuro, componentes, patrones de dashboard, transacciones, dividida y presupuestos. |
 | 2026-11-17 | 1.1 | Tokens movidos a la SPA (`webapp/src/styles/tokens.css`); guía y código comparten fuente. |
 | 2026-11-17 | 1.2 | Patrón del editor de transacción simple y escritura simple en la SPA. |
+| 2026-11-17 | 1.3 | Transferencias y divididas: API de escritura y editores; panel ancho de partes con importes firmados. |
