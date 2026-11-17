@@ -294,3 +294,6 @@ export const getReportTransactions = (
       `&type=${type}&from=${from}&to=${to}&limit=100&offset=0`,
     { signal },
   )
+
+export const duplicateBudget = (id: number) =>
+  request<Budget>(`/budgets/${id}/duplicate`, { method: 'POST' })

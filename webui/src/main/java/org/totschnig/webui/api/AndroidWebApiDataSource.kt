@@ -1018,6 +1018,33 @@ class AndroidWebApiDataSource(
         return budgetAllocations(id, year, second)
     }
 
+    override fun duplicateBudget(id: Long): BudgetDto {
+        val existing = repository.loadBudget(id) ?: throw ApiException(
+            HttpStatusCode.NotFound,
+            "budget_not_found",
+            "Budget not found"
+        )
+        val copy = existing.copy(
+            id = 0,
+            title = "${existing.title} (copy)",
+            default = false,
+            uuid = null,
+            accountName = null
+        )
+        val newId = repository.saveBudget(
+            copy,
+            repository.budgetAllocation(id, null, null)
+        )
+        if (newId <= 0) {
+            throw ApiException(
+                HttpStatusCode.InternalServerError,
+                "save_failed",
+                "Could not duplicate the budget"
+            )
+        }
+        return repository.loadBudget(newId)!!.toDto()
+    }
+
     override fun deleteBudget(id: Long): Boolean = repository.deleteBudget(id) == 1
 
     private fun updateDefaultAllocation(budgetId: Long, amount: Long) {

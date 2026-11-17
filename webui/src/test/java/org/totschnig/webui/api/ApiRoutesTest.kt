@@ -375,6 +375,15 @@ class ApiRoutesTest {
         assertTrue(body.contains("\"total\":1"))
         assertTrue(body.contains("\"kind\":\"SIMPLE\""))
     }
+
+    @Test
+    fun `duplicate budget returns 201`() = testApplication {
+        installRoutes(FakeDataSource())
+        val response = client.post("/api/v1/budgets/1/duplicate")
+        assertEquals(HttpStatusCode.Created, response.status)
+        assertEquals("/api/v1/budgets/2", response.headers[HttpHeaders.Location])
+        assertTrue(response.bodyAsText().contains("(copy)"))
+    }
 }
 
 private fun ApplicationTestBuilder.installRoutes(dataSource: WebApiDataSource) {
@@ -516,6 +525,17 @@ private class FakeDataSource : WebApiDataSource {
         }
         savedBudget = body
         return sampleBudget()
+    }
+
+    override fun duplicateBudget(id: Long): BudgetDto {
+        if (id != 1L) {
+            throw ApiException(
+                HttpStatusCode.NotFound,
+                "budget_not_found",
+                "Budget not found"
+            )
+        }
+        return sampleBudget().copy(id = 2, title = "Groceries (copy)")
     }
 
     override fun updateBudget(id: Long, body: BudgetWriteDto): BudgetDto {

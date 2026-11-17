@@ -143,6 +143,15 @@ class ApiRoutes(
                 val id = call.requirePathId()
                 call.respond(dataSource.updateBudget(id, call.receive<BudgetWriteDto>()))
             }
+            post("/budgets/{id}/duplicate") {
+                val id = call.requirePathId()
+                val created = dataSource.duplicateBudget(id)
+                call.response.headers.append(
+                    HttpHeaders.Location,
+                    "/api/v1/budgets/${created.id}"
+                )
+                call.respond(HttpStatusCode.Created, created)
+            }
             delete("/budgets/{id}") {
                 val id = call.requirePathId()
                 if (!dataSource.deleteBudget(id)) {

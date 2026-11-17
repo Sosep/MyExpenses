@@ -526,11 +526,11 @@ November 2026                     All budgets
 - Al editar, cuenta y periodo quedan fijos (el servidor los rechaza si cambian);
   el importe se rotula `Default amount` porque solo cambia la asignación por
   defecto, no los overrides por periodo.
-- `Delete` vive en el pie del editor y pide confirmación. Tras guardar se
-  refresca la lista y se muestra un toast.
+- `Delete` y `Duplicate` viven en el pie del editor; borrar pide confirmación.
+  Tras guardar, duplicar o borrar se refresca la lista y se muestra un toast.
 - La asignación por categorías se edita en el mismo panel: lista con sangría por
   nivel y un importe por categoría para el periodo actual. Se guarda junto al
-  presupuesto. El rollover y la duplicación siguen en la app Android.
+  presupuesto. El rollover sigue en la app Android.
 
 ### Maestros
 

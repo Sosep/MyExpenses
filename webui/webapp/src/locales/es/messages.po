@@ -173,6 +173,10 @@ msgid "Budget deleted."
 msgstr "Presupuesto eliminado."
 
 #: src/components/BudgetEditor.tsx
+msgid "Budget duplicated."
+msgstr "Presupuesto duplicado."
+
+#: src/components/BudgetEditor.tsx
 msgid "Budget end"
 msgstr "Fin del presupuesto"
 
@@ -259,6 +263,10 @@ msgstr "No se pudo eliminar la transacción."
 #: src/components/Files.tsx
 msgid "Could not download the file."
 msgstr "No se pudo descargar el fichero."
+
+#: src/components/BudgetEditor.tsx
+msgid "Could not duplicate the budget."
+msgstr "No se pudo duplicar el presupuesto."
 
 #: src/components/BudgetEditor.tsx
 msgid "Could not save the budget."
@@ -356,6 +364,10 @@ msgstr "Descargando…"
 #: src/components/ReportPanel.tsx
 msgid "Drill-down"
 msgstr "Detalle"
+
+#: src/components/BudgetEditor.tsx
+msgid "Duplicate"
+msgstr "Duplicar"
 
 #: src/components/BudgetEditor.tsx
 #: src/components/Budgets.tsx

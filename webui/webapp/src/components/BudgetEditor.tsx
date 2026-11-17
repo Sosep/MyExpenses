@@ -5,6 +5,7 @@ import {
   ApiError,
   createBudget,
   deleteBudget,
+  duplicateBudget,
   getBudgetAllocations,
   updateBudget,
   updateBudgetAllocations,
@@ -215,6 +216,20 @@ export function BudgetEditor({
       } else {
         setSubmitError(cause instanceof Error ? cause.message : t`Could not save the budget.`)
       }
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function duplicate() {
+    if (!budget) return
+    setSaving(true)
+    setSubmitError(null)
+    try {
+      await duplicateBudget(budget.id)
+      onSaved(t`Budget duplicated.`)
+    } catch (cause) {
+      setSubmitError(cause instanceof Error ? cause.message : t`Could not duplicate the budget.`)
     } finally {
       setSaving(false)
     }
@@ -449,14 +464,24 @@ export function BudgetEditor({
         </div>
         <div className="editor-actions">
           {mode === 'edit' ? (
-            <button
-              type="button"
-              className="btn ghost danger"
-              onClick={() => void remove()}
-              disabled={saving}
-            >
-              {t`Delete`}
-            </button>
+            <>
+              <button
+                type="button"
+                className="btn ghost"
+                onClick={() => void duplicate()}
+                disabled={saving}
+              >
+                {t`Duplicate`}
+              </button>
+              <button
+                type="button"
+                className="btn ghost danger"
+                onClick={() => void remove()}
+                disabled={saving}
+              >
+                {t`Delete`}
+              </button>
+            </>
           ) : null}
           <button type="button" className="btn ghost" onClick={requestClose}>
             {t`Cancel`}

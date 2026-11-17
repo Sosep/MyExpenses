@@ -56,6 +56,7 @@ interface WebApiDataSource {
     ): List<BudgetAllocationDto>
     fun createBudget(body: BudgetWriteDto): BudgetDto
     fun updateBudget(id: Long, body: BudgetWriteDto): BudgetDto
+    fun duplicateBudget(id: Long): BudgetDto
     fun deleteBudget(id: Long): Boolean
     fun createTransaction(body: TransactionWriteDto): TransactionDto
     fun updateTransaction(id: Long, body: TransactionWriteDto): TransactionDto

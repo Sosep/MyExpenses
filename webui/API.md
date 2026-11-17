@@ -421,8 +421,13 @@ Lista por categoría con `allocatedMinor` y `spentMinor` del periodo. Sin
 ```
 
 Actualiza la asignación de cada categoría para ese periodo. No admite
-presupuestos `NONE` (`422 unsupported_grouping`). El rollover y la duplicación
-siguen en la app Android.
+presupuestos `NONE` (`422 unsupported_grouping`). El rollover sigue en la app
+Android.
+
+#### POST /budgets/{id}/duplicate
+
+Crea una copia con el título `… (copy)`, la misma configuración y la asignación
+por defecto; responde `201` + `Location` con el nuevo `BudgetDto`.
 
 #### DELETE /budgets/{id}
 
@@ -579,7 +584,7 @@ Tras revisar de nuevo el código:
 ## 8. Pruebas
 
 - **Rutas en JVM**: `webui/src/test/java/org/totschnig/webui/api/ApiRoutesTest.kt`
-  con un `WebApiDataSource` fake y Ktor `testApplication`. 31 tests cubren
+  con un `WebApiDataSource` fake y Ktor `testApplication`. 32 tests cubren
   routing, validación, `201/204/404/409/422`, JSON, body malformado, los
   endpoints de transferencias/divididas, el CRUD y las asignaciones de
   presupuestos, y los informes con drill-down. Comando:

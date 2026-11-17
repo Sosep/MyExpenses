@@ -745,6 +745,30 @@ createServer(async (request, response) => {
     if (path === '/api/v1/tags') return send(response, 200, JSON.stringify(tags))
     if (path === '/api/v1/methods') return send(response, 200, JSON.stringify(methods))
 
+    const duplicateMatch = path.match(/^\/api\/v1\/budgets\/(\d+)\/duplicate$/)
+    if (duplicateMatch) {
+      const original = budgets.find((item) => item.id === Number(duplicateMatch[1]))
+      if (!original) {
+        return sendJson(response, 404, { error: 'budget_not_found', message: 'Budget not found' })
+      }
+      const copy = {
+        ...original,
+        id: nextBudgetId++,
+        title: `${original.title} (copy)`,
+        isDefault: false,
+        uuid: `budget-${nextBudgetId}`,
+        allocationMinor: original.allocationMinor ?? 0,
+      }
+      budgets.push(copy)
+      budgetProgresses[copy.id] = {
+        allocated: copy.allocationMinor ?? 0,
+        spent: 0,
+      }
+      return sendJson(response, 201, copy, {
+        Location: `/api/v1/budgets/${copy.id}`,
+      })
+    }
+
     const allocationMatch = path.match(/^\/api\/v1\/budgets\/(\d+)\/allocations$/)
     if (allocationMatch) {
       const id = Number(allocationMatch[1])

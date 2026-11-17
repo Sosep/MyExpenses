@@ -11,7 +11,7 @@ Read this before changing code. Detailed sources:
 
 - `/api/v1`: read endpoints plus create/update/delete for simple transactions,
   transfers and splits.
-- API routes covered on the JVM by 31 `ApiRoutesTest` tests plus 4
+- API routes covered on the JVM by 32 `ApiRoutesTest` tests plus 4
   `SessionStoreTest` tests, with a fake `WebApiDataSource` and Ktor
   `testApplication`.
 - SPA: dashboard, transactions, detail, reports, files, budgets, and the simple,
@@ -20,8 +20,8 @@ Read this before changing code. Detailed sources:
 - Budgets: list plus current-period progress, create/update/delete and
   per-category allocations for the current period. The summary only aggregates
   budgets that share currency and period. Account and period type are fixed on
-  edit; amount edits the default allocation. Rollover and duplication are still
-  app-only.
+  edit; amount edits the default allocation. Duplication is available; rollover
+  is still app-only.
 - Files: `GET /api/v1/files` lists app-directory backups and `GET /api/v1/files/{name}`
   streams one with `Content-Disposition`; the SPA downloads via fetch + blob with
   the session cookie.
@@ -138,7 +138,7 @@ Update the docs while the change is fresh; do not defer them to a later commit.
 
 ## Open work
 
-- Budget rollover and duplication remain app-only.
+- Budget rollover remains app-only.
 - Tailwind: new UI uses utilities; converting the older semantic CSS is still
   pending and should be done screen by screen with visual QA.
 - Files are device-level: the route lives in `WebInputService` (`AppDirHelper`),
