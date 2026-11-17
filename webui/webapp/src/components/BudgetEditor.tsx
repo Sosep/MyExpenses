@@ -105,6 +105,7 @@ export function BudgetEditor({
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [allocationValues, setAllocationValues] = useState<Record<number, string>>({})
+  const [rolloverValues, setRolloverValues] = useState<Record<number, boolean>>({})
   const [saving, setSaving] = useState(false)
   const account =
     accounts.find((candidate) => candidate.id === state.accountId) ?? accounts[0]
@@ -130,6 +131,14 @@ export function BudgetEditor({
         allocations.data.map((allocation) => [
           allocation.categoryId,
           amountInputValue(allocation.allocatedMinor, budget.fractionDigits),
+        ]),
+      ),
+    )
+    setRolloverValues(
+      Object.fromEntries(
+        allocations.data.map((allocation) => [
+          allocation.categoryId,
+          allocation.rolloverNextMinor > 0,
         ]),
       ),
     )
@@ -178,6 +187,21 @@ export function BudgetEditor({
       }
     }
 
+    let rolloverPayload: { categoryId: number; amountMinor: number }[] | null = null
+    if (
+      mode === 'edit' &&
+      budget &&
+      progress &&
+      (budget.grouping === 'MONTH' || budget.grouping === 'YEAR')
+    ) {
+      rolloverPayload = (allocations.data ?? []).map((row) => ({
+        categoryId: row.categoryId,
+        amountMinor: rolloverValues[row.categoryId]
+          ? Math.max(row.allocatedMinor - row.spentMinor, 0)
+          : 0,
+      }))
+    }
+
     const payload: BudgetWrite = {
       accountId: state.accountId,
       title: state.title.trim(),
@@ -205,6 +229,7 @@ export function BudgetEditor({
             year: progress.periodYear,
             second: progress.periodSecond,
             allocations: allocationPayload,
+            rollover: rolloverPayload ?? undefined,
           })
         }
       }
@@ -339,7 +364,7 @@ export function BudgetEditor({
 
           {mode === 'edit' ? (
             <p className="card-note">
-              {t`Account and period type are fixed after creation. Rollover and duplication stay in the Android app.`}
+              {t`Account and period type are fixed after creation. Rollover stays in the Android app.`}
             </p>
           ) : null}
 
@@ -426,19 +451,37 @@ export function BudgetEditor({
                         >
                           {row.label}
                         </span>
-                        <input
-                          className="input w-28 text-right"
-                          inputMode="decimal"
-                          aria-label={t`Allocation for ${row.label}`}
-                          value={allocationValues[row.categoryId] ?? ''}
-                          onChange={(event) =>
-                            setAllocationValues((previous) => ({
-                              ...previous,
-                              [row.categoryId]: event.target.value.replace(/[^\d.,]/g, ''),
-                            }))
-                          }
-                          placeholder="0.00"
-                        />
+                        <div className="flex items-center gap-2">
+                          {budget.grouping === 'MONTH' || budget.grouping === 'YEAR' ? (
+                            <label className="check-row" title={t`Roll over unused amount`}>
+                              <input
+                                type="checkbox"
+                                aria-label={t`Roll over ${row.label}`}
+                                checked={rolloverValues[row.categoryId] ?? false}
+                                onChange={(event) =>
+                                  setRolloverValues((previous) => ({
+                                    ...previous,
+                                    [row.categoryId]: event.target.checked,
+                                  }))
+                                }
+                              />
+                              <span className="text-[11px] text-muted">{t`Roll over`}</span>
+                            </label>
+                          ) : null}
+                          <input
+                            className="input w-28 text-right"
+                            inputMode="decimal"
+                            aria-label={t`Allocation for ${row.label}`}
+                            value={allocationValues[row.categoryId] ?? ''}
+                            onChange={(event) =>
+                              setAllocationValues((previous) => ({
+                                ...previous,
+                                [row.categoryId]: event.target.value.replace(/[^\d.,]/g, ''),
+                              }))
+                            }
+                            placeholder="0.00"
+                          />
+                        </div>
                       </div>
                     ))}
                 </div>
@@ -447,7 +490,7 @@ export function BudgetEditor({
                 <span className="field-error">{errors.allocations}</span>
               ) : null}
               <p className="card-note">
-                {t`Allocations apply to the current period. Rollover and duplication stay in the Android app.`}
+                {t`Allocations and rollover apply to the current period.`}
               </p>
             </section>
           ) : null}

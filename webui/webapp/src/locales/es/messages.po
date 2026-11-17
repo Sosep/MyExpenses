@@ -83,12 +83,10 @@ msgid "Account"
 msgstr "Cuenta"
 
 #: src/components/BudgetEditor.tsx
-#~ msgid "Account and period type are fixed after creation. Category allocations and rollover are edited in the Android app."
-#~ msgstr "La cuenta y el tipo de periodo no se pueden cambiar después de crear el presupuesto. Las asignaciones por categoría y el rollover se editan en la app Android."
 
 #: src/components/BudgetEditor.tsx
-msgid "Account and period type are fixed after creation. Rollover and duplication stay in the Android app."
-msgstr "La cuenta y el tipo de periodo no se pueden cambiar después de crear el presupuesto. El rollover y la duplicación siguen en la app Android."
+msgid "Account and period type are fixed after creation. Rollover stays in the Android app."
+msgstr "La cuenta y el tipo de periodo no se pueden cambiar después de crear el presupuesto. El rollover sigue en la app Android."
 
 #: src/components/Files.tsx
 msgid "Actions"
@@ -120,8 +118,10 @@ msgid "Allocation for {0}"
 msgstr "Asignación de {0}"
 
 #: src/components/BudgetEditor.tsx
-msgid "Allocations apply to the current period. Rollover and duplication stay in the Android app."
-msgstr "Las asignaciones se aplican al periodo actual. El rollover y la duplicación siguen en la app Android."
+msgid "Allocations and rollover apply to the current period."
+msgstr "Las asignaciones y el rollover se aplican al periodo actual."
+
+#: src/components/BudgetEditor.tsx
 
 #: src/components/BudgetEditor.tsx
 #: src/components/Dashboard.tsx
@@ -774,6 +774,19 @@ msgstr "Obligatorio."
 #: src/components/Transactions.tsx
 msgid "Retry"
 msgstr "Reintentar"
+
+#: src/components/BudgetEditor.tsx
+msgid "Roll over"
+msgstr "Arrastrar"
+
+#. placeholder {0}: row.label
+#: src/components/BudgetEditor.tsx
+msgid "Roll over {0}"
+msgstr "Arrastrar {0}"
+
+#: src/components/BudgetEditor.tsx
+msgid "Roll over unused amount"
+msgstr "Arrastrar el importe no usado"
 
 #: src/components/BudgetEditor.tsx
 #: src/components/TransactionEditor.tsx

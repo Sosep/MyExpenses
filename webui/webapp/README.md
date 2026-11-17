@@ -23,7 +23,7 @@ presupuestos e informes.
 - Presupuestos: progreso del periodo actual por presupuesto, resumen cuando
   comparten divisa y periodo, sobregiro explícito y días restantes. Alta,
   edición y borrado desde un panel lateral, con asignación por categoría para el
-  periodo actual y duplicación; el rollover sigue en la app.
+  periodo actual, rollover del importe no gastado y duplicación.
 - Informes: KPIs y desglose por categoría, beneficiario, etiqueta o método, con
   presets de periodo, tipo gasto/ingreso/ambos, todas las cuentas y drill-down al
   detalle de cada grupo.
@@ -34,8 +34,8 @@ presupuestos e informes.
 - Datos de servidor con TanStack Query: caché compartida y refresco por
   invalidación tras cada escritura.
 - Geist Sans empaquetada (`@fontsource/geist-sans`), sin depender de la red.
-- Tailwind v4 configurado con los tokens de `DESIGN.md`; la UI nueva usa
-  utilidades y la existente conserva las clases semánticas.
+- Tailwind v4 procesa toda la CSS: `app.css` vive en la capa `components` y la UI
+  nueva usa utilidades con los tokens de `DESIGN.md`.
 
 ## Traducciones
 

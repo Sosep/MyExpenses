@@ -416,13 +416,15 @@ Lista por categoría con `allocatedMinor` y `spentMinor` del periodo. Sin
 {
   "year": 2026,
   "second": 11,
-  "allocations": [{ "categoryId": 2, "amountMinor": 35000 }]
+  "allocations": [{ "categoryId": 2, "amountMinor": 35000 }],
+  "rollover": [{ "categoryId": 2, "amountMinor": 5000 }]
 }
 ```
 
 Actualiza la asignación de cada categoría para ese periodo. No admite
-presupuestos `NONE` (`422 unsupported_grouping`). El rollover sigue en la app
-Android.
+presupuestos `NONE` (`422 unsupported_grouping`). `rollover` es opcional y solo
+para `MONTH`/`YEAR`: escribe `rollOverNext` en el periodo actual y
+`rollOverPrevious` en el siguiente; un importe `0` lo borra.
 
 #### POST /budgets/{id}/duplicate
 

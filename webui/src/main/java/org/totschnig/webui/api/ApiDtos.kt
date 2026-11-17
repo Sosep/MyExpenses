@@ -301,7 +301,9 @@ data class BudgetAllocationDto(
     val level: Int,
     val parentId: Long?,
     val allocatedMinor: Long,
-    val spentMinor: Long
+    val spentMinor: Long,
+    val rolloverPreviousMinor: Long = 0,
+    val rolloverNextMinor: Long = 0
 )
 
 @Keep
@@ -314,5 +316,6 @@ data class BudgetAllocationWriteDto(
 data class BudgetAllocationsWriteDto(
     val year: Int? = null,
     val second: Int? = null,
-    val allocations: List<BudgetAllocationWriteDto>? = null
+    val allocations: List<BudgetAllocationWriteDto>? = null,
+    val rollover: List<BudgetAllocationWriteDto>? = null
 )

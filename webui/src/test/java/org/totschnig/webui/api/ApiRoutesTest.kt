@@ -356,11 +356,12 @@ class ApiRoutesTest {
         val response = client.put("/api/v1/budgets/1/allocations") {
             contentType(ContentType.Application.Json)
             setBody(
-                """{"year":2026,"second":11,"allocations":[{"categoryId":2,"amountMinor":35000}]}"""
+                """{"year":2026,"second":11,"allocations":[{"categoryId":2,"amountMinor":35000}],"rollover":[{"categoryId":2,"amountMinor":5000}]}"""
             )
         }
         assertEquals(HttpStatusCode.OK, response.status)
         assertEquals(35000L, fake.savedAllocations?.allocations?.first()?.amountMinor)
+        assertEquals(5000L, fake.savedAllocations?.rollover?.first()?.amountMinor)
     }
 
     @Test

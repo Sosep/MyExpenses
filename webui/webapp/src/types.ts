@@ -260,6 +260,8 @@ export interface BudgetAllocation {
   parentId: number | null
   allocatedMinor: number
   spentMinor: number
+  rolloverPreviousMinor: number
+  rolloverNextMinor: number
 }
 
 export interface BudgetAllocationWrite {
@@ -271,4 +273,5 @@ export interface BudgetAllocationsWrite {
   year: number
   second: number
   allocations: BudgetAllocationWrite[]
+  rollover?: BudgetAllocationWrite[]
 }

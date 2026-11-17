@@ -83,12 +83,12 @@ msgid "Account"
 msgstr "Account"
 
 #: src/components/BudgetEditor.tsx
-#~ msgid "Account and period type are fixed after creation. Category allocations and rollover are edited in the Android app."
-#~ msgstr "Account and period type are fixed after creation. Category allocations and rollover are edited in the Android app."
 
 #: src/components/BudgetEditor.tsx
-msgid "Account and period type are fixed after creation. Rollover and duplication stay in the Android app."
-msgstr "Account and period type are fixed after creation. Rollover and duplication stay in the Android app."
+
+#: src/components/BudgetEditor.tsx
+msgid "Account and period type are fixed after creation. Rollover stays in the Android app."
+msgstr "Account and period type are fixed after creation. Rollover stays in the Android app."
 
 #: src/components/Files.tsx
 msgid "Actions"
@@ -120,8 +120,10 @@ msgid "Allocation for {0}"
 msgstr "Allocation for {0}"
 
 #: src/components/BudgetEditor.tsx
-msgid "Allocations apply to the current period. Rollover and duplication stay in the Android app."
-msgstr "Allocations apply to the current period. Rollover and duplication stay in the Android app."
+msgid "Allocations and rollover apply to the current period."
+msgstr "Allocations and rollover apply to the current period."
+
+#: src/components/BudgetEditor.tsx
 
 #: src/components/BudgetEditor.tsx
 #: src/components/Dashboard.tsx
@@ -774,6 +776,19 @@ msgstr "Required."
 #: src/components/Transactions.tsx
 msgid "Retry"
 msgstr "Retry"
+
+#: src/components/BudgetEditor.tsx
+msgid "Roll over"
+msgstr "Roll over"
+
+#. placeholder {0}: row.label
+#: src/components/BudgetEditor.tsx
+msgid "Roll over {0}"
+msgstr "Roll over {0}"
+
+#: src/components/BudgetEditor.tsx
+msgid "Roll over unused amount"
+msgstr "Roll over unused amount"
 
 #: src/components/BudgetEditor.tsx
 #: src/components/TransactionEditor.tsx

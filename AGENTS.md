@@ -20,8 +20,8 @@ Read this before changing code. Detailed sources:
 - Budgets: list plus current-period progress, create/update/delete and
   per-category allocations for the current period. The summary only aggregates
   budgets that share currency and period. Account and period type are fixed on
-  edit; amount edits the default allocation. Duplication is available; rollover
-  is still app-only.
+  edit; amount edits the default allocation. Duplication and rollover (monthly
+  and yearly) are available.
 - Files: `GET /api/v1/files` lists app-directory backups and `GET /api/v1/files/{name}`
   streams one with `Content-Disposition`; the SPA downloads via fetch + blob with
   the session cookie.
@@ -36,8 +36,8 @@ Read this before changing code. Detailed sources:
   has an English/Spanish switch. Dates and money follow the active locale.
 - Server data uses TanStack Query; writes invalidate the cache instead of bumping
   a version counter. Geist Sans is bundled through `@fontsource/geist-sans`.
-- Tailwind v4 is configured with the DESIGN tokens. New UI uses utilities; the
-  older screens keep semantic classes and `app.css`.
+- Tailwind v4 processes the styles: `app.css` is imported into the `components`
+  layer and new UI uses utilities with the DESIGN tokens.
 - Reports: `/reports/summary`, `/reports/breakdown` (category, payee, tag or
   method) and `/reports/transactions` for drill-down. Period presets, `All
   accounts` (same currency only) and server-computed shares. Category breakdown
@@ -138,8 +138,7 @@ Update the docs while the change is fresh; do not defer them to a later commit.
 
 ## Open work
 
-- Budget rollover remains app-only.
-- Tailwind: new UI uses utilities; converting the older semantic CSS is still
-  pending and should be done screen by screen with visual QA.
+- Device QA remains for the new slices (cookie, PWA, allocations/rollover,
+  reports drill-down and all-account aggregation).
 - Files are device-level: the route lives in `WebInputService` (`AppDirHelper`),
   so `ApiRoutesTest` does not cover it; verify on the phone.

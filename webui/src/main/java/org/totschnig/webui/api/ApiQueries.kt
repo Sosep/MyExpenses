@@ -17,6 +17,8 @@ import org.totschnig.myexpenses.provider.KEY_ACCOUNT_TYPE_LIST
 import org.totschnig.myexpenses.provider.KEY_AMOUNT
 import org.totschnig.myexpenses.provider.KEY_BUDGET
 import org.totschnig.myexpenses.provider.KEY_BUDGETID
+import org.totschnig.myexpenses.provider.KEY_BUDGET_ROLLOVER_NEXT
+import org.totschnig.myexpenses.provider.KEY_BUDGET_ROLLOVER_PREVIOUS
 import org.totschnig.myexpenses.provider.KEY_CATID
 import org.totschnig.myexpenses.provider.KEY_COLOR
 import org.totschnig.myexpenses.provider.KEY_CR_STATUS
@@ -185,7 +187,9 @@ internal fun Repository.queryBudgetAllocations(
         KEY_PARENTID,
         KEY_LEVEL,
         KEY_SUM,
-        KEY_BUDGET
+        KEY_BUDGET,
+        KEY_BUDGET_ROLLOVER_PREVIOUS,
+        KEY_BUDGET_ROLLOVER_NEXT
     )
     val (selection, args) = dateSelection(from, to)
     return contentResolver.query(uri, projection, selection, args, null)
@@ -196,7 +200,9 @@ internal fun Repository.queryBudgetAllocations(
                 parentId = cursor.getLongOrNull(KEY_PARENTID),
                 level = cursor.getInt(KEY_LEVEL),
                 spentMinor = abs(cursor.getLongIfExistsOr0(KEY_SUM)),
-                allocatedMinor = cursor.getLongIfExistsOr0(KEY_BUDGET)
+                allocatedMinor = cursor.getLongIfExistsOr0(KEY_BUDGET),
+                rolloverPreviousMinor = cursor.getLongIfExistsOr0(KEY_BUDGET_ROLLOVER_PREVIOUS),
+                rolloverNextMinor = cursor.getLongIfExistsOr0(KEY_BUDGET_ROLLOVER_NEXT)
             )
         }
         ?.filter { it.categoryId > 0 }

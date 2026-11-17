@@ -858,4 +858,4 @@ src/
 | 2026-11-17 | 1.6 | Presupuestos: alta, edición y borrado con asignación por defecto; cuenta y periodo fijos al editar. |
 | 2026-11-17 | 1.7 | Informes: resumen y desglose por categoría, beneficiario o etiqueta con barras y porcentajes. |
 | 2026-11-17 | 1.8 | Lingui EN/ES, selector de idioma, Geist Sans empaquetada, caché TanStack y avisos PWA. |
-| 2026-11-17 | 1.9 | Informes v2 (presets, métodos, todas las cuentas y drill-down), asignaciones por categoría y Tailwind v4 para la UI nueva. |
+| 2026-11-17 | 1.9 | Informes v2 (presets, métodos, todas las cuentas y drill-down), asignaciones por categoría y Tailwind v4 procesando toda la CSS (app.css en la capa components). |

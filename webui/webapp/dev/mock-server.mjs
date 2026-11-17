@@ -164,17 +164,17 @@ let nextBudgetId = 5
 
 const budgetAllocations = {
   1: [
-    { categoryId: 2, label: 'Groceries', level: 1, parentId: 1, allocatedMinor: 30000, spentMinor: 24000 },
-    { categoryId: 5, label: 'Restaurants', level: 1, parentId: 1, allocatedMinor: 10000, spentMinor: 7200 },
+    { categoryId: 2, label: 'Groceries', level: 1, parentId: 1, allocatedMinor: 30000, spentMinor: 24000, rolloverPreviousMinor: 0, rolloverNextMinor: 0 },
+    { categoryId: 5, label: 'Restaurants', level: 1, parentId: 1, allocatedMinor: 10000, spentMinor: 7200, rolloverPreviousMinor: 0, rolloverNextMinor: 0 },
   ],
   2: [
-    { categoryId: 5, label: 'Restaurants', level: 1, parentId: 1, allocatedMinor: 12000, spentMinor: 14600 },
+    { categoryId: 5, label: 'Restaurants', level: 1, parentId: 1, allocatedMinor: 12000, spentMinor: 14600, rolloverPreviousMinor: 0, rolloverNextMinor: 0 },
   ],
   3: [
-    { categoryId: 4, label: 'Transport', level: 0, parentId: null, allocatedMinor: 18000, spentMinor: 9630 },
+    { categoryId: 4, label: 'Transport', level: 0, parentId: null, allocatedMinor: 18000, spentMinor: 9630, rolloverPreviousMinor: 0, rolloverNextMinor: 0 },
   ],
   4: [
-    { categoryId: 8, label: 'Household', level: 1, parentId: 6, allocatedMinor: 25000, spentMinor: 12400 },
+    { categoryId: 8, label: 'Household', level: 1, parentId: 6, allocatedMinor: 25000, spentMinor: 12400, rolloverPreviousMinor: 0, rolloverNextMinor: 0 },
   ],
 }
 
@@ -789,8 +789,14 @@ createServer(async (request, response) => {
               parentId: null,
               allocatedMinor: allocation.amountMinor,
               spentMinor: 0,
+              rolloverPreviousMinor: 0,
+              rolloverNextMinor: 0,
             })
           }
+        }
+        for (const rollover of body.rollover ?? []) {
+          const row = rows.find((item) => item.categoryId === rollover.categoryId)
+          if (row) row.rolloverNextMinor = rollover.amountMinor
         }
         budgetAllocations[id] = rows
         return sendJson(response, 200, rows)
