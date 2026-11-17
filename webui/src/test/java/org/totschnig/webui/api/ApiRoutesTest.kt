@@ -102,6 +102,17 @@ class ApiRoutesTest {
     }
 
     @Test
+    fun `grouped periods carry their first date`() = testApplication {
+        installRoutes(FakeDataSource())
+        val response = client.get(
+            "/api/v1/reports/grouped?accountId=1&grouping=MONTH" +
+                "&from=2026-11-01&to=2026-11-30"
+        )
+        assertEquals(HttpStatusCode.OK, response.status)
+        assertTrue(response.bodyAsText().contains("\"firstDate\":\"2026-11-03\""))
+    }
+
+    @Test
     fun `grouped months keep the api month index`() = testApplication {
         installRoutes(FakeDataSource())
         val response = client.get(
@@ -538,7 +549,7 @@ private class FakeDataSource : WebApiDataSource {
         grouping: String,
         from: LocalDate,
         to: LocalDate
-    ) = listOf(GroupDto(2026, 10, 1000, -500, 0))
+    ) = listOf(GroupDto(2026, 10, 1000, -500, 0, firstDate = "2026-11-03"))
 
     override suspend fun budgetAllocations(id: Long, year: Int?, second: Int?) =
         if (id == 1L) {

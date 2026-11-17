@@ -219,6 +219,7 @@ const val KEY_CRITERION: String = "criterion"
  * column alias for the second group (month or week)
  */
 const val KEY_SECOND_GROUP: String = "second"
+const val KEY_FIRST_DATE: String = "first_date"
 
 /**
  * Budget set for the grouping type that is active on an account

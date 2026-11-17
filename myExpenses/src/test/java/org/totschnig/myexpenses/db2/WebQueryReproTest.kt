@@ -140,6 +140,24 @@ class WebQueryReproTest : BaseTestWithRepository() {
     }
 
     @Test
+    fun groupedPeriodsExposeFirstDate() {
+        val (accountId, _) = seed()
+        val uri = org.totschnig.myexpenses.provider.BaseTransactionProvider
+            .groupingUriBuilder(org.totschnig.myexpenses.model.Grouping.MONTH)
+            .appendQueryParameter(KEY_ACCOUNTID, accountId.toString())
+            .appendQueryParameter(
+                org.totschnig.myexpenses.provider.KEY_FIRST_DATE,
+                "1"
+            )
+            .build()
+        contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+            assertThat(cursor.moveToFirst()).isTrue()
+            assertThat(cursor.getColumnIndex("first_date") >= 0).isTrue()
+            assertThat(cursor.getLong(cursor.getColumnIndex("first_date"))).isGreaterThan(0L)
+        }
+    }
+
+    @Test
     fun drillDownWithoutPayee() {
         val (accountId, _) = seed()
         // "0" must be compared as a number: coalesce() has no column affinity.

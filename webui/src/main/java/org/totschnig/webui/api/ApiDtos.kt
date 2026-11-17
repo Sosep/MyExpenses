@@ -195,7 +195,13 @@ data class GroupDto(
     val second: Int,
     val incomeMinor: Long,
     val expensesMinor: Long,
-    val transfersMinor: Long
+    val transfersMinor: Long,
+    /**
+     * Date of the first transaction of the period. Groups are ordered, so a client
+     * can assign each row to the last group whose [firstDate] is not after it,
+     * without recomputing month or week starts.
+     */
+    val firstDate: String? = null
 )
 
 @Keep

@@ -2,6 +2,7 @@ package org.totschnig.webui.api
 
 import android.content.ContentResolver
 import android.net.Uri
+import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import kotlin.math.abs
@@ -30,6 +31,7 @@ import org.totschnig.myexpenses.provider.KEY_CURRENT_BALANCE
 import org.totschnig.myexpenses.provider.KEY_DATE
 import org.totschnig.myexpenses.provider.KEY_DISPLAY_AMOUNT
 import org.totschnig.myexpenses.provider.KEY_EXCLUDE_FROM_TOTALS
+import org.totschnig.myexpenses.provider.KEY_FIRST_DATE
 import org.totschnig.myexpenses.provider.KEY_IS_NUMBERED
 import org.totschnig.myexpenses.provider.KEY_LABEL
 import org.totschnig.myexpenses.provider.KEY_LEVEL
@@ -62,6 +64,7 @@ import org.totschnig.myexpenses.provider.getBoolean
 import org.totschnig.myexpenses.provider.getInt
 import org.totschnig.myexpenses.provider.getIntIfExists
 import org.totschnig.myexpenses.provider.getLong
+import org.totschnig.myexpenses.provider.getLongIfExists
 import org.totschnig.myexpenses.provider.getLongIfExistsOr0
 import org.totschnig.myexpenses.provider.getLongOrNull
 import org.totschnig.myexpenses.provider.getString
@@ -520,8 +523,10 @@ internal fun Repository.queryTransactionGroups(
 ): List<GroupDto> {
     val uri = BaseTransactionProvider.groupingUriBuilder(grouping)
         .appendQueryParameter(KEY_ACCOUNTID, accountId.toString())
+        .appendQueryParameter(KEY_FIRST_DATE, "1")
         .build()
     val (selection, selectionArgs) = dateSelection(from, to)
+    val zone = ZoneId.systemDefault()
     return contentResolver.query(uri, null, selection, selectionArgs, null)
         ?.useAndMapToList { cursor ->
             GroupDto(
@@ -529,7 +534,9 @@ internal fun Repository.queryTransactionGroups(
                 second = cursor.getInt(KEY_SECOND_GROUP),
                 incomeMinor = cursor.getLongIfExistsOr0(KEY_SUM_INCOME),
                 expensesMinor = cursor.getLongIfExistsOr0(KEY_SUM_EXPENSES),
-                transfersMinor = cursor.getLongIfExistsOr0(KEY_SUM_TRANSFERS)
+                transfersMinor = cursor.getLongIfExistsOr0(KEY_SUM_TRANSFERS),
+                firstDate = cursor.getLongIfExists(KEY_FIRST_DATE)
+                    ?.let { Instant.ofEpochSecond(it).atZone(zone).toLocalDate().toString() }
             )
         } ?: emptyList()
 }

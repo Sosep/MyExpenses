@@ -1551,6 +1551,8 @@ abstract class BaseTransactionProvider : ContentProvider() {
             TransactionProvider.QUERY_PARAMETER_INCLUDE_TRANSFERS,
             false
         )
+        // Only the web API asks for it: the app reads its projection positionally.
+        val withFirstDate = uri.getBooleanQueryParameter(KEY_FIRST_DATE, false)
 
         val projection = buildList {
             add(KEY_YEAR)
@@ -1562,6 +1564,9 @@ abstract class BaseTransactionProvider : ContentProvider() {
             }
 
             add(KEY_MAPPED_CATEGORIES)
+            if (withFirstDate) {
+                add(KEY_FIRST_DATE)
+            }
             if (withJulianStart) {
                 add(
                     (if (group === Grouping.WEEK) weekStartJulian else DAY_START_JULIAN)

@@ -930,6 +930,9 @@ fun buildTransactionGroupCte(
         }
 
         append("MAX($KEY_DATE) AS $KEY_DATE") //needed for julian day and week start calculation
+        // first row of the period: lets a client map rows to groups without
+        // reimplementing the month-start and week-start rules
+        append(",MIN($KEY_DATE) AS $KEY_FIRST_DATE")
 
         if (breakdownByAccount) {
             append(",$KEY_CURRENCY")
