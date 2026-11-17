@@ -113,7 +113,9 @@ Se ejecuta en orden. Cada módulo se commitea con sus docs y sus assets si toca 
     listas, `transactions_extended` en agregados), `account_id` va cualificado y
     los agregados de todas las cuentas pasan por el CTE, único sitio donde
     `display_amount` lleva la conversión. Cubierto por `WebQueryReproTest`
-    (5 casos, SQLite real). Pendiente de verificar en el móvil con este build.
+    (6 casos, SQLite real) y verificado en el móvil: las cinco rutas dan 200 y
+    los grupos "Sin beneficiario"/"Sin método" del drill-down ya listan sus
+    movimientos (antes salían vacíos por la afinidad perdida en `coalesce`).
 
 ## Módulo `endurecimiento`
 
