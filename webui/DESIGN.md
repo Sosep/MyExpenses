@@ -69,9 +69,8 @@ mockup y este documento, manda este documento.
 
 ## 4. Tokens
 
-El archivo [`design/tokens.css`](./design/tokens.css) contiene los valores listos
-para copiar. Cuando exista la SPA, se moverá a `src/styles/tokens.css` y será la
-única fuente; la tabla de aquí es su documentación.
+El archivo [`webapp/src/styles/tokens.css`](./webapp/src/styles/tokens.css) es la
+fuente única de tokens; la tabla de aquí es su documentación.
 
 ### 4.1 Color
 
@@ -699,14 +698,14 @@ src/
 
 ## 17. Mantenimiento
 
-- `DESIGN.md` y `design/tokens.css` cambian en el mismo PR. Un token nuevo sin
+- `DESIGN.md` y `webapp/src/styles/tokens.css` cambian en el mismo PR. Un token nuevo sin
   documentar es un bug.
 - Un patrón nuevo (pantalla, estado, componente compuesto) se añade aquí con su
   wireframe y su copy de ejemplo.
 - Si un componente necesita una excepción, se documenta la excepción y el motivo;
   el código no es la única fuente.
-- Las capturas o referencias visuales se guardan en `webui/design/screens/` y se
-  actualizan cuando cambia el layout.
+- Las capturas o referencias visuales se guardarán en `webui/webapp/docs/screens/`
+  cuando existan, y se actualizan cuando cambia el layout.
 - Cada PR de UI se revisa con la checklist de §16.
 
 ---
@@ -729,3 +728,4 @@ src/
 | Fecha | Versión | Cambio |
 |---|---|---|
 | 2026-11-17 | 1.0 | Dirección inicial: Soft Ledger, tokens claro/oscuro, componentes, patrones de dashboard, transacciones, dividida y presupuestos. |
+| 2026-11-17 | 1.1 | Tokens movidos a la SPA (`webapp/src/styles/tokens.css`); guía y código comparten fuente. |
