@@ -361,6 +361,11 @@ msgstr "Divide one amount into categorized parts."
 msgid "Download"
 msgstr "Download"
 
+#. placeholder {0}: file.name
+#: src/components/Files.tsx
+msgid "Download {0}"
+msgstr "Download {0}"
+
 #: src/components/Files.tsx
 msgid "Downloading…"
 msgstr "Downloading…"

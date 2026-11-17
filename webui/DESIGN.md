@@ -575,6 +575,8 @@ expenses-november-2026.csv         18 KB   16 Nov 2026, 18:40 [↓ Download]
 - No se muestra la ruta interna.
 - La descarga se pide con `fetch` y se guarda como blob para conservar la
   autenticación; un fallo muestra un banner, no pierde la lista.
+- En móvil se oculta la columna `Modified` y Download queda como botón de icono
+  para que la tabla no desborde.
 
 ---
 

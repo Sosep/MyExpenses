@@ -142,6 +142,7 @@ Update the docs while the change is fresh; do not defer them to a later commit.
 ## Open work
 
 - Device QA remains for the new slices (cookie, PWA, allocations/rollover,
-  reports drill-down and all-account aggregation).
+  reports drill-down and all-account aggregation). The mock can be checked at
+  390×844 to catch responsive regressions.
 - Files are device-level: the route lives in `WebInputService` (`AppDirHelper`),
   so `ApiRoutesTest` does not cover it; verify on the phone.

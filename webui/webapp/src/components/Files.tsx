@@ -87,7 +87,7 @@ export function Files() {
               <tr>
                 <th>{t`Name`}</th>
                 <th className="num">{t`Size`}</th>
-                <th>{t`Modified`}</th>
+                <th className="hide-sm">{t`Modified`}</th>
                 <th className="file-action-head">
                   <span className="sr-only">{t`Actions`}</span>
                 </th>
@@ -98,11 +98,12 @@ export function Files() {
                 <tr key={file.name}>
                   <td className="desc">{file.name}</td>
                   <td className="num">{formatBytes(file.size)}</td>
-                  <td className="date">{formatTimestamp(file.modified)}</td>
+                  <td className="date hide-sm">{formatTimestamp(file.modified)}</td>
                   <td className="file-action">
                     <button
                       type="button"
                       className="btn ghost"
+                      aria-label={t`Download ${file.name}`}
                       onClick={() => void download(file)}
                       disabled={busy === file.name}
                     >

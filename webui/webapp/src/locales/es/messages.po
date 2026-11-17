@@ -361,6 +361,11 @@ msgstr "Divide un importe en partes categorizadas."
 msgid "Download"
 msgstr "Descargar"
 
+#. placeholder {0}: file.name
+#: src/components/Files.tsx
+msgid "Download {0}"
+msgstr "Descargar {0}"
+
 #: src/components/Files.tsx
 msgid "Downloading…"
 msgstr "Descargando…"
