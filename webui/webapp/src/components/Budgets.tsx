@@ -1,12 +1,20 @@
-import { useMemo } from 'react'
-import type { Budget, BudgetProgress } from '../types'
+import { useMemo, useState } from 'react'
+import type { Account, Budget, BudgetProgress } from '../types'
 import { getBudgetProgress, getBudgets } from '../api'
 import { formatMoney } from '../format'
 import { useAsync } from '../hooks'
+import { BudgetEditor } from './BudgetEditor'
 
 interface BudgetEntry {
   budget: Budget
   progress: BudgetProgress
+}
+
+interface BudgetsProps {
+  accounts: Account[]
+  defaultAccountId: number
+  dataVersion: number
+  onDataChanged: (message: string) => void
 }
 
 const GROUPING_LABELS: Record<string, string> = {
@@ -31,7 +39,15 @@ function daysLeft(progress: BudgetProgress): number | null {
   return progress.totalDays - progress.currentDay + 1
 }
 
-export function Budgets() {
+export function Budgets({
+  accounts,
+  defaultAccountId,
+  dataVersion,
+  onDataChanged,
+}: BudgetsProps) {
+  const [editor, setEditor] = useState<
+    { mode: 'create' } | { mode: 'edit'; entry: BudgetEntry } | null
+  >(null)
   const entries = useAsync<BudgetEntry[]>(async () => {
     const budgets = await getBudgets()
     const progress = await Promise.all(
@@ -40,7 +56,7 @@ export function Budgets() {
     return budgets
       .map((budget, index) => ({ budget, progress: progress[index] }))
       .filter((entry) => Boolean(entry.progress))
-  }, [])
+  }, [dataVersion])
 
   const items = entries.data ?? []
   const loading = entries.loading && !entries.data
@@ -93,6 +109,9 @@ export function Budgets() {
             disabled={entries.loading}
           >
             {entries.loading ? 'Refreshing…' : 'Refresh'}
+          </button>
+          <button type="button" className="btn primary" onClick={() => setEditor({ mode: 'create' })}>
+            New budget
           </button>
         </div>
       </div>
@@ -229,6 +248,13 @@ export function Budgets() {
                         {days} {days === 1 ? 'day' : 'days'} left
                       </span>
                     ) : null}
+                    <button
+                      type="button"
+                      className="btn ghost budget-edit"
+                      onClick={() => setEditor({ mode: 'edit', entry: { budget, progress } })}
+                    >
+                      Edit
+                    </button>
                   </footer>
 
                   {budget.description ? (
@@ -246,6 +272,23 @@ export function Budgets() {
           ) : null}
         </>
       )}
+
+      {editor ? (
+        <BudgetEditor
+          mode={editor.mode}
+          budget={editor.mode === 'edit' ? editor.entry.budget : undefined}
+          progress={editor.mode === 'edit' ? editor.entry.progress : undefined}
+          accounts={accounts}
+          defaultAccountId={
+            editor.mode === 'edit' ? editor.entry.budget.accountId : defaultAccountId
+          }
+          onClose={() => setEditor(null)}
+          onSaved={(message) => {
+            setEditor(null)
+            onDataChanged(message)
+          }}
+        />
+      ) : null}
     </>
   )
 }

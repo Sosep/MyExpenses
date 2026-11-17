@@ -487,8 +487,15 @@ November 2026                     All budgets
   color. La barra se llena al 100% y pasa a color negativo.
 - Importes con `fractionDigits` de la divisa del presupuesto; nada se suma en
   cliente salvo las filas ya calculadas por el servidor.
-- Sin edición todavía: la asignación por categorías y el alta/edición llegan en
-  el siguiente corte. La pantalla es de solo lectura.
+- Alta y edición en panel lateral: título, cuenta, tipo de periodo, fechas para
+  `One-time`, importe, `Uso como presupuesto por defecto` y nota.
+- Al editar, cuenta y periodo quedan fijos (el servidor los rechaza si cambian);
+  el importe se rotula `Default amount` porque solo cambia la asignación por
+  defecto, no los overrides por periodo.
+- `Delete` vive en el pie del editor y pide confirmación. Tras guardar se
+  refresca la lista y se muestra un toast.
+- La asignación por categorías y el rollover siguen en la app Android; el editor
+  lo indica con una nota.
 
 ### Maestros
 
@@ -813,3 +820,4 @@ src/
 | 2026-11-17 | 1.3 | Transferencias y divididas: API de escritura y editores; panel ancho de partes con importes firmados. |
 | 2026-11-17 | 1.4 | Ficheros: listado y descarga autenticada; tamaño y fecha local en la tabla. |
 | 2026-11-17 | 1.5 | Presupuestos: resumen condicional y tarjetas con progreso, sobregiro y periodo propio. |
+| 2026-11-17 | 1.6 | Presupuestos: alta, edición y borrado con asignación por defecto; cuenta y periodo fijos al editar. |

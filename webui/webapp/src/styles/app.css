@@ -800,6 +800,8 @@ button:disabled {
 }
 
 .panel-body {
+  flex: 1 1 auto;
+  min-height: 0;
   padding: 20px;
   overflow-y: auto;
   display: flex;
@@ -1670,4 +1672,30 @@ button:disabled {
   margin: 16px 0 0;
   font-size: 12px;
   color: var(--text-muted);
+}
+
+.budget-card-foot {
+  align-items: center;
+}
+
+.budget-edit {
+  margin-left: auto;
+}
+
+.check-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.check-row input {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--accent);
+}
+
+.editor-actions .danger {
+  margin-right: auto;
 }

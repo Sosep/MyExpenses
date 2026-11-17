@@ -190,6 +190,7 @@ export interface Budget {
   accountName: string | null
   isDefault: boolean
   uuid: string | null
+  allocationMinor: number | null
 }
 
 export interface BudgetProgress {
@@ -209,4 +210,15 @@ export interface BudgetProgress {
   remainingMinor: number
   totalDays: number
   currentDay: number
+}
+
+export interface BudgetWrite {
+  accountId: number
+  title: string
+  description?: string | null
+  grouping: string
+  start?: string | null
+  end?: string | null
+  isDefault?: boolean
+  amountMinor: number
 }

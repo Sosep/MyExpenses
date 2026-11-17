@@ -159,6 +159,7 @@ const budgetProgresses = {
   3: { allocated: 18000, spent: 9630 },
   4: { allocated: 25000, spent: 12400 },
 }
+let nextBudgetId = 5
 
 const files = [
   {
@@ -438,6 +439,28 @@ function serveAppIndex(response) {
           }
           if (q.get('view') === 'budgets') {
             setTimeout(function(){ document.querySelector('button[aria-label="Budgets"]')?.click() }, 250)
+            if (q.get('new') === '1') {
+              setTimeout(function(){
+                var buttons = document.querySelectorAll('button')
+                for (var i = 0; i < buttons.length; i++) {
+                  if (buttons[i].textContent && buttons[i].textContent.trim() === 'New budget') {
+                    buttons[i].click()
+                    break
+                  }
+                }
+              }, 900)
+            }
+            if (q.get('edit') === '1') {
+              setTimeout(function(){
+                var buttons = document.querySelectorAll('button')
+                for (var i = 0; i < buttons.length; i++) {
+                  if (buttons[i].textContent && buttons[i].textContent.trim() === 'Edit') {
+                    buttons[i].click()
+                    break
+                  }
+                }
+              }, 900)
+            }
           }
           if (q.get('view') === 'files') {
             setTimeout(function(){ document.querySelector('button[aria-label="Files"]')?.click() }, 250)
@@ -692,13 +715,78 @@ createServer(async (request, response) => {
     if (path === '/api/v1/tags') return send(response, 200, JSON.stringify(tags))
     if (path === '/api/v1/methods') return send(response, 200, JSON.stringify(methods))
 
-    if (path === '/api/v1/budgets') return sendJson(response, 200, budgets)
+    if (path === '/api/v1/budgets' && request.method === 'GET') {
+      return sendJson(response, 200, budgets)
+    }
+    if (path === '/api/v1/budgets' && request.method === 'POST') {
+      const body = await readJson(request)
+      const account = accounts.find((item) => item.id === body.accountId)
+      if (!account || !body.title || !body.amountMinor || !body.grouping) {
+        return sendJson(response, 422, {
+          error: 'validation_failed',
+          message: 'accountId, title, grouping and amountMinor are required',
+        })
+      }
+      if (!['DAY', 'WEEK', 'MONTH', 'YEAR', 'NONE'].includes(body.grouping)) {
+        return sendJson(response, 422, { error: 'invalid_grouping', message: 'Invalid grouping' })
+      }
+      if (body.grouping === 'NONE' && (!body.start || !body.end)) {
+        return sendJson(response, 422, {
+          error: 'validation_failed',
+          message: 'One-time budgets need start and end',
+        })
+      }
+      const budget = {
+        id: nextBudgetId++,
+        accountId: account.id,
+        title: body.title,
+        description: body.description ?? null,
+        currency: account.currency,
+        fractionDigits: account.fractionDigits,
+        grouping: body.grouping,
+        color: 0,
+        start: body.grouping === 'NONE' ? body.start : null,
+        end: body.grouping === 'NONE' ? body.end : null,
+        accountName: account.label,
+        isDefault: body.isDefault ?? false,
+        uuid: `budget-${nextBudgetId}`,
+        allocationMinor: body.amountMinor,
+      }
+      budgets.push(budget)
+      budgetProgresses[budget.id] = { allocated: body.amountMinor, spent: 0 }
+      return sendJson(response, 201, budget, {
+        Location: `/api/v1/budgets/${budget.id}`,
+      })
+    }
     const budgetMatch = path.match(/^\/api\/v1\/budgets\/(\d+)$/)
     if (budgetMatch) {
       const budget = budgets.find((item) => item.id === Number(budgetMatch[1]))
       const values = budgetProgresses[budgetMatch[1]]
       if (!budget || !values) {
         return sendJson(response, 404, { error: 'budget_not_found', message: 'Budget not found' })
+      }
+      if (request.method === 'PUT') {
+        const body = await readJson(request)
+        if (body.grouping && body.grouping !== budget.grouping) {
+          return sendJson(response, 422, {
+            error: 'unsupported_grouping_change',
+            message: 'Changing the period type is not supported',
+          })
+        }
+        budget.title = body.title ?? budget.title
+        budget.description = body.description ?? null
+        budget.isDefault = body.isDefault ?? budget.isDefault
+        if (body.amountMinor !== undefined) {
+          budget.allocationMinor = body.amountMinor
+          values.allocated = body.amountMinor
+        }
+        return sendJson(response, 200, budget)
+      }
+      if (request.method === 'DELETE') {
+        budgets.splice(budgets.indexOf(budget), 1)
+        delete budgetProgresses[budget.id]
+        response.writeHead(204, { 'Cache-Control': 'no-store' })
+        return response.end()
       }
       return sendJson(response, 200, {
         budgetId: budget.id,

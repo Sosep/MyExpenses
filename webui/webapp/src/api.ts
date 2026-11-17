@@ -2,6 +2,7 @@ import type {
   Account,
   Budget,
   BudgetProgress,
+  BudgetWrite,
   Category,
   FileEntry,
   Group,
@@ -224,3 +225,12 @@ export const getBudgetProgress = (
     year !== undefined && second !== undefined ? `?year=${year}&second=${second}` : ''
   return request<BudgetProgress>(`/budgets/${id}${query}`, { signal })
 }
+
+export const createBudget = (payload: BudgetWrite) =>
+  request<Budget>('/budgets', { method: 'POST', body: payload })
+
+export const updateBudget = (id: number, payload: BudgetWrite) =>
+  request<Budget>(`/budgets/${id}`, { method: 'PUT', body: payload })
+
+export const deleteBudget = (id: number) =>
+  request<void>(`/budgets/${id}`, { method: 'DELETE' })

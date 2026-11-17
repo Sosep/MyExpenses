@@ -6,7 +6,7 @@ React + TypeScript + Vite, con los tokens de [`../DESIGN.md`](../DESIGN.md).
 ## Estado
 
 Corte actual: lectura y escritura simple, transferencias, divididas, ficheros y
-presupuestos (lectura).
+presupuestos.
 
 - Login con la contraseña del Web UI (HTTP Basic).
 - Dashboard: patrimonio de la cuenta, ingresos/gastos/ahorro del mes,
@@ -21,10 +21,11 @@ presupuestos (lectura).
 - Ficheros: lista de backups/exportaciones del teléfono con tamaño, fecha y
   descarga autenticada (fetch + blob).
 - Presupuestos: progreso del periodo actual por presupuesto, resumen cuando
-  comparten divisa y periodo, sobregiro explícito y días restantes.
+  comparten divisa y periodo, sobregiro explícito y días restantes. Alta,
+  edición y borrado desde un panel lateral; la asignación por categorías y el
+  rollover siguen en la app.
 
-La edición de presupuestos y los informes desglosados llegan en los siguientes
-cortes.
+Los informes desglosados llegan en el siguiente corte.
 
 ## Desarrollo
 
@@ -54,9 +55,10 @@ npm run mock
 ```
 
 El mock sirve el build y el API en el mismo origen, e implementa `POST/PUT/DELETE`
-de transacciones **simples** en memoria (recalcula saldo y totales del mes). Las
-transferencias y divididas se pueden abrir y editar visualmente, pero su guardado
-se prueba contra el API real del teléfono. Acepta estos parámetros para QA visual:
+de transacciones **simples** y de **presupuestos** en memoria (recalcula saldo y
+totales del mes). Las transferencias y divididas se pueden abrir y editar
+visualmente, pero su guardado se prueba contra el API real del teléfono. Acepta
+estos parámetros para QA visual:
 
 | Parámetro | Efecto |
 |---|---|

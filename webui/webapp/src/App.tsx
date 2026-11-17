@@ -170,7 +170,12 @@ export default function App() {
           ) : view === 'files' ? (
             <Files />
           ) : view === 'budgets' ? (
-            <Budgets />
+            <Budgets
+              accounts={accounts}
+              defaultAccountId={account?.id ?? accountId ?? accounts[0]?.id ?? 0}
+              dataVersion={dataVersion}
+              onDataChanged={refreshData}
+            />
           ) : (
             <Transactions
               account={account}
