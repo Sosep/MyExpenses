@@ -59,6 +59,7 @@ export function SearchSelect({
   const inputRef = useRef<HTMLInputElement>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
+  const activeRef = useRef<HTMLButtonElement>(null)
   const listId = useId()
 
   const query = useMemo(() => normalize(input), [input])
@@ -89,6 +90,11 @@ export function SearchSelect({
   useEffect(() => {
     if (!open) setInput(selected?.label ?? '')
   }, [selected?.label, open])
+
+  useEffect(() => {
+    if (!open) return
+    activeRef.current?.scrollIntoView({ block: 'nearest' })
+  }, [open, highlight])
 
   useEffect(() => {
     if (!open) return
@@ -155,6 +161,7 @@ export function SearchSelect({
                     aria-selected={option.value === value}
                     className={`search-select-option ${index === highlight ? 'active' : ''}`}
                     onMouseDown={(event) => event.preventDefault()}
+                    ref={index === highlight ? activeRef : undefined}
                     onMouseEnter={() => setHighlight(index)}
                     onClick={() => choose(option)}
                   >

@@ -68,10 +68,18 @@ export function BudgetHistoryPanel({ budget, onClose }: BudgetHistoryPanelProps)
                       point.periodYear,
                     ).slice(2)}`
                   : point.periodDescription
+              const percent =
+                point.allocatedMinor > 0
+                  ? Math.round((point.spentMinor / point.allocatedMinor) * 100)
+                  : 0
               return (
                 <div key={`${point.periodDescription}-${point.periodYear}-${point.periodSecond}`}>
                   <div className="budget-history-head">
-                    <span>{label}</span>
+                    <span className="budget-history-label">
+                      {label}
+                      <span className="budget-history-pct">{percent}%</span>
+                    </span>
+                    {over ? <span className="budget-chip over">{t`Over`}</span> : null}
                     <span className={over ? 'over' : 'positive'}>
                       {formatMoney(
                         point.spentMinor,
@@ -88,7 +96,9 @@ export function BudgetHistoryPanel({ budget, onClose }: BudgetHistoryPanelProps)
                   </div>
                   <div className="budget-history-track" style={{ width: `${Math.max(scale * 100, 2)}%` }}>
                     <div
-                      className={`budget-history-fill ${over ? 'over' : ''}`}
+                      className={`budget-history-fill ${
+                        over ? 'over' : percent >= 80 ? 'warn' : ''
+                      }`}
                       style={{ width: `${Math.round(ratio * 100)}%` }}
                     />
                   </div>

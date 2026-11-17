@@ -2075,6 +2075,36 @@ button:disabled {
   display: none;
 }
 
+.filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 10px;
+}
+
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-pill);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-size: 12px;
+}
+
+.filter-chip:hover {
+  border-color: var(--border-strong);
+}
+
+.filter-chip:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+
 .transaction-filters .field {
   min-width: 0;
 }
@@ -2146,6 +2176,26 @@ button:disabled {
   height: 100%;
   border-radius: inherit;
   background: var(--accent);
+}
+
+.budget-history-fill.warn {
+  background: var(--warning);
+}
+
+.budget-history-fill.over,
+.budget-history-fill.over.warn {
+  background: var(--negative);
+}
+
+.budget-history-label {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.budget-history-pct {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
 }
 
 .budget-history-fill.over {

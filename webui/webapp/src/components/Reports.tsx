@@ -254,8 +254,8 @@ export function Reports({ account, accounts }: ReportsProps) {
                   {data && data.items.length > 0
                     ? t`${data.items.length} groups · ${formatMoney(
                         data.totalMinor,
-                        account.currency,
-                        account.fractionDigits,
+                        data.currency,
+                        data.fractionDigits,
                       )} total`
                     : t`No activity for this selection`}
                 </p>

@@ -25,7 +25,7 @@ msgid "{0} budgets · {1}"
 msgstr "{0} presupuestos · {1}"
 
 #. placeholder {0}: data.items.length
-#. placeholder {1}: formatMoney( data.totalMinor, account.currency, account.fractionDigits, )
+#. placeholder {1}: formatMoney( data.totalMinor, data.currency, data.fractionDigits, )
 #: src/components/Reports.tsx
 msgid "{0} groups · {1} total"
 msgstr "{0} grupos · {1} en total"
@@ -530,6 +530,14 @@ msgstr "Filtrar por beneficiario"
 msgid "Filter by tag"
 msgstr "Filtrar por etiqueta"
 
+#: src/components/Transactions.tsx
+msgid "Filters"
+msgstr "Filtros"
+
+#: src/components/Transactions.tsx
+msgid "Filters ({activeFilterCount})"
+msgstr "Filtros ({activeFilterCount})"
+
 #: src/components/TransactionEditor.tsx
 msgid "From"
 msgstr "Desde"
@@ -675,6 +683,7 @@ msgstr "Nuevo"
 msgid "New budget"
 msgstr "Nuevo presupuesto"
 
+#: src/App.tsx
 #: src/components/Dashboard.tsx
 #: src/components/TransactionEditor.tsx
 #: src/components/Transactions.tsx
@@ -724,6 +733,10 @@ msgstr "Sin resultados"
 msgid "No transactions in {0}"
 msgstr "No hay transacciones en {0}"
 
+#: src/components/Transactions.tsx
+msgid "No transactions match these filters"
+msgstr "Ninguna transacción coincide con estos filtros"
+
 #: src/components/Dashboard.tsx
 msgid "No transactions this month"
 msgstr "No hay transacciones este mes"
@@ -763,6 +776,7 @@ msgstr "Abrir transacción: {0}"
 msgid "Other periods keep using the default amount."
 msgstr "Los demás periodos siguen usando el importe por defecto."
 
+#: src/components/BudgetHistoryPanel.tsx
 #: src/components/Budgets.tsx
 msgid "Over"
 msgstr "Excedido"
@@ -874,6 +888,15 @@ msgstr "Actualizando…"
 #: src/components/Pwa.tsx
 msgid "Reload"
 msgstr "Recargar"
+
+#: src/components/Transactions.tsx
+msgid "Remove a filter to see more."
+msgstr "Quita algún filtro para ver más."
+
+#. placeholder {0}: chip.label
+#: src/components/Transactions.tsx
+msgid "Remove filter: {0}"
+msgstr "Quitar filtro: {0}"
 
 #: src/components/TransactionEditor.tsx
 msgid "Remove part"
@@ -1026,6 +1049,10 @@ msgstr "El móvil no pudo completar la solicitud."
 #: src/components/TransactionEditor.tsx
 msgid "The transaction could not be loaded."
 msgstr "No se pudo cargar la transacción."
+
+#: src/components/Budgets.tsx
+msgid "There is no later period"
+msgstr "No hay periodos posteriores"
 
 #: src/components/TransactionPanel.tsx
 msgid "This cannot be undone."

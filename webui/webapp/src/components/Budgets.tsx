@@ -66,6 +66,8 @@ export function Budgets({
     { mode: 'create' } | { mode: 'edit'; entry: BudgetEntry } | null
   >(null)
   const [month, setMonth] = useState(currentMonth())
+  const current = currentMonth()
+  const atCurrentMonth = month >= current
   const [historyBudget, setHistoryBudget] = useState<Budget | null>(null)
   const [year, monthNumber] = month.split('-').map(Number)
   const entries = useAsync<BudgetEntry[]>(async () => {
@@ -141,6 +143,8 @@ export function Budgets({
               className="icon-btn"
               onClick={() => setMonth(addMonths(month, 1))}
               aria-label={t`Next month`}
+              title={atCurrentMonth ? t`There is no later period` : undefined}
+              disabled={atCurrentMonth}
             >
               <IconChevronRight />
             </button>

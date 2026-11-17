@@ -41,8 +41,9 @@ Read this before changing code. Detailed sources:
 - Tailwind v4 processes the styles: `app.css` is imported into the `components`
   layer and new UI uses utilities with the DESIGN tokens.
 - Transactions list supports `categoryId`, `payeeId`, `tagId` and `methodId`
-  filters (AND); the SPA exposes them with `SearchSelect` and hides the month
-  KPIs while filtering.
+  filters (AND); the SPA exposes them with `SearchSelect`, keeps them in the URL
+  and as removable chips, hides the month KPIs while filtering and collapses
+  them behind `Filters (n)` on phones.
 - Budgets have month navigation; monthly budgets load that month's progress,
   allocations and period total. Each budget has a 12-month history panel and
   per-category spent/allocated bars.

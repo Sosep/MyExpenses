@@ -40,15 +40,16 @@ con varias divisas. Hoy están implementadas las rutas principales; faltan los b
 
 - El mes se queda visible en cada tarjeta, siempre (decisión 6 del mapa): la redundancia con
   la cabecera se acepta para que cada tarjeta se lea sola.
-- “›” no navega más allá del mes actual; “‹” se detiene antes del primer presupuesto.
+- “›” no navega más allá del mes actual y se deshabilita con un título que lo explica. “‹”
+  sigue libre: el API no dice cuál es el primer periodo con presupuesto.
 - El resumen superior sigue apareciendo sólo si todos los presupuestos comparten divisa y
   periodo; si no, se explica en una nota.
 - El pie de la tarjeta es una línea con porcentaje, días restantes y dos acciones táctiles.
 
 ### F3. Gráficos de presupuesto
 
-- El histórico colorea por estado: en curso, en riesgo (≥80 %) y excedido (>100 %); los
-  meses excedidos se marcan también con texto, no sólo con color.
+- El histórico colorea por estado: en curso, en riesgo (≥80 %) y excedido (>100 %), y
+  muestra el porcentaje de cada mes; los meses excedidos llevan además el chip `Over`.
 - Cada barra por categoría lleva importe gastado/asignado legible; la pista de la barra se
   distingue del fondo en claro y en oscuro.
 - El panel de histórico se puede abrir con teclado y cierra con `Esc`.

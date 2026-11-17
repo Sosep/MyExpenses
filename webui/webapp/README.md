@@ -13,6 +13,9 @@ presupuestos e informes.
   tendencia de 12 meses y últimas transacciones.
 - Transacciones: navegación por mes, filtro ingreso/gasto, paginación,
   detalle con partes de una dividida y transferencias enlazadas.
+- Los filtros de transacciones (categoría, beneficiario, etiqueta, método) viven en la URL
+  (`?categoryId=3&tagId=7`) y se pueden quitar con chips; en móvil se pliegan tras
+  `Filters (n)`.
 - Alta, edición y borrado de transacciones **simples**, **transferencias** y
   **divididas** desde paneles laterales. La dividida usa un panel ancho con la
   lista de partes y el editor de la parte seleccionada; los importes van con

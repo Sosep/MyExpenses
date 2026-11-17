@@ -17,6 +17,8 @@ import { t } from '@lingui/core/macro'
 import { useAsync } from '../hooks'
 import { IconChevronLeft, IconChevronRight } from './Icons'
 import { SearchSelect } from './SearchSelect'
+import { NO_FILTERS, filtersFromUrl, searchWithFilters } from '../filters'
+import type { Filters } from '../filters'
 import { TransactionPanel } from './TransactionPanel'
 
 interface TransactionsProps {
@@ -47,12 +49,7 @@ export function Transactions({
 }: TransactionsProps) {
   const [month, setMonth] = useState(currentMonth())
   const [type, setType] = useState<TypeFilter>('all')
-  const [filters, setFilters] = useState<{
-    categoryId: number | null
-    payeeId: number | null
-    tagId: number | null
-    methodId: number | null
-  }>({ categoryId: null, payeeId: null, tagId: null, methodId: null })
+  const [filters, setFilters] = useState<Filters>(() => filtersFromUrl(window.location.search))
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [extra, setExtra] = useState<Transaction[]>([])
   const [loadingMore, setLoadingMore] = useState(false)
@@ -64,6 +61,14 @@ export function Transactions({
   const filtersKey = JSON.stringify(filters)
   const hasFilters = Object.values(filters).some((value) => value !== null)
   const activeFilterCount = Object.values(filters).filter((value) => value !== null).length
+
+  useEffect(() => {
+    window.history.replaceState(
+      null,
+      '',
+      `${window.location.pathname}${searchWithFilters(window.location.search, filters)}`,
+    )
+  }, [filters])
   const references = useAsync(async () => {
     const [categories, payees, tags, methods] = await Promise.all([
       getCategories(),
@@ -94,6 +99,23 @@ export function Transactions({
     ],
     [references.data?.categories, paths],
   )
+  const chips = useMemo(() => {
+    const list = [
+      ['categoryId', 'categories'],
+      ['payeeId', 'payees'],
+      ['tagId', 'tags'],
+      ['methodId', 'methods'],
+    ] as const
+    return list.flatMap(([key, source]) => {
+      const id = filters[key]
+      if (id === null) return []
+      const item = (references.data?.[source] ?? []).find((entry) => entry.id === id)
+      const text = item && 'label' in item ? item.label : item && 'name' in item ? item.name : null
+      const label = key === 'categoryId' ? (paths.get(id) ?? text ?? String(id)) : (text ?? String(id))
+      return [{ key, label }]
+    })
+  }, [filters, references.data, paths])
+
   const summary = useAsync(
     () => getGrouped(account.id, range.from, range.to),
     ['transaction-summary', account.id, range.from, range.to],
@@ -236,6 +258,23 @@ export function Transactions({
       >
         {activeFilterCount > 0 ? t`Filters (${activeFilterCount})` : t`Filters`}
       </button>
+
+      {chips.length > 0 ? (
+        <div className="filter-chips">
+          {chips.map((chip) => (
+            <button
+              key={chip.key}
+              type="button"
+              className="filter-chip"
+              aria-label={t`Remove filter: ${chip.label}`}
+              onClick={() => setFilters((previous) => ({ ...previous, [chip.key]: null }))}
+            >
+              {chip.label}
+              <span aria-hidden="true">×</span>
+            </button>
+          ))}
+        </div>
+      ) : null}
 
       <div
         id="transaction-filters"
@@ -420,8 +459,27 @@ export function Transactions({
               <tr>
                 <td colSpan={5}>
                   <div className="empty">
-                    <h3>{t`No transactions in ${formatMonth(year, monthNumber)}`}</h3>
-                    <p>{t`Record one in the app and it will show up here.`}</p>
+                    <h3>
+                      {hasFilters
+                        ? t`No transactions match these filters`
+                        : t`No transactions in ${formatMonth(year, monthNumber)}`}
+                    </h3>
+                    <p>
+                      {hasFilters
+                        ? t`Remove a filter to see more.`
+                        : t`Record one in the app and it will show up here.`}
+                    </p>
+                    {hasFilters ? (
+                      <button
+                        type="button"
+                        className="btn ghost"
+                        onClick={() =>
+                          setFilters(NO_FILTERS)
+                        }
+                      >
+                        {t`Clear filters`}
+                      </button>
+                    ) : null}
                   </div>
                 </td>
               </tr>
