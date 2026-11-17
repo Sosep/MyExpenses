@@ -38,30 +38,41 @@ Secuencia reproducida en el móvil real:
 - `DELETE /budgets/{id}` elimina también sus asignaciones (o deja el estado
   equivalente a "no existe"), sin bloquear altas posteriores.
 
-## Causas a confirmar
+## Causa confirmada
 
-Prueba nueva (sandbox **vacío**: 0 transacciones, 0 presupuestos, 0 ficheros):
-`POST /budgets` sigue devolviendo **422 constraint_violation**. Es decir, **no** son
-filas huérfanas de mis pruebas: el fallo se reproduce desde cero y borrar datos
-no lo arregla.
+`budgets.description` es **NOT NULL** en el esquema
+(`TransactionDatabase.java:294-305`) y `createBudget`/`updateBudget` convierten
+una descripción ausente o vacía en `null`:
 
-Patrón común con `SPEC-divididas.md`: las dos escrituras que fallan insertan una
-fila con `cat_id = 0` (la asignación por defecto del presupuesto y el padre de la
-dividida). Las transacciones simples con `cat_id = 1` funcionan. La sospecha
-principal pasa a ser la fila especial de categoría 0 o su clave foránea
-(`budget_allocations.cat_id references categories(_id)`), no el cascade del
-borrado —aunque el `DELETE` que no limpia asignaciones sigue siendo un fallo
-aparte que hay que corregir.
+```kotlin
+description = body.description?.trim()?.takeIf { it.isNotEmpty() }   // "" -> null
+```
 
-- `PUT /budgets/{id}` con `amountMinor` reescribe la asignación por defecto
-  (`TransactionProvider.java:1164-1175` y `:1589`). Un `UPDATE`/`INSERT` que no
-  respete la clave `(budget_id, cat_id, year, second)` provoca el 422 aunque el
-  usuario solo cambie el título.
-- `updateBudgetAllocations` devuelve `[]` después de un `200`: la respuesta se
-  construye sin releer lo escrito, así que un fallo de escritura pasa inadvertido.
-- El 500 del historial tras escribir asignaciones apunta a la consulta de
-  periodos (`BaseTransactionProvider.budgetAllocationGroupsQuery`) recibiendo
-  filas con `year`/`second` nulos o repetidos.
+`Budget.toContentValues` hace `put(KEY_DESCRIPTION, description)`, así que el
+`INSERT`/`UPDATE` escribe `NULL` y SQLite responde `NOT NULL constraint failed:
+budgets.description`, que `StatusPages` traduce a `422 constraint_violation`.
+
+Prueba de contraste en el móvil (base nueva, mismo cuerpo salvo un campo):
+
+| Cuerpo | Resultado |
+|---|---|
+| `description: "x"` | **201** |
+| sin `description` | 422 |
+| `description: ""` | 422 |
+| `PUT` con `description: "d"` | **200** |
+| `PUT` sin `description` | 422 |
+
+La app Android no cae en esto porque guarda `""` (cadena vacía), no `null`.
+
+**Lo demás funciona** en cuanto la descripción no es nula: asignaciones con
+override de periodo y rollover, `history` (200 con y sin movimientos), progreso
+con `periodAllocationMinor`, borrado y alta posterior. `GET /allocations`
+devuelve `[]` en este entorno porque la única categoría disponible es la de
+transferencia; queda por confirmar con una categoría normal.
+
+Lo que queda de este módulo es, por tanto, pequeño: aceptar `null`/`""` como
+descripción vacía (o hacer la columna nullable con migración) y cubrirlo con un
+test que compare los dos cuerpos.
 
 ## Ficheros
 

@@ -33,19 +33,28 @@ Las validaciones previas funcionan; el fallo ocurre al escribir en la base.
 4. La lista la muestra como `kind: "SPLIT"` y los informes por categoría suman
    las partes, no el padre (comportamiento actual que no debe cambiar).
 
-## Causas a confirmar
+## Causa confirmada
 
-- `createSplitTransaction` (`webui/.../AndroidWebApiDataSource.kt:429-500`)
-  valida y delega en el repositorio. El 422 viene de
-  `SQLiteConstraintException` capturada en `WebInputService.kt:319`.
-- **Comparte patrón con `SPEC-presupuestos-escritura.md`**: el padre de la
-  dividida se escribe con `cat_id = SPLIT_CATID` (0), y la asignación por defecto
-  del presupuesto también usa `cat_id = 0`; ambas fallan, y una transacción
-  simple con `cat_id = 1` funciona. Sospecha principal: la fila especial de
-  categoría 0 o su clave foránea. Se confirma con el log del dispositivo antes
-  de tocar nada.
-- Si la causa es de esquema, el arreglo debe mantener compatibilidad con las
-  divididas que ya existen creadas desde la app.
+`createSplit` asigna **el mismo `uuid`** al padre y a todas las partes
+(`AndroidWebApiDataSource.kt:460, 464, 503`), y el esquema declara un índice
+único sobre la terna:
+
+```sql
+CREATE UNIQUE INDEX transactions_account_uuid_index
+  ON transactions(account_id, uuid, status)      -- BaseTransactionDatabase.kt:340-341
+```
+
+Padre y partes comparten cuenta, `uuid` y `cr_status = UNRECONCILED`, así que la
+segunda fila del lote choca: `SQLiteConstraintException` → `422
+constraint_violation`. Con una sola parte ya choca, que es lo que se midió.
+
+La app Android no cae en esto porque cada `TransactionEditData` nace con su
+propio `generateUuid()` (`TransactionEditViewModel.kt:555` y siguientes): el
+`uuid` compartido es una suposición de la capa web, no del modelo. `API.md`
+también lo dice mal ("mismo `uuid` en padre y partes") y hay que corregirlo.
+
+El arreglo es dar un `uuid` propio a cada parte al construir el lote (el padre
+conserva el suyo) y ajustar la documentación.
 
 ## Ficheros
 

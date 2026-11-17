@@ -71,25 +71,28 @@ Se ejecuta en orden. Cada módulo se commitea con sus docs y sus assets si toca 
 
 ## Módulo `presupuestos-escritura` + `divididas`
 
-- [ ] **T8 — Diagnóstico único de `cat_id = 0`**
-  - Acceptance: con el log del dispositivo se identifica la restricción exacta que
-    lanza `SQLiteConstraintException` en el alta de presupuesto y de dividida;
-    queda escrito en el PR si es la misma causa.
-  - Verify: `POST /budgets` y `POST /split-transactions` reproducen; log con la
-    sentencia y la tabla.
+- [x] **T8 — Diagnóstico del 422** (por código y contraste, sin log)
+  - Acceptance: se identifica la restricción exacta de cada 422.
+  - Verify: `POST /budgets` con y sin `description`; `POST /split-transactions`.
   - Files: ninguno (diagnóstico)
+  - Resultado: **dos causas distintas**. Presupuesto: `budgets.description` es
+    NOT NULL y la API convierte `null`/`""` en `null` → 422; con descripción
+    devuelve 201 y el resto del ciclo funciona. Dividida: padre y partes
+    comparten `uuid` y choca el índice único
+    `(account_id, uuid, status)`; cada parte necesita su propio `uuid`.
 
-- [ ] **T9 — Alta y edición de presupuesto**
-  - Acceptance: ciclo crear → asignaciones con rollover → historial → editar →
-    borrar → **crear otra vez** termina en 201; `PUT /allocations` devuelve lo
-    guardado.
+- [ ] **T9 — Descripción de presupuesto**
+  - Acceptance: `POST`/`PUT` sin `description` (y con `""`) responden 201/200 y
+    guardan cadena vacía; el ciclo crear → asignaciones con rollover → historial
+    → editar → borrar → crear otra vez sigue en 201.
   - Verify: `curl` del ciclo + `ApiRoutesTest` de las rutas.
   - Files: `AndroidWebApiDataSource.kt`, `ApiQueries.kt`, `RepositoryBudget.kt`,
     `ApiRoutesTest.kt`
 
-- [ ] **T10 — Alta de dividida**
+- [ ] **T10 — `uuid` por parte en las divididas**
   - Acceptance: `POST /split-transactions` con dos partes que suman el padre
-    devuelve 201; `PUT` añade/quita partes; el borrado deja el saldo intacto.
+    devuelve 201 (cada parte con su `uuid`); `PUT` añade/quita partes; el borrado
+    deja el saldo intacto; `API.md` deja de decir que el `uuid` es compartido.
   - Verify: `curl` + SPA: crear, reabrir, editar y borrar en el móvil.
   - Files: `AndroidWebApiDataSource.kt` (y provider si el diagnóstico lo pide)
 
