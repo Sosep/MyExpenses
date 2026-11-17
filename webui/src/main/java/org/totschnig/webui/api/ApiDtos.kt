@@ -255,3 +255,36 @@ data class BudgetWriteDto(
     val isDefault: Boolean? = null,
     val amountMinor: Long? = null
 )
+
+@Keep
+data class ReportSummaryDto(
+    val accountId: Long,
+    val from: String,
+    val to: String,
+    val currency: String,
+    val fractionDigits: Int,
+    val incomeMinor: Long,
+    val expensesMinor: Long,
+    val netMinor: Long,
+    val count: Long
+)
+
+@Keep
+data class BreakdownItemDto(
+    val id: Long,
+    val label: String,
+    val amountMinor: Long,
+    val count: Long,
+    val share: Double
+)
+
+@Keep
+data class BreakdownDto(
+    val accountId: Long,
+    val from: String,
+    val to: String,
+    val by: String,
+    val type: String,
+    val totalMinor: Long,
+    val items: List<BreakdownItemDto>
+)

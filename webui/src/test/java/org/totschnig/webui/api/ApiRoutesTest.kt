@@ -290,6 +290,53 @@ class ApiRoutesTest {
         assertEquals(HttpStatusCode.NotFound, missing.status)
         assertTrue(missing.bodyAsText().contains("budget_not_found"))
     }
+
+    @Test
+    fun `report summary returns totals`() = testApplication {
+        installRoutes(FakeDataSource())
+        val response = client.get(
+            "/api/v1/reports/summary?accountId=1&from=2026-11-01&to=2026-11-30"
+        )
+        assertEquals(HttpStatusCode.OK, response.status)
+        val body = response.bodyAsText()
+        assertTrue(body.contains("\"incomeMinor\":300000"))
+        assertTrue(body.contains("\"netMinor\":120000"))
+        assertTrue(body.contains("\"count\":12"))
+    }
+
+    @Test
+    fun `breakdown returns items with share`() = testApplication {
+        installRoutes(FakeDataSource())
+        val response = client.get(
+            "/api/v1/reports/breakdown?accountId=1&by=category&type=expense" +
+                "&from=2026-11-01&to=2026-11-30"
+        )
+        assertEquals(HttpStatusCode.OK, response.status)
+        val body = response.bodyAsText()
+        assertTrue(body.contains("Groceries"))
+        assertTrue(body.contains("\"share\":66.67"))
+        assertTrue(body.contains("\"totalMinor\":180000"))
+    }
+
+    @Test
+    fun `breakdown with invalid by is a 400`() = testApplication {
+        installRoutes(FakeDataSource())
+        val response = client.get(
+            "/api/v1/reports/breakdown?accountId=1&by=account&from=2026-11-01&to=2026-11-30"
+        )
+        assertEquals(HttpStatusCode.BadRequest, response.status)
+        assertTrue(response.bodyAsText().contains("invalid_by"))
+    }
+
+    @Test
+    fun `breakdown with invalid type is a 400`() = testApplication {
+        installRoutes(FakeDataSource())
+        val response = client.get(
+            "/api/v1/reports/breakdown?accountId=1&type=all&from=2026-11-01&to=2026-11-30"
+        )
+        assertEquals(HttpStatusCode.BadRequest, response.status)
+        assertTrue(response.bodyAsText().contains("invalid_type"))
+    }
 }
 
 private fun ApplicationTestBuilder.installRoutes(dataSource: WebApiDataSource) {
@@ -414,6 +461,38 @@ private class FakeDataSource : WebApiDataSource {
     }
 
     override fun deleteBudget(id: Long) = id == 1L
+
+    override fun summary(accountId: Long, from: LocalDate, to: LocalDate) =
+        ReportSummaryDto(
+            accountId = accountId,
+            from = from.toString(),
+            to = to.toString(),
+            currency = "EUR",
+            fractionDigits = 2,
+            incomeMinor = 300000,
+            expensesMinor = -180000,
+            netMinor = 120000,
+            count = 12
+        )
+
+    override fun breakdown(
+        accountId: Long,
+        by: String,
+        type: String,
+        from: LocalDate,
+        to: LocalDate
+    ) = BreakdownDto(
+        accountId = accountId,
+        from = from.toString(),
+        to = to.toString(),
+        by = by,
+        type = type,
+        totalMinor = 180000,
+        items = listOf(
+            BreakdownItemDto(1, "Food > Groceries", 120000, 8, 66.67),
+            BreakdownItemDto(2, "Transport", 60000, 4, 33.33)
+        )
+    )
 
     override fun budgets() = listOf(sampleBudget())
 

@@ -1,7 +1,8 @@
 # API web de MyExpenses (borrador de contrato)
 
-Estado: **lectura, escritura simple, transferencias, divididas, ficheros y
-presupuestos implementados**. Informes siguen como contrato objetivo.
+Estado: **lectura, escritura simple, transferencias, divididas, ficheros,
+presupuestos e informes implementados**. El resto del documento describe el
+contrato objetivo (plantillas y v2).
 Alcance: API JSON consumida por la web app de escritorio. La app Android sigue
 siendo la fuente de verdad; el servidor corre en el móvil (Ktor, dentro del
 módulo `:webui`). Interfaz y sistema visual: [`DESIGN.md`](./DESIGN.md).
@@ -416,15 +417,55 @@ duplicación de presupuestos. Se siguen gestionando en la app Android.
 |---|---|---|
 | GET | `/reports/grouped?accountId&grouping=DAY\|WEEK\|MONTH\|YEAR\|NONE&from&to` | Serie temporal: ingresos, gastos, transferencias, total por grupo |
 | GET | `/reports/summary?accountId&from&to` | Totales del rango |
-| GET | `/reports/breakdown?accountId&from&to&by=category\|payee\|tag&type=expense\|income\|both` | Reparto con importe y porcentaje |
+| GET | `/reports/breakdown?accountId&from&to&by=category\|payee\|tag&type=expense\|income\|both` | Reparto con importe, número y porcentaje |
 
 `grouping` usa el mismo enum que la app, así los números coinciden con el móvil.
-La implementación se apoya en `IAccount.groupingQuery` (series) y en una consulta
-de agregación nueva en `db2` para el reparto (el provider ya soporta `groupBy`).
+La serie sale de `IAccount.groupingQuery`; el resumen y el reparto usan
+`TRANSACTIONS_EXTENDED` con agregación en `ApiQueries.kt`.
 
-Para "todas las cuentas" se usa la cuenta agregada de la app (IDs negativos /
-`DataBaseAccount.queryParameter`) y la divisa base; documentar que los importes
-se convierten con los tipos de cambio que ya usa la app.
+`ReportSummaryDto`:
+
+```json
+{
+  "accountId": 1,
+  "from": "2026-11-01",
+  "to": "2026-11-30",
+  "currency": "EUR",
+  "fractionDigits": 2,
+  "incomeMinor": 295000,
+  "expensesMinor": -113867,
+  "netMinor": 181133,
+  "count": 59
+}
+```
+
+`BreakdownDto`:
+
+```json
+{
+  "accountId": 1,
+  "from": "2026-11-01",
+  "to": "2026-11-30",
+  "by": "category",
+  "type": "expense",
+  "totalMinor": 113867,
+  "items": [
+    { "id": 2, "label": "Food > Groceries", "amountMinor": 32407, "count": 15, "share": 28.46 }
+  ]
+}
+```
+
+- Importes del reparto en **magnitud positiva**; `share` es porcentaje 0–100
+  calculado en el servidor sobre el total de las filas devueltas.
+- `from`/`to` son inclusivos; si se omiten, últimos 12 meses hasta hoy.
+- Se excluyen transferencias, movimientos `VOID` y cuentas sin divisa. `type`
+  filtra por signo del importe (`expense` por defecto).
+- `by=category` agrega las partes de una dividida y excluye el padre; `payee` y
+  `tag` cuentan la transacción completa (padre) una vez.
+- Una transacción con varias etiquetas aparece en cada etiqueta; el total del
+  reparto por etiqueta puede superar el gasto real del periodo.
+- `by` inválido: `400 invalid_by`; `type` inválido: `400 invalid_type`; cuenta
+  desconocida: `404 account_not_found`.
 
 ### 4.7 Ficheros
 
@@ -513,9 +554,10 @@ Tras revisar de nuevo el código:
 ## 8. Pruebas
 
 - **Rutas en JVM**: `webui/src/test/java/org/totschnig/webui/api/ApiRoutesTest.kt`
-  con un `WebApiDataSource` fake y Ktor `testApplication`. 24 tests cubren
+  con un `WebApiDataSource` fake y Ktor `testApplication`. 28 tests cubren
   routing, validación, `201/204/404/409/422`, JSON, body malformado, los
-  endpoints de transferencias/divididas y el CRUD de presupuestos. Comando:
+  endpoints de transferencias/divididas, el CRUD de presupuestos y los informes.
+  Comando:
   `docker compose run --rm android-build :webui:testDebugUnitTest`.
 - **Capa Android**: `AndroidWebApiDataSource` y el `ContentProvider` se validan
   en el móvil o con tests instrumentados; los mapeadores puros pueden probarse

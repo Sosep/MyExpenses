@@ -182,6 +182,38 @@ class ApiRoutes(
                     )
                 call.respond(progress)
             }
+            get("/reports/summary") {
+                val accountId = call.requireLong("accountId")
+                val now = LocalDate.now()
+                val from = call.dateParam("from") ?: now.withDayOfMonth(1).minusMonths(11)
+                val to = call.dateParam("to") ?: now
+                validateRange(from, to)
+                call.respond(dataSource.summary(accountId, from, to))
+            }
+            get("/reports/breakdown") {
+                val accountId = call.requireLong("accountId")
+                val by = (call.parameters["by"] ?: "category").lowercase(Locale.ROOT)
+                if (by !in setOf("category", "payee", "tag")) {
+                    throw ApiException(
+                        HttpStatusCode.BadRequest,
+                        "invalid_by",
+                        "by must be category, payee or tag"
+                    )
+                }
+                val type = (call.parameters["type"] ?: "expense").lowercase(Locale.ROOT)
+                if (type !in setOf("income", "expense", "both")) {
+                    throw ApiException(
+                        HttpStatusCode.BadRequest,
+                        "invalid_type",
+                        "type must be income, expense or both"
+                    )
+                }
+                val now = LocalDate.now()
+                val from = call.dateParam("from") ?: now.withDayOfMonth(1).minusMonths(11)
+                val to = call.dateParam("to") ?: now
+                validateRange(from, to)
+                call.respond(dataSource.breakdown(accountId, by, type, from, to))
+            }
             get("/reports/grouped") {
                 val accountId = call.requireLong("accountId")
                 val grouping = (call.parameters["grouping"] ?: "MONTH")

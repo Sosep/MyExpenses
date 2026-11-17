@@ -29,6 +29,14 @@ interface WebApiDataSource {
         from: LocalDate,
         to: LocalDate
     ): List<GroupDto>
+    fun summary(accountId: Long, from: LocalDate, to: LocalDate): ReportSummaryDto
+    fun breakdown(
+        accountId: Long,
+        by: String,
+        type: String,
+        from: LocalDate,
+        to: LocalDate
+    ): BreakdownDto
     fun budgets(): List<BudgetDto>
     suspend fun budgetProgress(id: Long, year: Int?, second: Int?): BudgetProgressDto?
     fun createBudget(body: BudgetWriteDto): BudgetDto

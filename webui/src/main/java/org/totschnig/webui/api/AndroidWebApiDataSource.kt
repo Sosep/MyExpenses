@@ -180,6 +180,26 @@ class AndroidWebApiDataSource(
         )
     }
 
+    override fun summary(
+        accountId: Long,
+        from: LocalDate,
+        to: LocalDate
+    ): ReportSummaryDto {
+        requireReportAccount(accountId)
+        return repository.queryReportSummary(accountId, from, to)
+    }
+
+    override fun breakdown(
+        accountId: Long,
+        by: String,
+        type: String,
+        from: LocalDate,
+        to: LocalDate
+    ): BreakdownDto {
+        requireReportAccount(accountId)
+        return repository.queryBreakdown(accountId, by, type, from, to)
+    }
+
     override fun createTransaction(body: TransactionWriteDto): TransactionDto =
         createSimple(body)
 
@@ -504,6 +524,16 @@ class AndroidWebApiDataSource(
             )
         )
         return loadTransactionDto(parent.id)
+    }
+
+    private fun requireReportAccount(accountId: Long) {
+        if (repository.getCurrencyUnitForAccount(accountId) == null) {
+            throw ApiException(
+                HttpStatusCode.NotFound,
+                "account_not_found",
+                "Account not found"
+            )
+        }
     }
 
     private fun loadExistingTransfer(id: Long): RepositoryTransaction {
