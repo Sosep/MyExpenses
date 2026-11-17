@@ -237,12 +237,14 @@ internal fun Repository.queryReportTransactions(
         }
 
         "payee" -> {
-            selection = "$baseSelection AND coalesce($KEY_PAYEEID, 0) = ?"
+            // coalesce() drops the column affinity, so "0" would be compared as text
+            // and the "no payee" group would come back empty.
+            selection = "$baseSelection AND coalesce($KEY_PAYEEID, 0) = CAST(? AS INTEGER)"
             args = (baseArgs ?: emptyArray()) + groupId.toString()
         }
 
         "method" -> {
-            selection = "$baseSelection AND coalesce($KEY_METHODID, 0) = ?"
+            selection = "$baseSelection AND coalesce($KEY_METHODID, 0) = CAST(? AS INTEGER)"
             args = (baseArgs ?: emptyArray()) + groupId.toString()
         }
 

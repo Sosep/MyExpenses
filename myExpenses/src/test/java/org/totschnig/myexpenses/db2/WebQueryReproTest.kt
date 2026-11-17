@@ -18,6 +18,7 @@ import org.totschnig.myexpenses.provider.KEY_CR_STATUS
 import org.totschnig.myexpenses.provider.KEY_DATE
 import org.totschnig.myexpenses.provider.KEY_DISPLAY_AMOUNT
 import org.totschnig.myexpenses.provider.KEY_PARENTID
+import org.totschnig.myexpenses.provider.KEY_PAYEEID
 import org.totschnig.myexpenses.provider.KEY_ROWID
 import org.totschnig.myexpenses.provider.KEY_TRANSFER_ACCOUNT
 import org.totschnig.myexpenses.provider.SPLIT_CATID
@@ -134,6 +135,22 @@ class WebQueryReproTest : BaseTestWithRepository() {
             Transaction.projection,
             selection,
             args,
+            null
+        )?.use { assertThat(it.count).isEqualTo(1) }
+    }
+
+    @Test
+    fun drillDownWithoutPayee() {
+        val (accountId, _) = seed()
+        // "0" must be compared as a number: coalesce() has no column affinity.
+        val selection = "$VIEW_EXTENDED.$KEY_ACCOUNTID = ? AND " +
+            "coalesce($VIEW_EXTENDED.$KEY_PAYEEID, 0) = CAST(? AS INTEGER) AND " +
+            "$VIEW_EXTENDED.$KEY_PARENTID IS NULL"
+        contentResolver.query(
+            TransactionProvider.EXTENDED_URI,
+            Transaction.projection,
+            selection,
+            arrayOf(accountId.toString(), "0"),
             null
         )?.use { assertThat(it.count).isEqualTo(1) }
     }
