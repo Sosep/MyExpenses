@@ -175,3 +175,38 @@ export interface FileEntry {
   modified: number
   link: string
 }
+
+export interface Budget {
+  id: number
+  accountId: number
+  title: string
+  description: string | null
+  currency: string
+  fractionDigits: number
+  grouping: string
+  color: number
+  start: string | null
+  end: string | null
+  accountName: string | null
+  isDefault: boolean
+  uuid: string | null
+}
+
+export interface BudgetProgress {
+  budgetId: number
+  accountId: number
+  title: string
+  currency: string
+  fractionDigits: number
+  grouping: string
+  periodYear: number | null
+  periodSecond: number | null
+  periodStart: string
+  periodEnd: string
+  periodDescription: string
+  allocatedMinor: number
+  spentMinor: number
+  remainingMinor: number
+  totalDays: number
+  currentDay: number
+}

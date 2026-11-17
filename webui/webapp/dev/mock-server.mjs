@@ -12,6 +12,7 @@
  * QA switches (query string):
  *   ?login=1            show the login screen instead of bypassing auth
  *   ?view=transactions  open the transactions screen
+ *   ?view=budgets       open the budgets screen
  *   ?panel=split        open the split transaction detail panel
  *   ?theme=dark         toggle dark mode
  *   ?metrics=1          show scroll/row metrics in a corner badge
@@ -81,6 +82,83 @@ const accounts = [
     parentId: null,
   },
 ]
+
+const monthName = new Intl.DateTimeFormat('en-GB', { month: 'long', year: 'numeric' }).format(
+  new Date(year, month - 1, 1),
+)
+const periodStart = `${year}-${pad(month)}-01`
+const periodEnd = `${year}-${pad(month)}-${pad(new Date(year, month, 0).getDate())}`
+const totalDays = new Date(year, month, 0).getDate()
+
+const budgets = [
+  {
+    id: 1,
+    accountId: 1,
+    title: 'Groceries',
+    description: null,
+    currency: 'EUR',
+    fractionDigits: 2,
+    grouping: 'MONTH',
+    color: 0,
+    start: null,
+    end: null,
+    accountName: 'Everyday',
+    isDefault: false,
+    uuid: 'budget-groceries',
+  },
+  {
+    id: 2,
+    accountId: 1,
+    title: 'Restaurants',
+    description: null,
+    currency: 'EUR',
+    fractionDigits: 2,
+    grouping: 'MONTH',
+    color: 0,
+    start: null,
+    end: null,
+    accountName: 'Everyday',
+    isDefault: false,
+    uuid: 'budget-restaurants',
+  },
+  {
+    id: 3,
+    accountId: 2,
+    title: 'Fuel',
+    description: 'Both cars',
+    currency: 'EUR',
+    fractionDigits: 2,
+    grouping: 'MONTH',
+    color: 0,
+    start: null,
+    end: null,
+    accountName: 'Joint',
+    isDefault: false,
+    uuid: 'budget-fuel',
+  },
+  {
+    id: 4,
+    accountId: 1,
+    title: 'Household',
+    description: null,
+    currency: 'EUR',
+    fractionDigits: 2,
+    grouping: 'MONTH',
+    color: 0,
+    start: null,
+    end: null,
+    accountName: 'Everyday',
+    isDefault: false,
+    uuid: 'budget-household',
+  },
+]
+
+const budgetProgresses = {
+  1: { allocated: 40000, spent: 31200 },
+  2: { allocated: 12000, spent: 14600 },
+  3: { allocated: 18000, spent: 9630 },
+  4: { allocated: 25000, spent: 12400 },
+}
 
 const files = [
   {
@@ -358,6 +436,9 @@ function serveAppIndex(response) {
           if (q.get('theme') === 'dark') {
             setTimeout(function(){ document.querySelector('button[aria-label="Switch to dark"]')?.click() }, 120)
           }
+          if (q.get('view') === 'budgets') {
+            setTimeout(function(){ document.querySelector('button[aria-label="Budgets"]')?.click() }, 250)
+          }
           if (q.get('view') === 'files') {
             setTimeout(function(){ document.querySelector('button[aria-label="Files"]')?.click() }, 250)
           }
@@ -611,6 +692,34 @@ createServer(async (request, response) => {
     if (path === '/api/v1/tags') return send(response, 200, JSON.stringify(tags))
     if (path === '/api/v1/methods') return send(response, 200, JSON.stringify(methods))
 
+    if (path === '/api/v1/budgets') return sendJson(response, 200, budgets)
+    const budgetMatch = path.match(/^\/api\/v1\/budgets\/(\d+)$/)
+    if (budgetMatch) {
+      const budget = budgets.find((item) => item.id === Number(budgetMatch[1]))
+      const values = budgetProgresses[budgetMatch[1]]
+      if (!budget || !values) {
+        return sendJson(response, 404, { error: 'budget_not_found', message: 'Budget not found' })
+      }
+      return sendJson(response, 200, {
+        budgetId: budget.id,
+        accountId: budget.accountId,
+        title: budget.title,
+        currency: budget.currency,
+        fractionDigits: budget.fractionDigits,
+        grouping: budget.grouping,
+        periodYear: year,
+        periodSecond: month,
+        periodStart,
+        periodEnd,
+        periodDescription: monthName,
+        allocatedMinor: values.allocated,
+        spentMinor: values.spent,
+        remainingMinor: values.allocated - values.spent,
+        totalDays,
+        currentDay: now.getDate(),
+      })
+    }
+
     if (path === '/api/v1/files') return sendJson(response, 200, files)
     const fileMatch = path.match(/^\/api\/v1\/files\/([^/]+)$/)
     if (fileMatch) {
@@ -722,5 +831,5 @@ createServer(async (request, response) => {
   }
 }).listen(port, '127.0.0.1', () => {
   console.log(`mock web server on http://localhost:${port}/app/`)
-  console.log('QA: ?login=1 ?view=transactions ?panel=split ?new=1 ?edit=split ?view=files ?theme=dark ?metrics=1')
+  console.log('QA: ?login=1 ?view=transactions ?view=budgets ?view=files ?panel=split ?new=1 ?edit=split ?theme=dark ?metrics=1')
 })

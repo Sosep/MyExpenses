@@ -1,5 +1,7 @@
 import type {
   Account,
+  Budget,
+  BudgetProgress,
   Category,
   FileEntry,
   Group,
@@ -207,4 +209,18 @@ export async function downloadFile(name: string): Promise<Blob> {
     )
   }
   return response.blob()
+}
+
+export const getBudgets = (signal?: AbortSignal) =>
+  request<Budget[]>('/budgets', { signal })
+
+export const getBudgetProgress = (
+  id: number,
+  year?: number,
+  second?: number,
+  signal?: AbortSignal,
+) => {
+  const query =
+    year !== undefined && second !== undefined ? `?year=${year}&second=${second}` : ''
+  return request<BudgetProgress>(`/budgets/${id}${query}`, { signal })
 }

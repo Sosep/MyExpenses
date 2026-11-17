@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { Account, Meta } from './types'
 import { getAccounts, getMeta, hasStoredAuth, login, logout, UNAUTHORIZED_EVENT } from './api'
+import { Budgets } from './components/Budgets'
 import { Dashboard } from './components/Dashboard'
 import { Files } from './components/Files'
 import { Login } from './components/Login'
@@ -168,6 +169,8 @@ export default function App() {
             />
           ) : view === 'files' ? (
             <Files />
+          ) : view === 'budgets' ? (
+            <Budgets />
           ) : (
             <Transactions
               account={account}

@@ -12,7 +12,7 @@ import {
   IconSun,
 } from './Icons'
 
-export type View = 'dashboard' | 'transactions' | 'files'
+export type View = 'dashboard' | 'transactions' | 'budgets' | 'files'
 
 interface ShellProps {
   view: View
@@ -47,23 +47,31 @@ export function Shell({
           <span>My Expenses</span>
         </div>
         <span className="crumb">
-          {view === 'dashboard' ? 'Overview' : view === 'files' ? 'Files' : 'Transactions'}
+          {view === 'dashboard'
+            ? 'Overview'
+            : view === 'files'
+              ? 'Files'
+              : view === 'budgets'
+                ? 'Budgets'
+                : 'Transactions'}
         </span>
         <div className="top-right">
-          <label className="account-picker">
-            <span className="sr-only">Account</span>
-            <select
-              className="account-select"
-              value={accountId ?? ''}
-              onChange={(event) => onAccount(Number(event.target.value))}
-            >
-              {accounts.map((account) => (
-                <option key={account.id} value={account.id}>
-                  {account.label}
-                </option>
-              ))}
-            </select>
-          </label>
+          {view === 'dashboard' || view === 'transactions' ? (
+            <label className="account-picker">
+              <span className="sr-only">Account</span>
+              <select
+                className="account-select"
+                value={accountId ?? ''}
+                onChange={(event) => onAccount(Number(event.target.value))}
+              >
+                {accounts.map((account) => (
+                  <option key={account.id} value={account.id}>
+                    {account.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
           <button
             type="button"
             className="icon-btn"
@@ -127,10 +135,11 @@ export function Shell({
           </button>
           <button
             type="button"
-            className="rail-item"
-            disabled
-            title="Budgets (next milestone)"
-            aria-label="Budgets (next milestone)"
+            className={`rail-item ${view === 'budgets' ? 'active' : ''}`}
+            onClick={() => onView('budgets')}
+            title="Budgets"
+            aria-label="Budgets"
+            aria-current={view === 'budgets' ? 'page' : undefined}
           >
             <IconPie />
           </button>

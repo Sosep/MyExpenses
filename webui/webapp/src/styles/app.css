@@ -1537,3 +1537,137 @@ button:disabled {
   padding: 5px 10px;
   font-size: 12px;
 }
+
+/* Budgets */
+
+.budget-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+}
+
+.budget-summary-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.budget-summary-figures {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  font-size: 13px;
+}
+
+.budget-summary-figures strong {
+  font-variant-numeric: tabular-nums;
+}
+
+.budget-summary-figures .over,
+.budget-card .over {
+  color: var(--negative);
+}
+
+.budget-summary-figures .positive,
+.budget-card .positive {
+  color: var(--positive);
+}
+
+.budget-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+}
+
+.budget-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+}
+
+.budget-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.budget-card-head h2 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.budget-card-head p {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.budget-chip {
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--tint-rose);
+  color: var(--negative);
+}
+
+.budget-period {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.budget-figures {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.budget-bar {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--bg-canvas);
+  border: 1px solid var(--border-subtle);
+  overflow: hidden;
+}
+
+.budget-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+}
+
+.budget-fill.over {
+  background: var(--negative);
+}
+
+.budget-card-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.budget-description {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.budget-note {
+  margin: 16px 0 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}

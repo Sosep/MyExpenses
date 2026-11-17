@@ -465,21 +465,30 @@ Filters: [search] [account] [All|Expenses|Income] [Month]
 ### Presupuestos
 
 ```text
-┌ Budgeted €2,400 · Spent €1,680 · Remaining €720 ┐
-│ ▓▓▓▓▓▓▓░░░  70%                                │
-├ Lista (5) ──────────────────┬ Edit budget ──────┤
-│ Groceries  312/400  ▓▓▓▓░  │ Amount €400       │
-│ Restaurants 146/120 Over   │ Period Monthly    │
-│ ...                        │ Allocation        │
-│ €720 left overall          │ Delete    Save    │
-└────────────────────────────┴───────────────────┘
+November 2026                     All budgets
+€678.30 spent   €950.00 allocated   €271.70 left
+▓▓▓▓▓▓▓░░░
+
+┌ Groceries ────────────────┐  ┌ Restaurants ────── Over ┐
+│ Everyday · Monthly        │  │ Everyday · Monthly      │
+│ November 2026             │  │ November 2026           │
+│ €312.00 of €400.00        │  │ €146.00 of €120.00      │
+│ €88.00 left               │  │ Over by €26.00          │
+│ ▓▓▓▓▓▓▓▓░░  78% used      │  │ ▓▓▓▓▓▓▓▓▓▓  100% used   │
+│ 14 days left              │  │ 14 days left            │
+└───────────────────────────┘  └─────────────────────────┘
 ```
 
-- El resumen es del periodo visible; el periodo manda en toda la pantalla.
+- El resumen superior solo aparece si todos los presupuestos comparten divisa y
+  periodo; si no, se muestra cada tarjeta por separado con una nota.
+- Cada tarjeta lleva su propio periodo (`November 2026`), cuenta, agrupación
+  (`Monthly`, `Weekly`, `Yearly`, `Daily`, `One-time`) y días restantes.
 - El estado de sobregiro es explícito: chip "Over" + "Over by €26"; no solo un
-  color.
-- La edición incluye la asignación por categorías y el total asignado.
-- No se mezclan presupuestos de periodos distintos en la misma lista.
+  color. La barra se llena al 100% y pasa a color negativo.
+- Importes con `fractionDigits` de la divisa del presupuesto; nada se suma en
+  cliente salvo las filas ya calculadas por el servidor.
+- Sin edición todavía: la asignación por categorías y el alta/edición llegan en
+  el siguiente corte. La pantalla es de solo lectura.
 
 ### Maestros
 
@@ -803,3 +812,4 @@ src/
 | 2026-11-17 | 1.2 | Patrón del editor de transacción simple y escritura simple en la SPA. |
 | 2026-11-17 | 1.3 | Transferencias y divididas: API de escritura y editores; panel ancho de partes con importes firmados. |
 | 2026-11-17 | 1.4 | Ficheros: listado y descarga autenticada; tamaño y fecha local en la tabla. |
+| 2026-11-17 | 1.5 | Presupuestos: resumen condicional y tarjetas con progreso, sobregiro y periodo propio. |
