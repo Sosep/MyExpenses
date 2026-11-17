@@ -15,14 +15,20 @@ Read this before changing code. Detailed sources:
   `WebApiDataSource` and Ktor `testApplication`.
 - SPA: dashboard, transactions, detail, reports, files, budgets, and the simple,
   transfer and split editors. The split editor uses signed amounts, a parts list
-  and a part panel.
+  and a part panel. It is installable as a PWA.
 - Budgets: list plus current-period progress (`spent`, `allocated`, `remaining`)
   and create/update/delete from a side panel. The summary only aggregates budgets
   that share currency and period. Account and period type are fixed on edit;
   amount edits the default allocation only.
 - Files: `GET /api/v1/files` lists app-directory backups and `GET /api/v1/files/{name}`
-  streams one with `Content-Disposition`; the SPA downloads via fetch + blob so
-  Basic auth is sent.
+  streams one with `Content-Disposition`; the SPA downloads via fetch + blob with
+  the session cookie.
+- Auth: `POST/DELETE /api/v1/session` issue and clear an HttpOnly
+  `myexpenses_session` cookie (`SameSite=Strict`, sliding 7 days). `/app` is the
+  public shell; `/api/v1` and downloads require the cookie when a password is
+  set. Basic and the legacy HTML form are gone; `/` redirects to `/app/`.
+- PWA: `manifest.webmanifest`, PNG icons and `sw.js` cache the `/app` shell; the
+  API is network-only, so the app still needs the phone for data.
 - Reports: `/reports/summary` and `/reports/breakdown` (category, payee or tag;
   expense, income or both) compute amounts and shares on the server. The SPA
   shows month KPIs and ranked bars. Category breakdown uses split parts; payee
@@ -94,7 +100,8 @@ assets.
 
 `webui/webapp/dev/mock-server.mjs` (`npm run mock`) serves the built SPA and an
 in-memory v1 API with 60 transactions, including `POST/PUT/DELETE`. QA switches:
-`?login=1`, `?view=transactions`, `?view=budgets`, `?view=budgets&new=1`,
+`?login=1` (clears the mock session cookie), `?view=transactions`, `?view=budgets`,
+`?view=budgets&new=1`,
 `?view=budgets&edit=1`, `?view=reports`, `?view=reports&reportBy=Payee&reportType=Both`,
 `?view=files`, `?panel=split`, `?panel=transfer`, `?new=1`,
 `?new=1&kind=transfer`, `?new=1&kind=split`, `?edit=simple`, `?edit=split`,
@@ -122,7 +129,7 @@ Update the docs while the change is fresh; do not defer them to a later commit.
 - Budget category allocations, rollover and duplication (app-only today).
 - Reports v2: period presets, drill-down into filtered transactions, method
   breakdown and all-account aggregation.
-- Then Lingui `.po`, cookie session, TanStack/Tailwind/Geist, PWA and the legacy
-  form cleanup (`/` → `/app`).
+- Then Lingui `.po`, TanStack/Tailwind/Geist, and the remaining PWA polish
+  (offline messaging, update prompt).
 - Files are device-level: the route lives in `WebInputService` (`AppDirHelper`),
   so `ApiRoutesTest` does not cover it; verify on the phone.
