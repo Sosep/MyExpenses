@@ -5,8 +5,8 @@ React + TypeScript + Vite, con los tokens de [`../DESIGN.md`](../DESIGN.md).
 
 ## Estado
 
-Corte actual: lectura y escritura simple, transferencias, divididas, ficheros y
-presupuestos.
+Corte actual: lectura y escritura simple, transferencias, divididas, ficheros,
+presupuestos e informes.
 
 - Login con la contraseña del Web UI (HTTP Basic).
 - Dashboard: patrimonio de la cuenta, ingresos/gastos/ahorro del mes,
@@ -24,8 +24,8 @@ presupuestos.
   comparten divisa y periodo, sobregiro explícito y días restantes. Alta,
   edición y borrado desde un panel lateral; la asignación por categorías y el
   rollover siguen en la app.
-
-Los informes desglosados llegan en el siguiente corte.
+- Informes: KPIs del mes y desglose por categoría, beneficiario o etiqueta, con
+  tipo gasto/ingreso/ambos, importe, número y porcentaje.
 
 ## Desarrollo
 
@@ -55,15 +55,21 @@ npm run mock
 ```
 
 El mock sirve el build y el API en el mismo origen, e implementa `POST/PUT/DELETE`
-de transacciones **simples** y de **presupuestos** en memoria (recalcula saldo y
-totales del mes). Las transferencias y divididas se pueden abrir y editar
-visualmente, pero su guardado se prueba contra el API real del teléfono. Acepta
-estos parámetros para QA visual:
+de transacciones **simples** y de **presupuestos** en memoria, y sirve resumen y
+desglose de informes (recalcula saldo y totales del mes). Las transferencias y
+divididas se pueden abrir y editar visualmente, pero su guardado se prueba contra
+el API real del teléfono. Acepta estos parámetros para QA visual:
 
 | Parámetro | Efecto |
 |---|---|
 | `?login=1` | Muestra la pantalla de login en vez de saltar la auth |
 | `?view=transactions` | Abre Transacciones |
+| `?view=reports` | Abre Informes |
+| `?view=reports&reportBy=Payee&reportType=Both` | Preselecciona dimensión y tipo en Informes |
+| `?view=budgets` | Abre Presupuestos |
+| `?view=budgets&new=1` | Abre el editor de alta de presupuesto |
+| `?view=budgets&edit=1` | Abre el primer presupuesto en el editor |
+| `?view=files` | Abre Ficheros |
 | `?panel=split` / `?panel=transfer` | Abre el detalle de la dividida / transferencia |
 | `?new=1` | Abre el selector de tipo de alta |
 | `?new=1&kind=transfer` / `&kind=split` | Abre el editor de transferencia / dividida |

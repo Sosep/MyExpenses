@@ -5,6 +5,7 @@ import { Budgets } from './components/Budgets'
 import { Dashboard } from './components/Dashboard'
 import { Files } from './components/Files'
 import { Login } from './components/Login'
+import { Reports } from './components/Reports'
 import { Shell } from './components/Shell'
 import type { View } from './components/Shell'
 import { TransactionEditor } from './components/TransactionEditor'
@@ -167,6 +168,8 @@ export default function App() {
               onOpenTransactions={() => setView('transactions')}
               onNewTransaction={() => setEditor({ mode: 'create' })}
             />
+          ) : view === 'reports' ? (
+            <Reports account={account} dataVersion={dataVersion} />
           ) : view === 'files' ? (
             <Files />
           ) : view === 'budgets' ? (

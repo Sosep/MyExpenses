@@ -13,6 +13,7 @@
  *   ?login=1            show the login screen instead of bypassing auth
  *   ?view=transactions  open the transactions screen
  *   ?view=budgets       open the budgets screen
+ *   ?view=reports       open the reports screen
  *   ?panel=split        open the split transaction detail panel
  *   ?theme=dark         toggle dark mode
  *   ?metrics=1          show scroll/row metrics in a corner badge
@@ -437,6 +438,22 @@ function serveAppIndex(response) {
           if (q.get('theme') === 'dark') {
             setTimeout(function(){ document.querySelector('button[aria-label="Switch to dark"]')?.click() }, 120)
           }
+          if (q.get('view') === 'reports') {
+            setTimeout(function(){ document.querySelector('button[aria-label="Reports"]')?.click() }, 250)
+            ;[['reportBy', 900], ['reportType', 1000]].forEach(function(entry){
+              var value = q.get(entry[0])
+              if (!value) return
+              setTimeout(function(){
+                var buttons = document.querySelectorAll('.segmented button')
+                for (var i = 0; i < buttons.length; i++) {
+                  if (buttons[i].textContent && buttons[i].textContent.trim().toLowerCase() === value.toLowerCase()) {
+                    buttons[i].click()
+                    break
+                  }
+                }
+              }, entry[1])
+            })
+          }
           if (q.get('view') === 'budgets') {
             setTimeout(function(){ document.querySelector('button[aria-label="Budgets"]')?.click() }, 250)
             if (q.get('new') === '1') {
@@ -805,6 +822,116 @@ createServer(async (request, response) => {
         remainingMinor: values.allocated - values.spent,
         totalDays,
         currentDay: now.getDate(),
+      })
+    }
+
+    if (path === '/api/v1/reports/summary') {
+      const from = url.searchParams.get('from') ?? ''
+      const to = url.searchParams.get('to') ?? ''
+      const items = transactions.filter(
+        (item) => item.date >= from && item.date <= to && !item.transferPeerId,
+      )
+      const income = items
+        .filter((item) => item.amountMinor > 0)
+        .reduce((total, item) => total + item.amountMinor, 0)
+      const expenses = items
+        .filter((item) => item.amountMinor < 0)
+        .reduce((total, item) => total + item.amountMinor, 0)
+      return sendJson(response, 200, {
+        accountId: Number(url.searchParams.get('accountId')),
+        from,
+        to,
+        currency: 'EUR',
+        fractionDigits: 2,
+        incomeMinor: income,
+        expensesMinor: expenses,
+        netMinor: income + expenses,
+        count: items.length,
+      })
+    }
+
+    if (path === '/api/v1/reports/breakdown') {
+      const from = url.searchParams.get('from') ?? ''
+      const to = url.searchParams.get('to') ?? ''
+      const by = url.searchParams.get('by') ?? 'category'
+      const type = url.searchParams.get('type') ?? 'expense'
+      const matchesType = (item) =>
+        type === 'both' || (type === 'income' ? item.amountMinor > 0 : item.amountMinor < 0)
+      const parents = transactions.filter(
+        (item) =>
+          item.date >= from &&
+          item.date <= to &&
+          !item.transferPeerId &&
+          matchesType(item),
+      )
+      const entries = []
+      if (by === 'category') {
+        for (const item of parents) {
+          if (item.kind === 'SPLIT') {
+            for (const part of splitParts) {
+              if (!matchesType(part)) continue
+              entries.push({
+                id: part.category?.id ?? 0,
+                label: part.category?.path ?? 'No category',
+                amountMinor: Math.abs(part.amountMinor),
+                count: 1,
+              })
+            }
+          } else if (item.category) {
+            entries.push({
+              id: item.category.id,
+              label: item.category.path ?? item.category.label,
+              amountMinor: Math.abs(item.amountMinor),
+              count: 1,
+            })
+          }
+        }
+      } else if (by === 'payee') {
+        for (const item of parents) {
+          entries.push({
+            id: item.payee?.id ?? 0,
+            label: item.payee?.label ?? 'No payee',
+            amountMinor: Math.abs(item.amountMinor),
+            count: 1,
+          })
+        }
+      } else {
+        for (const item of parents) {
+          const list = item.tags?.length ? item.tags : []
+          for (const tag of list) {
+            entries.push({
+              id: tag.id,
+              label: tag.label,
+              amountMinor: Math.abs(item.amountMinor),
+              count: 1,
+            })
+          }
+        }
+      }
+      const grouped = new Map()
+      for (const entry of entries) {
+        const key = `${entry.id}-${entry.label}`
+        const current = grouped.get(key) ?? { ...entry, count: 0, amountMinor: 0 }
+        current.count += entry.count
+        current.amountMinor += entry.amountMinor
+        grouped.set(key, current)
+      }
+      const items = [...grouped.values()]
+      const total = items.reduce((sum, item) => sum + item.amountMinor, 0)
+      const result = items
+        .map((item) => ({
+          ...item,
+          share: total > 0 ? Math.round((item.amountMinor * 10000) / total) / 100 : 0,
+        }))
+        .sort((a, b) => b.amountMinor - a.amountMinor || a.label.localeCompare(b.label))
+      return sendJson(response, 200, {
+        accountId: Number(url.searchParams.get('accountId')),
+        from,
+        to,
+        by,
+        type,
+        totalMinor: total,
+        items: result,
       })
     }
 

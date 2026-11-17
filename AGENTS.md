@@ -11,11 +11,11 @@ Read this before changing code. Detailed sources:
 
 - `/api/v1`: read endpoints plus create/update/delete for simple transactions,
   transfers and splits.
-- API routes covered on the JVM by 24 `ApiRoutesTest` tests with a fake
+- API routes covered on the JVM by 28 `ApiRoutesTest` tests with a fake
   `WebApiDataSource` and Ktor `testApplication`.
-- SPA: dashboard, transactions, detail, files, budgets, and the simple, transfer
-  and split editors. The split editor uses signed amounts, a parts list and a part
-  panel.
+- SPA: dashboard, transactions, detail, reports, files, budgets, and the simple,
+  transfer and split editors. The split editor uses signed amounts, a parts list
+  and a part panel.
 - Budgets: list plus current-period progress (`spent`, `allocated`, `remaining`)
   and create/update/delete from a side panel. The summary only aggregates budgets
   that share currency and period. Account and period type are fixed on edit;
@@ -23,6 +23,10 @@ Read this before changing code. Detailed sources:
 - Files: `GET /api/v1/files` lists app-directory backups and `GET /api/v1/files/{name}`
   streams one with `Content-Disposition`; the SPA downloads via fetch + blob so
   Basic auth is sent.
+- Reports: `/reports/summary` and `/reports/breakdown` (category, payee or tag;
+  expense, income or both) compute amounts and shares on the server. The SPA
+  shows month KPIs and ranked bars. Category breakdown uses split parts; payee
+  and tag count whole transactions.
 
 ## Build and verify
 
@@ -91,11 +95,13 @@ assets.
 `webui/webapp/dev/mock-server.mjs` (`npm run mock`) serves the built SPA and an
 in-memory v1 API with 60 transactions, including `POST/PUT/DELETE`. QA switches:
 `?login=1`, `?view=transactions`, `?view=budgets`, `?view=budgets&new=1`,
-`?view=budgets&edit=1`, `?view=files`, `?panel=split`, `?panel=transfer`, `?new=1`,
+`?view=budgets&edit=1`, `?view=reports`, `?view=reports&reportBy=Payee&reportType=Both`,
+`?view=files`, `?panel=split`, `?panel=transfer`, `?new=1`,
 `?new=1&kind=transfer`, `?new=1&kind=split`, `?edit=simple`, `?edit=split`,
 `?edit=transfer`, `?new=1&save=1`, `?theme=dark`, `?metrics=1`. The mock writes
-simple transactions and budgets only; transfer/split saves need the real phone
-API. It tests the SPA and the contract, not the Kotlin queries.
+simple transactions and budgets only, and serves report summary/breakdown;
+transfer/split saves need the real phone API. It tests the SPA and the contract,
+not the Kotlin queries.
 
 ## Documentation is part of done
 
@@ -114,7 +120,8 @@ Update the docs while the change is fresh; do not defer them to a later commit.
 ## Open work
 
 - Budget category allocations, rollover and duplication (app-only today).
-- Reports (grouped/breakdown).
+- Reports v2: period presets, drill-down into filtered transactions, method
+  breakdown and all-account aggregation.
 - Then Lingui `.po`, cookie session, TanStack/Tailwind/Geist, PWA and the legacy
   form cleanup (`/` → `/app`).
 - Files are device-level: the route lives in `WebInputService` (`AppDirHelper`),

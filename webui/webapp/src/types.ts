@@ -222,3 +222,33 @@ export interface BudgetWrite {
   isDefault?: boolean
   amountMinor: number
 }
+
+export interface ReportSummary {
+  accountId: number
+  from: string
+  to: string
+  currency: string
+  fractionDigits: number
+  incomeMinor: number
+  expensesMinor: number
+  netMinor: number
+  count: number
+}
+
+export interface BreakdownItem {
+  id: number
+  label: string
+  amountMinor: number
+  count: number
+  share: number
+}
+
+export interface Breakdown {
+  accountId: number
+  from: string
+  to: string
+  by: 'category' | 'payee' | 'tag'
+  type: 'expense' | 'income' | 'both'
+  totalMinor: number
+  items: BreakdownItem[]
+}

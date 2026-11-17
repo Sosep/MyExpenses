@@ -1,5 +1,6 @@
 import type {
   Account,
+  Breakdown,
   Budget,
   BudgetProgress,
   BudgetWrite,
@@ -10,6 +11,7 @@ import type {
   Method,
   Page,
   Payee,
+  ReportSummary,
   SplitWrite,
   Tag,
   Transaction,
@@ -234,3 +236,28 @@ export const updateBudget = (id: number, payload: BudgetWrite) =>
 
 export const deleteBudget = (id: number) =>
   request<void>(`/budgets/${id}`, { method: 'DELETE' })
+
+export const getReportSummary = (
+  accountId: number,
+  from: string,
+  to: string,
+  signal?: AbortSignal,
+) =>
+  request<ReportSummary>(
+    `/reports/summary?accountId=${accountId}&from=${from}&to=${to}`,
+    { signal },
+  )
+
+export const getBreakdown = (
+  accountId: number,
+  by: 'category' | 'payee' | 'tag',
+  type: 'expense' | 'income' | 'both',
+  from: string,
+  to: string,
+  signal?: AbortSignal,
+) =>
+  request<Breakdown>(
+    `/reports/breakdown?accountId=${accountId}&by=${by}&type=${type}` +
+      `&from=${from}&to=${to}`,
+    { signal },
+  )

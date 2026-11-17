@@ -12,7 +12,7 @@ import {
   IconSun,
 } from './Icons'
 
-export type View = 'dashboard' | 'transactions' | 'budgets' | 'files'
+export type View = 'dashboard' | 'transactions' | 'reports' | 'budgets' | 'files'
 
 interface ShellProps {
   view: View
@@ -53,10 +53,12 @@ export function Shell({
               ? 'Files'
               : view === 'budgets'
                 ? 'Budgets'
-                : 'Transactions'}
+                : view === 'reports'
+                  ? 'Reports'
+                  : 'Transactions'}
         </span>
         <div className="top-right">
-          {view === 'dashboard' || view === 'transactions' ? (
+          {view === 'dashboard' || view === 'transactions' || view === 'reports' ? (
             <label className="account-picker">
               <span className="sr-only">Account</span>
               <select
@@ -126,10 +128,11 @@ export function Shell({
           </button>
           <button
             type="button"
-            className="rail-item"
-            disabled
-            title="Reports (next milestone)"
-            aria-label="Reports (next milestone)"
+            className={`rail-item ${view === 'reports' ? 'active' : ''}`}
+            onClick={() => onView('reports')}
+            title="Reports"
+            aria-label="Reports"
+            aria-current={view === 'reports' ? 'page' : undefined}
           >
             <IconChart />
           </button>

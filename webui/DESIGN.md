@@ -462,6 +462,37 @@ Filters: [search] [account] [All|Expenses|Income] [Month]
 - Las partes con transferencia se añaden en v2 y se marcan como tales.
 - El servidor valida la suma otra vez; nunca se confía solo en el cliente.
 
+### Informes
+
+```text
+Reports                                   ‹ November 2026 ›  [Refresh]
+Everyday · November 2026
+[Category | Payee | Tag]   [Expenses | Income | Both]
+
+┌ Income €2,950 ┐ ┌ Expenses €1,138 ┐ ┌ Net +€1,811 ┐ ┌ 59 tx ┐
+
+┌ Spending by category · 7 groups · €1,138.67 total ──────┐
+│ Food > Groceries                         €324.07      │
+│ ▓▓▓▓▓▓▓▓░░░░░░░░░░░░░░░░░░░░░░                        │
+│ 28.5%                                  15 transactions │
+│ Transport                                €242.48      │
+│ ▓▓▓▓▓▓░░░░░░░░░░░░░░░░░░░░░░░░░░                        │
+│ 21.3%                                  14 transactions │
+└────────────────────────────────────────────────────────┘
+```
+
+- Mes visible con navegación `‹ ›`; el mismo mes manda en KPIs y desglose.
+- Dos segmentados: dimensión (`Category`, `Payee`, `Tag`) y tipo (`Expenses`,
+  `Income`, `Both`).
+- KPIs: ingresos, gastos (magnitud), neto con signo y número de transacciones.
+- Cada fila: etiqueta, importe, barra proporcional, porcentaje y número de
+  transacciones. La barra usa `--negative` para gastos, `--positive` para
+  ingresos y `--accent` para `Both`.
+- El porcentaje y el total vienen del servidor; el cliente no suma transacciones.
+- Vacío: explica que no hay actividad y sugiere cambiar de mes o de tipo.
+- El badge de etiqueta puede solaparse entre sí; es un reparto por etiqueta, no
+  una partición del gasto.
+
 ### Presupuestos
 
 ```text
@@ -821,3 +852,4 @@ src/
 | 2026-11-17 | 1.4 | Ficheros: listado y descarga autenticada; tamaño y fecha local en la tabla. |
 | 2026-11-17 | 1.5 | Presupuestos: resumen condicional y tarjetas con progreso, sobregiro y periodo propio. |
 | 2026-11-17 | 1.6 | Presupuestos: alta, edición y borrado con asignación por defecto; cuenta y periodo fijos al editar. |
+| 2026-11-17 | 1.7 | Informes: resumen y desglose por categoría, beneficiario o etiqueta con barras y porcentajes. |
