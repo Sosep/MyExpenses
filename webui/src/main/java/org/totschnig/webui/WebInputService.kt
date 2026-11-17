@@ -5,6 +5,7 @@ import android.app.PendingIntent
 import android.app.PendingIntent.FLAG_ONE_SHOT
 import android.content.Context
 import android.content.Intent
+import android.database.sqlite.SQLiteConstraintException
 import android.os.IBinder
 import androidx.annotation.PluralsRes
 import androidx.annotation.StringRes
@@ -31,6 +32,7 @@ import io.ktor.server.engine.connector
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.engine.sslConnector
 import io.ktor.server.netty.Netty
+import io.ktor.server.plugins.BadRequestException
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.plugins.statuspages.StatusPages
 import io.ktor.server.request.receive
@@ -318,6 +320,24 @@ class WebInputService : LifecycleService(), IWebInputService {
                             }
 
                             install(StatusPages) {
+                                exception<BadRequestException> { call, _ ->
+                                    call.respond(
+                                        HttpStatusCode.BadRequest,
+                                        ApiError("invalid_body", "Malformed request body")
+                                    )
+                                }
+                                exception<SQLiteConstraintException> { call, cause ->
+                                    IWebInputService.report(cause)
+                                    if (!call.response.isCommitted) {
+                                        call.respond(
+                                            HttpStatusCode.UnprocessableEntity,
+                                            ApiError(
+                                                "constraint_violation",
+                                                "The transaction violates a data rule"
+                                            )
+                                        )
+                                    }
+                                }
                                 exception<ApiException> { call, cause ->
                                     call.respond(
                                         cause.status,

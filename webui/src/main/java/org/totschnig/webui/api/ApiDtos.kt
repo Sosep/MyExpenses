@@ -123,6 +123,21 @@ data class SplitPartDto(
 )
 
 @Keep
+data class TransactionWriteDto(
+    val accountId: Long? = null,
+    val amountMinor: Long? = null,
+    val date: String? = null,
+    val time: String? = null,
+    val valueDate: String? = null,
+    val payeeId: Long? = null,
+    val categoryId: Long? = null,
+    val tagIds: List<Long>? = null,
+    val comment: String? = null,
+    val methodId: Long? = null,
+    val referenceNumber: String? = null
+)
+
+@Keep
 data class PageDto<T>(
     val items: List<T>,
     val total: Long,

@@ -1,25 +1,45 @@
 package org.totschnig.webui.api
 
+import android.content.ContentUris
+import android.net.Uri
+import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.application.call
+import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
+import io.ktor.server.routing.delete
 import io.ktor.server.routing.get
+import io.ktor.server.routing.post
+import io.ktor.server.routing.put
 import io.ktor.server.routing.route
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.LocalTime
 import java.time.ZoneId
 import java.time.format.DateTimeParseException
 import java.util.Locale
 import kotlinx.coroutines.flow.StateFlow
 import org.totschnig.myexpenses.db2.Repository
+import org.totschnig.myexpenses.db2.createTransaction
+import org.totschnig.myexpenses.db2.entities.Transaction
 import org.totschnig.myexpenses.db2.getCurrencyUnitForAccount
 import org.totschnig.myexpenses.db2.loadTransaction
+import org.totschnig.myexpenses.db2.updateTransaction
+import org.totschnig.myexpenses.model.CrStatus
 import org.totschnig.myexpenses.model.CurrencyContext
 import org.totschnig.myexpenses.model.Grouping
+import org.totschnig.myexpenses.model.generateUuid
 import org.totschnig.myexpenses.preference.PrefHandler
 import org.totschnig.myexpenses.preference.PrefKey
+import org.totschnig.myexpenses.provider.KEY_ROWID
+import org.totschnig.myexpenses.provider.TransactionProvider.CATEGORIES_URI
+import org.totschnig.myexpenses.provider.TransactionProvider.METHODS_URI
+import org.totschnig.myexpenses.provider.TransactionProvider.PAYEES_URI
+import org.totschnig.myexpenses.provider.TransactionProvider.TAGS_URI
+import org.totschnig.myexpenses.util.epoch2ZonedDateTime
+import org.totschnig.myexpenses.util.toEpoch
 
 class ApiRoutes(
     private val repository: Repository,
@@ -92,36 +112,32 @@ class ApiRoutes(
                 )
             }
             get("/transactions/{id}") {
-                val id = call.parameters["id"]?.toLongOrNull()
-                    ?: throw ApiException(
-                        HttpStatusCode.BadRequest,
-                        "invalid_id",
-                        "id must be a number"
-                    )
-                val transaction = try {
-                    repository.loadTransaction(id, withTransfer = true, withTags = true)
-                } catch (_: IllegalArgumentException) {
+                call.respond(loadTransactionDto(call.requirePathId()))
+            }
+            post("/transactions") {
+                val body = call.receive<TransactionWriteDto>()
+                val created = createSimple(body)
+                call.response.headers.append(
+                    HttpHeaders.Location,
+                    "/api/v1/transactions/${created.id}"
+                )
+                call.respond(HttpStatusCode.Created, created)
+            }
+            put("/transactions/{id}") {
+                val id = call.requirePathId()
+                val body = call.receive<TransactionWriteDto>()
+                call.respond(updateSimple(id, body))
+            }
+            delete("/transactions/{id}") {
+                val id = call.requirePathId()
+                if (!repository.deleteTransaction(id)) {
                     throw ApiException(
                         HttpStatusCode.NotFound,
                         "transaction_not_found",
                         "Transaction not found"
                     )
                 }
-                val currency = repository.getCurrencyUnitForAccount(transaction.data.accountId)
-                    ?: throw ApiException(
-                        HttpStatusCode.NotFound,
-                        "account_not_found",
-                        "Account not found"
-                    )
-                call.respond(
-                    transaction.data.toApiDto(
-                        currencyUnit = currency,
-                        payeeMap = payeeMap.value,
-                        tagMap = tagMap.value,
-                        withTime = prefHandler.getBoolean(PrefKey.TRANSACTION_WITH_TIME, false),
-                        splitParts = transaction.splitParts
-                    )
-                )
+                call.respond(HttpStatusCode.NoContent)
             }
             get("/reports/grouped") {
                 val accountId = call.requireLong("accountId")
@@ -154,6 +170,172 @@ class ApiRoutes(
         }
     }
 
+    private fun createSimple(body: TransactionWriteDto): TransactionDto {
+        val accountId = body.accountId.requirePositive("accountId")
+        val amountMinor = body.amountMinor.requireNonZero("amountMinor")
+        val date = body.date.requireDate("date")
+        val time = body.time
+            ?.takeIf { it.isNotBlank() }
+            ?.let { parseTime(it, "time") }
+        val valueDate = body.valueDate
+            ?.takeIf { it.isNotBlank() }
+            ?.let { parseDate(it, "valueDate") }
+            ?: date
+        validateAccount(accountId)
+        val categoryId = body.categoryId.normalizeId()
+        validateOptional("categoryId", "category", categoryId, CATEGORIES_URI)
+        val payeeId = body.payeeId.normalizeId()
+        validateOptional("payeeId", "payee", payeeId, PAYEES_URI)
+        val methodId = body.methodId.normalizeId()
+        validateOptional("methodId", "method", methodId, METHODS_URI)
+        val tagIds = body.tagIds.orEmpty().filter { it > 0 }.distinct()
+        validateTags(tagIds)
+        val dateEpoch = if (time != null) {
+            LocalDateTime.of(date, time).toEpoch()
+        } else {
+            date.toEpoch()
+        }
+        val transaction = Transaction(
+            id = 0,
+            comment = body.comment.orEmpty(),
+            date = dateEpoch,
+            valueDate = valueDate.toEpoch(),
+            amount = amountMinor,
+            categoryId = categoryId,
+            accountId = accountId,
+            payeeId = payeeId,
+            methodId = methodId,
+            crStatus = CrStatus.UNRECONCILED,
+            referenceNumber = body.referenceNumber?.takeIf { it.isNotBlank() },
+            uuid = generateUuid(),
+            tagList = tagIds
+        )
+        val created = repository.createTransaction(transaction)
+        return loadTransactionDto(created.data.id)
+    }
+
+    private fun updateSimple(id: Long, body: TransactionWriteDto): TransactionDto {
+        val existing = loadExisting(id)
+        if (existing.data.isSplit || existing.data.isTransfer) {
+            throw ApiException(
+                HttpStatusCode.Conflict,
+                "unsupported_kind",
+                "Transfers and split transactions need their own endpoint"
+            )
+        }
+        val accountId = body.accountId.requirePositive("accountId")
+        val amountMinor = body.amountMinor.requireNonZero("amountMinor")
+        val date = body.date.requireDate("date")
+        val time = body.time
+            ?.takeIf { it.isNotBlank() }
+            ?.let { parseTime(it, "time") }
+        validateAccount(accountId)
+        val categoryId = body.categoryId.normalizeId()
+        validateOptional("categoryId", "category", categoryId, CATEGORIES_URI)
+        val payeeId = body.payeeId.normalizeId()
+        validateOptional("payeeId", "payee", payeeId, PAYEES_URI)
+        val methodId = body.methodId.normalizeId()
+        validateOptional("methodId", "method", methodId, METHODS_URI)
+        val tagIds = body.tagIds
+            ?.filter { it > 0 }
+            ?.distinct()
+            ?: existing.data.tagList
+        validateTags(tagIds)
+        val dateEpoch = if (time != null) {
+            LocalDateTime.of(date, time).toEpoch()
+        } else {
+            val existingTime = epoch2ZonedDateTime(existing.data.date).toLocalTime()
+            LocalDateTime.of(date, existingTime).toEpoch()
+        }
+        val valueDateEpoch = body.valueDate
+            ?.takeIf { it.isNotBlank() }
+            ?.let { parseDate(it, "valueDate").toEpoch() }
+            ?: existing.data.valueDate
+        val updated = existing.data.copy(
+            accountId = accountId,
+            amount = amountMinor,
+            date = dateEpoch,
+            valueDate = valueDateEpoch,
+            categoryId = categoryId,
+            payeeId = payeeId,
+            methodId = methodId,
+            referenceNumber = body.referenceNumber?.takeIf { it.isNotBlank() },
+            comment = body.comment.orEmpty(),
+            tagList = tagIds
+        )
+        repository.updateTransaction(updated)
+        return loadTransactionDto(id)
+    }
+
+    private fun loadExisting(id: Long) = try {
+        repository.loadTransaction(id, withTransfer = false, withTags = false)
+    } catch (_: IllegalArgumentException) {
+        throw ApiException(
+            HttpStatusCode.NotFound,
+            "transaction_not_found",
+            "Transaction not found"
+        )
+    }
+
+    private fun loadTransactionDto(id: Long): TransactionDto {
+        val transaction = try {
+            repository.loadTransaction(id, withTransfer = true, withTags = true)
+        } catch (_: IllegalArgumentException) {
+            throw ApiException(
+                HttpStatusCode.NotFound,
+                "transaction_not_found",
+                "Transaction not found"
+            )
+        }
+        val currency = repository.getCurrencyUnitForAccount(transaction.data.accountId)
+            ?: throw ApiException(
+                HttpStatusCode.NotFound,
+                "account_not_found",
+                "Account not found"
+            )
+        return transaction.data.toApiDto(
+            currencyUnit = currency,
+            payeeMap = payeeMap.value,
+            tagMap = tagMap.value,
+            withTime = prefHandler.getBoolean(PrefKey.TRANSACTION_WITH_TIME, false),
+            splitParts = transaction.splitParts
+        )
+    }
+
+    private fun validateAccount(accountId: Long) {
+        if (repository.getCurrencyUnitForAccount(accountId) == null) {
+            throw ApiException(
+                HttpStatusCode.UnprocessableEntity,
+                "invalid_accountId",
+                "The selected account does not exist",
+                mapOf("accountId" to "Does not exist")
+            )
+        }
+    }
+
+    private fun validateOptional(field: String, label: String, id: Long?, uri: Uri) {
+        if (id == null) return
+        val exists = repository.contentResolver.query(
+            ContentUris.withAppendedId(uri, id),
+            arrayOf(KEY_ROWID),
+            null,
+            null,
+            null
+        )?.use { it.moveToFirst() } ?: false
+        if (!exists) {
+            throw ApiException(
+                HttpStatusCode.UnprocessableEntity,
+                "invalid_$field",
+                "The selected $label does not exist",
+                mapOf(field to "Does not exist")
+            )
+        }
+    }
+
+    private fun validateTags(ids: List<Long>) {
+        ids.forEach { validateOptional("tagIds", "tag", it, TAGS_URI) }
+    }
+
     private fun metaDto() = MetaDto(
         appVersion = appVersion,
         serverTime = LocalDateTime.now().withNano(0).toString(),
@@ -167,6 +349,76 @@ class ApiRoutes(
     )
 }
 
+private fun Long?.normalizeId() = this?.takeIf { it > 0 }
+
+private fun Long?.requirePositive(field: String): Long {
+    val value = this ?: throw ApiException(
+        HttpStatusCode.UnprocessableEntity,
+        "validation_failed",
+        "Missing $field",
+        mapOf(field to "Required")
+    )
+    if (value <= 0) {
+        throw ApiException(
+            HttpStatusCode.UnprocessableEntity,
+            "validation_failed",
+            "Invalid $field",
+            mapOf(field to "Must be positive")
+        )
+    }
+    return value
+}
+
+private fun Long?.requireNonZero(field: String): Long {
+    val value = this ?: throw ApiException(
+        HttpStatusCode.UnprocessableEntity,
+        "validation_failed",
+        "Missing $field",
+        mapOf(field to "Required")
+    )
+    if (value == 0L) {
+        throw ApiException(
+            HttpStatusCode.UnprocessableEntity,
+            "validation_failed",
+            "Invalid $field",
+            mapOf(field to "Must not be zero")
+        )
+    }
+    return value
+}
+
+private fun String?.requireDate(field: String): LocalDate {
+    val value = this?.takeIf { it.isNotBlank() } ?: throw ApiException(
+        HttpStatusCode.UnprocessableEntity,
+        "validation_failed",
+        "Missing $field",
+        mapOf(field to "Required")
+    )
+    return parseDate(value, field)
+}
+
+private fun parseDate(value: String, field: String): LocalDate = try {
+    LocalDate.parse(value)
+} catch (_: DateTimeParseException) {
+    throw ApiException(
+        HttpStatusCode.BadRequest,
+        "invalid_$field",
+        "$field must be YYYY-MM-DD",
+        mapOf(field to "Expected YYYY-MM-DD")
+    )
+}
+
+private fun parseTime(value: String, field: String): LocalTime = try {
+    LocalTime.parse(value)
+} catch (_: DateTimeParseException) {
+    throw ApiException(
+        HttpStatusCode.BadRequest,
+        "invalid_$field",
+        "$field must be HH:mm",
+        mapOf(field to "Expected HH:mm")
+    )
+}
+
 private fun validateRange(from: LocalDate?, to: LocalDate?) {
     if (from != null && to != null && from.isAfter(to)) {
         throw ApiException(
@@ -176,6 +428,14 @@ private fun validateRange(from: LocalDate?, to: LocalDate?) {
         )
     }
 }
+
+private fun ApplicationCall.requirePathId(): Long =
+    parameters["id"]?.toLongOrNull()
+        ?: throw ApiException(
+            HttpStatusCode.BadRequest,
+            "invalid_id",
+            "id must be a number"
+        )
 
 private fun ApplicationCall.requireLong(name: String): Long {
     val raw = parameters[name]

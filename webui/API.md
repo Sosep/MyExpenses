@@ -1,6 +1,7 @@
 # API web de MyExpenses (borrador de contrato)
 
-Estado: **borrador para revisión**. No implementado todavía.
+Estado: **lectura y escritura simple implementadas**; transferencias y divididas
+siguen en solo lectura. El resto del documento describe el contrato objetivo.
 Alcance: API JSON consumida por la web app de escritorio. La app Android sigue
 siendo la fuente de verdad; el servidor corre en el móvil (Ktor, dentro del
 módulo `:webui`). Interfaz y sistema visual: [`DESIGN.md`](./DESIGN.md).
@@ -201,6 +202,10 @@ Servidor: valida cuenta/categoría/beneficiario/método, construye `Transaction`
 con `uuid = generateUuid()`, `crStatus = UNRECONCILED`, y delega en
 `Repository.createTransaction`. Responde `201` + `Location`.
 
+El cuerpo se deserializa en `TransactionWriteDto`: los campos opcionales son
+nullables y el servidor aplica los valores por defecto. Si `time` se omite, la
+fecha se guarda a mediodía; si `valueDate` se omite, se usa `date`.
+
 #### PUT /transactions/{id}
 
 Mismos campos. Reglas:
@@ -209,10 +214,20 @@ Mismos campos. Reglas:
   resetea a `UNRECONCILED`).
 - Si la transacción no es `SIMPLE`, responde `409 unsupported_kind` y sugiere el
   endpoint correcto.
-- Etiquetas: se reemplaza la lista si viene `tagIds`; si se omite, se conservan.
+- Etiquetas: se reemplaza la lista si viene `tagIds`, incluida una lista vacía;
+  si se omite, se conservan.
+- Si `time` se omite, se conserva la hora local existente; si `valueDate` se
+  omite, se conserva el valor existente. Así una edición parcial no mueve la
+  transacción a mediodía ni pierde la fecha valor.
 - `uuid` no se modifica.
 
-#### POST /transfers
+#### Estado del corte actual
+
+Implementado en `/api/v1`: `POST`, `PUT` y `DELETE` de transacciones **simples**.
+El editor de la SPA usa este contrato. Transferencias y divididas siguen en solo
+lectura; sus escrituras llegan con endpoints propios.
+
+#### POST /transfers (siguiente corte)
 
 ```json
 {
@@ -232,13 +247,13 @@ Servidor: `amountMinor` es magnitud positiva; genera las dos caras (origen
 cruzados, y llama a `Repository.createTransfer`. Rechaza misma cuenta y fecha
 distinta entre caras (no aplica porque las genera él).
 
-#### PUT /transfers/{id}
+#### PUT /transfers/{id} (siguiente corte)
 
 Cuerpo igual. El servidor carga la pareja (`loadTransaction` con peer), aplica
 los cambios a ambas caras y llama a `updateTransfer`. Cambiar de cuenta destino
 se trata como borrar/crear si el provider no lo soporta (decisión a validar).
 
-#### POST /split-transactions
+#### POST /split-transactions (siguiente corte)
 
 ```json
 {
@@ -352,7 +367,8 @@ Todo es aditivo: no hace falta tocar el esquema de base de datos.
 4. Paginación por `offset` o por cursor `(date,id)`.
 5. Moneda y zona horaria: asumir la del móvil (recomendado v1) o enviar offset
    explícito en cada petición.
-6. v1 incluye transferencias y splits en escritura, o solo lectura de ellos.
+6. ~~v1 incluye transferencias y splits en escritura~~. El corte actual escribe
+   solo transacciones simples; transferencias y divididas van en el siguiente.
 
 ## 7. Correcciones sobre el análisis previo
 
