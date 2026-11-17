@@ -478,7 +478,8 @@ class AndroidWebApiDataSource(
                 methodId = methodId,
                 crStatus = CrStatus.UNRECONCILED,
                 referenceNumber = part.referenceNumber?.takeIf { it.isNotBlank() },
-                uuid = uuid,
+                // Each part needs its own uuid: (account_id, uuid, status) is unique.
+                uuid = generateUuid(),
                 tagList = partTags
             )
         }
@@ -590,7 +591,9 @@ class AndroidWebApiDataSource(
                 methodId = methodId,
                 crStatus = existing.data.crStatus,
                 referenceNumber = part.referenceNumber?.takeIf { it.isNotBlank() },
-                uuid = existing.data.uuid,
+                // Keep the part's own uuid; a new part gets a fresh one. Sharing the
+                // parent's uuid violates the unique index on (account_id, uuid, status).
+                uuid = existingParts[partId]?.data?.uuid ?: generateUuid(),
                 parentId = existing.data.id,
                 tagList = partTags
             )
@@ -833,7 +836,9 @@ class AndroidWebApiDataSource(
             id = 0,
             accountId = accountId,
             title = title,
-            description = body.description?.trim()?.takeIf { it.isNotEmpty() },
+            // budgets.description is NOT NULL in the schema: an absent or blank description
+            // is stored as "", never null, or the insert fails.
+            description = body.description?.trim().orEmpty(),
             currency = currency,
             grouping = grouping,
             color = -1,
@@ -889,7 +894,8 @@ class AndroidWebApiDataSource(
         val (start, end) = budgetDuration(grouping, body.start, body.end, existing)
         val updated = existing.copy(
             title = title,
-            description = body.description?.trim()?.takeIf { it.isNotEmpty() },
+            // Omitting the description keeps the stored one; sending it empty clears it.
+            description = body.description?.trim() ?: existing.description,
             start = start,
             end = end,
             default = body.isDefault ?: existing.default

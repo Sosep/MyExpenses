@@ -81,20 +81,25 @@ Se ejecuta en orden. Cada módulo se commitea con sus docs y sus assets si toca 
     comparten `uuid` y choca el índice único
     `(account_id, uuid, status)`; cada parte necesita su propio `uuid`.
 
-- [ ] **T9 — Descripción de presupuesto**
+- [x] **T9 — Descripción de presupuesto**
   - Acceptance: `POST`/`PUT` sin `description` (y con `""`) responden 201/200 y
     guardan cadena vacía; el ciclo crear → asignaciones con rollover → historial
     → editar → borrar → crear otra vez sigue en 201.
   - Verify: `curl` del ciclo + `ApiRoutesTest` de las rutas.
   - Files: `AndroidWebApiDataSource.kt`, `ApiQueries.kt`, `RepositoryBudget.kt`,
     `ApiRoutesTest.kt`
+  - Hecho: la descripción se guarda como `""` al crear y, al editar, omitirla
+    conserva la existente. Sin verificar en dispositivo hasta instalar el build.
 
-- [ ] **T10 — `uuid` por parte en las divididas**
+- [x] **T10 — `uuid` por parte en las divididas**
   - Acceptance: `POST /split-transactions` con dos partes que suman el padre
     devuelve 201 (cada parte con su `uuid`); `PUT` añade/quita partes; el borrado
     deja el saldo intacto; `API.md` deja de decir que el `uuid` es compartido.
   - Verify: `curl` + SPA: crear, reabrir, editar y borrar en el móvil.
   - Files: `AndroidWebApiDataSource.kt` (y provider si el diagnóstico lo pide)
+  - Hecho: cada parte nace con su `uuid`; al editar conserva el suyo y las nuevas
+    generan uno. `API.md` corregido. Sin verificar en dispositivo hasta instalar
+    el build.
 
 ## Módulo `consultas-informes`
 

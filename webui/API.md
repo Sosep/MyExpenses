@@ -285,7 +285,9 @@ Reglas (ya existen en `createSplitTransaction`):
 - al menos una parte; cada `parts[].amountMinor` es distinto de cero y **con signo**
 - `sum(parts.amountMinor) == amountMinor`
 - todas las partes comparten cuenta y fecha; `categoryId = SPLIT_CATID` en el padre
-- mismo `uuid` en padre y partes; etiquetas por padre y por parte
+- **cada parte lleva su propio `uuid`** (padre y partes se enlazan por `parent_id`;
+  compartir el `uuid` del padre choca con el índice único sobre
+  `(account_id, uuid, status)`); etiquetas por padre y por parte
 - partes con transferencia: v2 (`parts[].transferAccountId`)
 
 Update: `PUT /split-transactions/{id}` envía el mismo cuerpo. Una parte con `id`
@@ -396,6 +398,9 @@ separado; el editor de transferencias no usa `payee` para elegir la cuenta.
 - `201` + `Location: /api/v1/budgets/{id}`; responde `BudgetDto`.
 - `accountId`, `title`, `grouping` y `amountMinor` son obligatorios;
   `amountMinor` no puede ser negativo.
+- `description` es opcional: si falta o viene vacía se guarda como `""` (la
+  columna no admite `NULL`). En `PUT`, omitirla conserva la existente y enviarla
+  vacía la borra.
 - `grouping` inválido: `422 invalid_grouping`.
 - `NONE` exige `start` y `end` (`YYYY-MM-DD`, `end >= start`); los demás tipos no
   admiten fechas (`422 validation_failed`).
