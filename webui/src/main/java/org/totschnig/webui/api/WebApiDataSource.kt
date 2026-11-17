@@ -31,6 +31,9 @@ interface WebApiDataSource {
     ): List<GroupDto>
     fun budgets(): List<BudgetDto>
     suspend fun budgetProgress(id: Long, year: Int?, second: Int?): BudgetProgressDto?
+    fun createBudget(body: BudgetWriteDto): BudgetDto
+    fun updateBudget(id: Long, body: BudgetWriteDto): BudgetDto
+    fun deleteBudget(id: Long): Boolean
     fun createTransaction(body: TransactionWriteDto): TransactionDto
     fun updateTransaction(id: Long, body: TransactionWriteDto): TransactionDto
     fun createTransfer(body: TransferWriteDto): TransactionDto

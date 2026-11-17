@@ -224,6 +224,72 @@ class ApiRoutesTest {
         assertEquals(HttpStatusCode.NotFound, response.status)
         assertTrue(response.bodyAsText().contains("budget_not_found"))
     }
+
+    @Test
+    fun `create budget returns 201 and location`() = testApplication {
+        val fake = FakeDataSource()
+        installRoutes(fake)
+        val response = client.post("/api/v1/budgets") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """{"accountId":1,"title":"Groceries","grouping":"MONTH","amountMinor":40000}"""
+            )
+        }
+        assertEquals(HttpStatusCode.Created, response.status)
+        assertEquals("/api/v1/budgets/1", response.headers[HttpHeaders.Location])
+        assertEquals("Groceries", fake.savedBudget?.title)
+        assertEquals(40000L, fake.savedBudget?.amountMinor)
+    }
+
+    @Test
+    fun `budget with invalid grouping is a 422`() = testApplication {
+        installRoutes(FakeDataSource())
+        val response = client.post("/api/v1/budgets") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """{"accountId":1,"title":"Groceries","grouping":"FORTNIGHT","amountMinor":40000}"""
+            )
+        }
+        assertEquals(HttpStatusCode.UnprocessableEntity, response.status)
+        assertTrue(response.bodyAsText().contains("invalid_grouping"))
+    }
+
+    @Test
+    fun `one-time budget without dates is a 422`() = testApplication {
+        installRoutes(FakeDataSource())
+        val response = client.post("/api/v1/budgets") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """{"accountId":1,"title":"Trip","grouping":"NONE","amountMinor":90000}"""
+            )
+        }
+        assertEquals(HttpStatusCode.UnprocessableEntity, response.status)
+        assertTrue(response.bodyAsText().contains("validation_failed"))
+    }
+
+    @Test
+    fun `update budget returns 200`() = testApplication {
+        val fake = FakeDataSource()
+        installRoutes(fake)
+        val response = client.put("/api/v1/budgets/1") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """{"accountId":1,"title":"Food","grouping":"MONTH","amountMinor":45000}"""
+            )
+        }
+        assertEquals(HttpStatusCode.OK, response.status)
+        assertEquals("Food", fake.savedBudget?.title)
+    }
+
+    @Test
+    fun `delete budget returns 204 and unknown id returns 404`() = testApplication {
+        installRoutes(FakeDataSource())
+        val deleted = client.delete("/api/v1/budgets/1")
+        assertEquals(HttpStatusCode.NoContent, deleted.status)
+        val missing = client.delete("/api/v1/budgets/9")
+        assertEquals(HttpStatusCode.NotFound, missing.status)
+        assertTrue(missing.bodyAsText().contains("budget_not_found"))
+    }
 }
 
 private fun ApplicationTestBuilder.installRoutes(dataSource: WebApiDataSource) {
@@ -255,6 +321,7 @@ private class FakeDataSource : WebApiDataSource {
     var created: TransactionWriteDto? = null
     var createdTransfer: TransferWriteDto? = null
     var createdSplit: SplitWriteDto? = null
+    var savedBudget: BudgetWriteDto? = null
     private val sample = sampleTransaction()
 
     override fun meta() = MetaDto(
@@ -314,6 +381,39 @@ private class FakeDataSource : WebApiDataSource {
         from: LocalDate,
         to: LocalDate
     ) = listOf(GroupDto(2026, 11, 1000, -500, 0))
+
+    override fun createBudget(body: BudgetWriteDto): BudgetDto {
+        if (body.grouping !in setOf("DAY", "WEEK", "MONTH", "YEAR", "NONE")) {
+            throw ApiException(
+                HttpStatusCode.UnprocessableEntity,
+                "invalid_grouping",
+                "Invalid grouping"
+            )
+        }
+        if (body.grouping == "NONE" && (body.start == null || body.end == null)) {
+            throw ApiException(
+                HttpStatusCode.UnprocessableEntity,
+                "validation_failed",
+                "Missing start or end"
+            )
+        }
+        savedBudget = body
+        return sampleBudget()
+    }
+
+    override fun updateBudget(id: Long, body: BudgetWriteDto): BudgetDto {
+        if (id != 1L) {
+            throw ApiException(
+                HttpStatusCode.NotFound,
+                "budget_not_found",
+                "Budget not found"
+            )
+        }
+        savedBudget = body
+        return sampleBudget()
+    }
+
+    override fun deleteBudget(id: Long) = id == 1L
 
     override fun budgets() = listOf(sampleBudget())
 
@@ -479,7 +579,8 @@ private fun sampleBudget() = BudgetDto(
     end = null,
     accountName = "Everyday",
     isDefault = false,
-    uuid = "budget-uuid"
+    uuid = "budget-uuid",
+    allocationMinor = 40000
 )
 
 private fun sampleBudgetProgress() = BudgetProgressDto(

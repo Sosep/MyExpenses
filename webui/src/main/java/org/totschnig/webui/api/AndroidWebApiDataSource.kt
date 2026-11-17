@@ -1,6 +1,7 @@
 package org.totschnig.webui.api
 
 import android.content.ContentUris
+import android.content.ContentValues
 import android.net.Uri
 import io.ktor.http.HttpStatusCode
 import java.time.LocalDate
@@ -13,12 +14,15 @@ import kotlin.math.abs
 import kotlinx.coroutines.flow.StateFlow
 import org.totschnig.myexpenses.db2.Repository
 import org.totschnig.myexpenses.db2.RepositoryTransaction
+import org.totschnig.myexpenses.db2.budgetAllocation
 import org.totschnig.myexpenses.db2.createTransaction
+import org.totschnig.myexpenses.db2.deleteBudget
 import org.totschnig.myexpenses.db2.entities.Transaction
 import org.totschnig.myexpenses.db2.getCurrencyUnitForAccount
 import org.totschnig.myexpenses.db2.loadBudget
 import org.totschnig.myexpenses.db2.loadBudgetProgress
 import org.totschnig.myexpenses.db2.loadTransaction
+import org.totschnig.myexpenses.db2.saveBudget
 import org.totschnig.myexpenses.db2.updateTransaction
 import org.totschnig.myexpenses.model.CrStatus
 import org.totschnig.myexpenses.model.CurrencyContext
@@ -26,10 +30,16 @@ import org.totschnig.myexpenses.model.Grouping
 import org.totschnig.myexpenses.model.generateUuid
 import org.totschnig.myexpenses.preference.PrefHandler
 import org.totschnig.myexpenses.preference.PrefKey
+import org.totschnig.myexpenses.provider.KEY_BUDGET
+import org.totschnig.myexpenses.provider.KEY_BUDGETID
+import org.totschnig.myexpenses.provider.KEY_CATID
 import org.totschnig.myexpenses.provider.KEY_ROWID
+import org.totschnig.myexpenses.provider.KEY_SECOND_GROUP
 import org.totschnig.myexpenses.provider.KEY_TITLE
+import org.totschnig.myexpenses.provider.KEY_YEAR
 import org.totschnig.myexpenses.provider.SPLIT_CATID
 import org.totschnig.myexpenses.provider.TransactionProvider.BUDGETS_URI
+import org.totschnig.myexpenses.provider.TransactionProvider.BUDGET_ALLOCATIONS_URI
 import org.totschnig.myexpenses.provider.TransactionProvider.CATEGORIES_URI
 import org.totschnig.myexpenses.provider.TransactionProvider.METHODS_URI
 import org.totschnig.myexpenses.provider.TransactionProvider.PAYEES_URI
@@ -663,6 +673,145 @@ class AndroidWebApiDataSource(
         )
     }
 
+    override fun createBudget(body: BudgetWriteDto): BudgetDto {
+        val accountId = body.accountId.requirePositive("accountId")
+        validateAccount(accountId)
+        val title = body.title?.trim().orEmpty()
+        if (title.isBlank()) {
+            throw ApiException(
+                HttpStatusCode.UnprocessableEntity,
+                "validation_failed",
+                "Missing title",
+                mapOf("title" to "Required")
+            )
+        }
+        val grouping = parseBudgetGrouping(body.grouping)
+        val (start, end) = budgetDuration(grouping, body.start, body.end)
+        val amount = body.amountMinor ?: throw ApiException(
+            HttpStatusCode.UnprocessableEntity,
+            "validation_failed",
+            "Missing amountMinor",
+            mapOf("amountMinor" to "Required")
+        )
+        if (amount < 0) {
+            throw ApiException(
+                HttpStatusCode.UnprocessableEntity,
+                "validation_failed",
+                "Invalid amountMinor",
+                mapOf("amountMinor" to "Must not be negative")
+            )
+        }
+        val currency = repository.getCurrencyUnitForAccount(accountId)!!.code
+        val budget = Budget(
+            id = 0,
+            accountId = accountId,
+            title = title,
+            description = body.description?.trim()?.takeIf { it.isNotEmpty() },
+            currency = currency,
+            grouping = grouping,
+            color = -1,
+            start = start,
+            end = end,
+            accountName = null,
+            default = body.isDefault == true
+        )
+        val id = repository.saveBudget(budget, amount)
+        if (id <= 0) {
+            throw ApiException(
+                HttpStatusCode.InternalServerError,
+                "save_failed",
+                "Could not create the budget"
+            )
+        }
+        return repository.loadBudget(id)!!.toDto()
+    }
+
+    override fun updateBudget(id: Long, body: BudgetWriteDto): BudgetDto {
+        val existing = repository.loadBudget(id) ?: throw ApiException(
+            HttpStatusCode.NotFound,
+            "budget_not_found",
+            "Budget not found"
+        )
+        val accountId = body.accountId.requirePositive("accountId")
+        if (accountId != existing.accountId) {
+            throw ApiException(
+                HttpStatusCode.UnprocessableEntity,
+                "unsupported_move",
+                "Moving a budget to another account is not supported",
+                mapOf("accountId" to "Must match the current account")
+            )
+        }
+        val grouping = parseBudgetGrouping(body.grouping)
+        if (grouping != existing.grouping) {
+            throw ApiException(
+                HttpStatusCode.UnprocessableEntity,
+                "unsupported_grouping_change",
+                "Changing the period type is not supported",
+                mapOf("grouping" to "Must match the current period type")
+            )
+        }
+        val title = body.title?.trim().orEmpty()
+        if (title.isBlank()) {
+            throw ApiException(
+                HttpStatusCode.UnprocessableEntity,
+                "validation_failed",
+                "Missing title",
+                mapOf("title" to "Required")
+            )
+        }
+        val (start, end) = budgetDuration(grouping, body.start, body.end, existing)
+        val updated = existing.copy(
+            title = title,
+            description = body.description?.trim()?.takeIf { it.isNotEmpty() },
+            start = start,
+            end = end,
+            default = body.isDefault ?: existing.default
+        )
+        if (repository.saveBudget(updated, null) <= 0) {
+            throw ApiException(
+                HttpStatusCode.InternalServerError,
+                "save_failed",
+                "Could not update the budget"
+            )
+        }
+        body.amountMinor?.let { amount ->
+            if (amount < 0) {
+                throw ApiException(
+                    HttpStatusCode.UnprocessableEntity,
+                    "validation_failed",
+                    "Invalid amountMinor",
+                    mapOf("amountMinor" to "Must not be negative")
+                )
+            }
+            updateDefaultAllocation(id, amount)
+        }
+        return repository.loadBudget(id)!!.toDto()
+    }
+
+    override fun deleteBudget(id: Long): Boolean = repository.deleteBudget(id) == 1
+
+    private fun updateDefaultAllocation(budgetId: Long, amount: Long) {
+        val values = ContentValues().apply { put(KEY_BUDGET, amount) }
+        val selection = "$KEY_BUDGETID = ? AND $KEY_CATID = 0 AND " +
+            "$KEY_YEAR IS NULL AND $KEY_SECOND_GROUP IS NULL"
+        val updated = repository.contentResolver.update(
+            BUDGET_ALLOCATIONS_URI,
+            values,
+            selection,
+            arrayOf(budgetId.toString())
+        )
+        if (updated == 0) {
+            repository.contentResolver.insert(
+                BUDGET_ALLOCATIONS_URI,
+                ContentValues().apply {
+                    put(KEY_BUDGETID, budgetId)
+                    put(KEY_CATID, 0)
+                    put(KEY_BUDGET, amount)
+                }
+            )
+        }
+    }
+
     private fun Budget.toDto() = BudgetDto(
         id = id,
         accountId = accountId,
@@ -676,7 +825,8 @@ class AndroidWebApiDataSource(
         end = end?.toString(),
         accountName = accountName,
         isDefault = default,
-        uuid = uuid
+        uuid = uuid,
+        allocationMinor = repository.budgetAllocation(id, null, null)
     )
 
     private fun loadTransactionDto(id: Long): TransactionDto {
@@ -740,6 +890,64 @@ class AndroidWebApiDataSource(
 }
 
 private fun Long?.normalizeId() = this?.takeIf { it > 0 }
+
+private fun parseBudgetGrouping(raw: String?): Grouping {
+    val value = (raw ?: "MONTH").uppercase(Locale.ROOT)
+    return try {
+        Grouping.valueOf(value)
+    } catch (_: IllegalArgumentException) {
+        throw ApiException(
+            HttpStatusCode.UnprocessableEntity,
+            "invalid_grouping",
+            "grouping must be DAY, WEEK, MONTH, YEAR or NONE",
+            mapOf("grouping" to "Invalid value")
+        )
+    }
+}
+
+private fun budgetDuration(
+    grouping: Grouping,
+    startRaw: String?,
+    endRaw: String?,
+    existing: Budget? = null
+): Pair<LocalDate?, LocalDate?> {
+    if (grouping != Grouping.NONE) {
+        if (!startRaw.isNullOrBlank() || !endRaw.isNullOrBlank()) {
+            throw ApiException(
+                HttpStatusCode.UnprocessableEntity,
+                "validation_failed",
+                "start and end are only allowed for one-time budgets",
+                mapOf("start" to "Not allowed", "end" to "Not allowed")
+            )
+        }
+        return null to null
+    }
+    val start = startRaw?.takeIf { it.isNotBlank() }?.let { parseDate(it, "start") }
+        ?: existing?.start
+        ?: throw ApiException(
+            HttpStatusCode.UnprocessableEntity,
+            "validation_failed",
+            "Missing start",
+            mapOf("start" to "Required for one-time budgets")
+        )
+    val end = endRaw?.takeIf { it.isNotBlank() }?.let { parseDate(it, "end") }
+        ?: existing?.end
+        ?: throw ApiException(
+            HttpStatusCode.UnprocessableEntity,
+            "validation_failed",
+            "Missing end",
+            mapOf("end" to "Required for one-time budgets")
+        )
+    if (end.isBefore(start)) {
+        throw ApiException(
+            HttpStatusCode.UnprocessableEntity,
+            "validation_failed",
+            "end must be on or after start",
+            mapOf("end" to "Must be on or after start")
+        )
+    }
+    return start to end
+}
 
 private fun Long?.requirePositive(field: String): Long {
     val value = this ?: throw ApiException(

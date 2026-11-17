@@ -131,6 +131,29 @@ class ApiRoutes(
             get("/budgets") {
                 call.respond(dataSource.budgets())
             }
+            post("/budgets") {
+                val created = dataSource.createBudget(call.receive<BudgetWriteDto>())
+                call.response.headers.append(
+                    HttpHeaders.Location,
+                    "/api/v1/budgets/${created.id}"
+                )
+                call.respond(HttpStatusCode.Created, created)
+            }
+            put("/budgets/{id}") {
+                val id = call.requirePathId()
+                call.respond(dataSource.updateBudget(id, call.receive<BudgetWriteDto>()))
+            }
+            delete("/budgets/{id}") {
+                val id = call.requirePathId()
+                if (!dataSource.deleteBudget(id)) {
+                    throw ApiException(
+                        HttpStatusCode.NotFound,
+                        "budget_not_found",
+                        "Budget not found"
+                    )
+                }
+                call.respond(HttpStatusCode.NoContent)
+            }
             get("/budgets/{id}") {
                 val id = call.requirePathId()
                 val yearRaw = call.parameters["year"]

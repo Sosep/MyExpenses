@@ -220,7 +220,8 @@ data class BudgetDto(
     val end: String?,
     val accountName: String?,
     val isDefault: Boolean,
-    val uuid: String?
+    val uuid: String?,
+    val allocationMinor: Long?
 )
 
 @Keep
@@ -241,4 +242,16 @@ data class BudgetProgressDto(
     val remainingMinor: Long,
     val totalDays: Long,
     val currentDay: Long
+)
+
+@Keep
+data class BudgetWriteDto(
+    val accountId: Long? = null,
+    val title: String? = null,
+    val description: String? = null,
+    val grouping: String? = null,
+    val start: String? = null,
+    val end: String? = null,
+    val isDefault: Boolean? = null,
+    val amountMinor: Long? = null
 )

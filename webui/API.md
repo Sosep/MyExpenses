@@ -1,7 +1,7 @@
 # API web de MyExpenses (borrador de contrato)
 
 Estado: **lectura, escritura simple, transferencias, divididas, ficheros y
-presupuestos (lectura) implementados**. Informes siguen como contrato objetivo.
+presupuestos implementados**. Informes siguen como contrato objetivo.
 Alcance: API JSON consumida por la web app de escritorio. La app Android sigue
 siendo la fuente de verdad; el servidor corre en el móvil (Ktor, dentro del
 módulo `:webui`). Interfaz y sistema visual: [`DESIGN.md`](./DESIGN.md).
@@ -310,7 +310,7 @@ separado; el editor de transferencias no usa `payee` para elegir la cuenta.
 |---|---|---|
 | GET | `/budgets` | Lista con configuración |
 | GET | `/budgets/{id}?year&second` | Progreso del periodo (gastado, asignado, restante) |
-| POST/PUT/DELETE | `/budgets[/{id}]` | CRUD (siguiente corte) |
+| POST/PUT/DELETE | `/budgets[/{id}]` | CRUD |
 
 `BudgetDto`:
 
@@ -366,6 +366,49 @@ separado; el editor de transferencias no usa `payee` para elegir la cuenta.
 - Los presupuestos de cuentas y divisas distintas se devuelven en la misma lista;
   el cliente solo agrega importes cuando comparten divisa y periodo.
 - `grouping` usa los nombres de la app: `DAY`, `WEEK`, `MONTH`, `YEAR`, `NONE`.
+- `allocationMinor` es la asignación por defecto (la fila sin año ni periodo), o
+  `null` si el presupuesto solo tiene asignaciones por periodo. El editor la usa
+  como importe inicial.
+
+#### POST /budgets
+
+```json
+{
+  "accountId": 1,
+  "title": "Groceries",
+  "description": null,
+  "grouping": "MONTH",
+  "start": null,
+  "end": null,
+  "isDefault": false,
+  "amountMinor": 40000
+}
+```
+
+- `201` + `Location: /api/v1/budgets/{id}`; responde `BudgetDto`.
+- `accountId`, `title`, `grouping` y `amountMinor` son obligatorios;
+  `amountMinor` no puede ser negativo.
+- `grouping` inválido: `422 invalid_grouping`.
+- `NONE` exige `start` y `end` (`YYYY-MM-DD`, `end >= start`); los demás tipos no
+  admiten fechas (`422 validation_failed`).
+- La divisa y `fractionDigits` se derivan de la cuenta.
+- La asignación inicial se guarda como asignación por defecto (categoría 0, sin
+  periodo), igual que en la app.
+
+#### PUT /budgets/{id}
+
+Mismo cuerpo. Actualiza título, descripción, fechas de `NONE` e `isDefault`. Si
+`amountMinor` viene, actualiza la asignación por defecto; no toca las
+asignaciones por periodo ni el rollover. La cuenta y el `grouping` no se pueden
+cambiar (`422 unsupported_move` / `422 unsupported_grouping_change`); omite
+`start`/`end` en `NONE` para conservar las fechas actuales.
+
+#### DELETE /budgets/{id}
+
+`204` si existía, `404 budget_not_found` si no.
+
+Fuera de este corte: asignación por categoría, rollover entre periodos y
+duplicación de presupuestos. Se siguen gestionando en la app Android.
 
 ### 4.6 Informes y agrupaciones
 
@@ -470,9 +513,9 @@ Tras revisar de nuevo el código:
 ## 8. Pruebas
 
 - **Rutas en JVM**: `webui/src/test/java/org/totschnig/webui/api/ApiRoutesTest.kt`
-  con un `WebApiDataSource` fake y Ktor `testApplication`. 19 tests cubren
+  con un `WebApiDataSource` fake y Ktor `testApplication`. 24 tests cubren
   routing, validación, `201/204/404/409/422`, JSON, body malformado, los
-  endpoints de transferencias/divididas y presupuestos. Comando:
+  endpoints de transferencias/divididas y el CRUD de presupuestos. Comando:
   `docker compose run --rm android-build :webui:testDebugUnitTest`.
 - **Capa Android**: `AndroidWebApiDataSource` y el `ContentProvider` se validan
   en el móvil o con tests instrumentados; los mapeadores puros pueden probarse
