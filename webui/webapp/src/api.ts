@@ -22,6 +22,7 @@ import type {
   TransactionWrite,
   TransferWrite,
 } from './types'
+import type { Grouping } from './filters'
 
 export const UNAUTHORIZED_EVENT = 'myexpenses:unauthorized'
 
@@ -169,12 +170,13 @@ export const getMethods = (signal?: AbortSignal) => request<Method[]>('/methods'
 
 export const getGrouped = (
   accountId: number,
+  grouping: Grouping,
   from: string,
   to: string,
   signal?: AbortSignal,
 ) =>
   request<Group[]>(
-    `/reports/grouped?accountId=${accountId}&from=${from}&to=${to}&grouping=MONTH`,
+    `/reports/grouped?accountId=${accountId}&from=${from}&to=${to}&grouping=${grouping}`,
     { signal },
   )
 
@@ -187,8 +189,8 @@ export interface TransactionFilters {
 
 export const getTransactions = (
   accountId: number,
-  from: string,
-  to: string,
+  from: string | undefined,
+  to: string | undefined,
   type: 'both' | 'income' | 'expense',
   limit: number,
   offset: number,
@@ -197,12 +199,13 @@ export const getTransactions = (
 ) => {
   const params = new URLSearchParams({
     accountId: String(accountId),
-    from,
-    to,
     type,
     limit: String(limit),
     offset: String(offset),
   })
+  // Without a range the list is the whole history, newest first.
+  if (from) params.set('from', from)
+  if (to) params.set('to', to)
   for (const key of ['categoryId', 'payeeId', 'tagId', 'methodId'] as const) {
     const value = filters[key]
     if (value != null) params.set(key, String(value))

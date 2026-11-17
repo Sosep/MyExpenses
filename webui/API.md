@@ -501,6 +501,11 @@ Cada grupo de `/reports/grouped` lleva `year` y `second` con la misma base 0 que
 los presupuestos: `MONTH` 0–11, así que **noviembre es `10`**. El cliente compara
 sus cursors `YYYY-MM` con ese índice, no con el mes 1–12.
 
+Cada grupo lleva además `firstDate` (ISO): la fecha de su primera transacción.
+Los grupos vienen ordenados y son disjuntos, así que el cliente asigna cada fila
+al último grupo cuyo `firstDate` no sea posterior a ella; no necesita recalcular
+inicios de mes ni de semana.
+
 `ReportSummaryDto`:
 
 ```json

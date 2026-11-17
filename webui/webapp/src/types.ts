@@ -86,6 +86,8 @@ export interface Group {
   incomeMinor: number
   expensesMinor: number
   transfersMinor: number
+  /** First transaction date of the period; groups are ordered, so it anchors rows. */
+  firstDate?: string | null
 }
 
 export interface Category {

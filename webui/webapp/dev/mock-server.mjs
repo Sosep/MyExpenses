@@ -36,6 +36,12 @@ const month = now.getMonth() + 1
 const pad = (value) => String(value).padStart(2, '0')
 const iso = (day) => `${year}-${pad(month)}-${pad(day)}`
 
+/** ISO date `monthsAgo` months back, so grouping by month has history to show. */
+const isoMonthsAgo = (monthsAgo, day) => {
+  const date = new Date(year, month - 1 - monthsAgo, day)
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+}
+
 const accounts = [
   {
     id: 1,
@@ -376,7 +382,29 @@ const fillers = Array.from({ length: 52 }, (_, index) =>
   }),
 )
 
-const transactions = [...special, ...fillers].sort((a, b) => b.date.localeCompare(a.date))
+const history = [
+  { monthsAgo: 1, day: 3, amountMinor: -4200, name: 'Supermarket', category: fillerCategories[0] },
+  { monthsAgo: 1, day: 17, amountMinor: -1850, name: 'Cafe', category: fillerCategories[1] },
+  { monthsAgo: 1, day: 28, amountMinor: 295000, name: 'Salary', category: null },
+  { monthsAgo: 2, day: 9, amountMinor: -78000, name: 'Rent', category: fillerCategories[2] },
+  { monthsAgo: 2, day: 21, amountMinor: -3600, name: 'Fuel', category: fillerCategories[3] },
+  { monthsAgo: 3, day: 12, amountMinor: -9900, name: 'Pharmacy', category: fillerCategories[2] },
+].map((entry, index) =>
+  tx({
+    id: 300 + index,
+    amountMinor: entry.amountMinor,
+    date: isoMonthsAgo(entry.monthsAgo, entry.day),
+    valueDate: isoMonthsAgo(entry.monthsAgo, entry.day),
+    payee: entry.category ? { id: 30 + index, label: entry.name } : null,
+    category: entry.category,
+    comment: entry.name,
+    crStatus: 'CLEARED',
+  }),
+)
+
+const transactions = [...special, ...fillers, ...history].sort((a, b) =>
+  b.date.localeCompare(a.date),
+)
 
 const splitParts = [
   {
@@ -1196,23 +1224,55 @@ createServer(async (request, response) => {
     }
 
     if (path === '/api/v1/reports/grouped') {
-      const from = url.searchParams.get('from') ?? ''
-      const to = url.searchParams.get('to') ?? ''
-      const fromYear = Number(from.slice(0, 4))
-      const fromMonth = Number(from.slice(5, 7))
-      const toYear = Number(to.slice(0, 4))
-      const toMonth = Number(to.slice(5, 7))
-      const filtered = groups.filter((group) => {
-        const value = group.year * 12 + group.second
-        // Range bounds come from ISO dates (1-12); the group index is 0-11.
-        return value >= fromYear * 12 + fromMonth - 1 && value <= toYear * 12 + toMonth - 1
-      })
-      return sendJson(response, 200, filtered)
+      // Same shape as the API: groups carry the first date of the period, so the
+      // SPA can bucket rows without doing month or week arithmetic.
+      const grouping = (url.searchParams.get('grouping') ?? 'MONTH').toUpperCase()
+      const from = url.searchParams.get('from') || '0000-01-01'
+      const to = url.searchParams.get('to') || '9999-12-31'
+      const dayOfYear = (iso) => {
+        const date = new Date(`${iso}T00:00:00`)
+        const start = new Date(date.getFullYear(), 0, 1)
+        return Math.floor((date - start) / 86400000) + 1
+      }
+      const weekNumber = (iso) => Math.floor((dayOfYear(iso) - 1) / 7) + 1
+      const keyFor = (iso) => {
+        if (grouping === 'NONE') return 'all'
+        if (grouping === 'DAY') return iso
+        if (grouping === 'WEEK') return `${iso.slice(0, 4)}-W${weekNumber(iso)}`
+        if (grouping === 'YEAR') return iso.slice(0, 4)
+        return iso.slice(0, 7)
+      }
+      const buckets = new Map()
+      for (const item of transactions) {
+        if (item.date < from || item.date > to) continue
+        const key = keyFor(item.date)
+        const entry = buckets.get(key) ?? {
+          year: Number(item.date.slice(0, 4)),
+          second: 0,
+          incomeMinor: 0,
+          expensesMinor: 0,
+          transfersMinor: 0,
+          firstDate: item.date,
+        }
+        if (grouping === 'MONTH') entry.second = Number(item.date.slice(5, 7)) - 1
+        if (grouping === 'DAY') entry.second = dayOfYear(item.date)
+        if (grouping === 'WEEK') entry.second = weekNumber(item.date)
+        if (item.date < entry.firstDate) entry.firstDate = item.date
+        if (item.transferPeerId) entry.transfersMinor += item.amountMinor
+        else if (item.amountMinor > 0) entry.incomeMinor += item.amountMinor
+        else entry.expensesMinor += item.amountMinor
+        buckets.set(key, entry)
+      }
+      const result = [...buckets.values()].sort((left, right) =>
+        left.firstDate.localeCompare(right.firstDate),
+      )
+      return sendJson(response, 200, result)
     }
 
     if (path === '/api/v1/transactions' && request.method === 'GET') {
-      const from = url.searchParams.get('from') ?? ''
-      const to = url.searchParams.get('to') ?? ''
+      // No range means the whole history, newest first.
+      const from = url.searchParams.get('from') || '0000-01-01'
+      const to = url.searchParams.get('to') || '9999-12-31'
       const type = url.searchParams.get('type') ?? 'both'
       const limit = Number(url.searchParams.get('limit') ?? 50)
       const offset = Number(url.searchParams.get('offset') ?? 0)

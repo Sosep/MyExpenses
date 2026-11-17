@@ -46,8 +46,12 @@ Read this before changing code. Detailed sources:
   tokens. Only resets, keyframes and a few exact keywords remain plain CSS.
 - Transactions list supports `categoryId`, `payeeId`, `tagId` and `methodId`
   filters (AND); the SPA exposes them with `SearchSelect`, keeps them in the URL
-  and as removable chips, hides the month KPIs while filtering and collapses
-  them behind `Filters (n)` on phones.
+  and as removable chips, and collapses them behind `Filters (n)` on phones.
+  The list is not tied to a month: the grouping (`NONE/DAY/WEEK/MONTH/YEAR`) is a
+  visual choice kept in the URL and `localStorage`, each period header carries
+  its income, expenses and transfers from `/reports/grouped` (`firstDate`
+  anchors rows to periods), and the range is just another filter (`Historial`
+  by default, plus `Este mes`, `Últimos 3 meses`, `Este año` and a custom one).
 - Budgets have month navigation; monthly budgets load that month's progress,
   allocations and period total. Each budget has a 12-month history panel and
   per-category spent/allocated bars.

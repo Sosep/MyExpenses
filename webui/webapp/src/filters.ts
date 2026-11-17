@@ -42,3 +42,75 @@ export function searchWithFilters(search: string, filters: Filters): string {
   const query = params.toString()
   return query ? `?${query}` : ''
 }
+
+
+export type Grouping = 'NONE' | 'DAY' | 'WEEK' | 'MONTH' | 'YEAR'
+
+export const GROUPINGS: Grouping[] = ['NONE', 'DAY', 'WEEK', 'MONTH', 'YEAR']
+
+const GROUPING_STORAGE_KEY = 'myexpenses.grouping'
+
+export function isGrouping(value: string | null): value is Grouping {
+  return value !== null && (GROUPINGS as string[]).includes(value)
+}
+
+/**
+ * Grouping is a visual choice, remembered between visits. The URL wins over the
+ * stored value so a shared link keeps its grouping.
+ */
+export function groupingFromUrl(search: string): Grouping {
+  const fromUrl = new URLSearchParams(search).get('grouping')?.toUpperCase() ?? null
+  if (isGrouping(fromUrl)) return fromUrl
+  const stored = window.localStorage.getItem(GROUPING_STORAGE_KEY)?.toUpperCase() ?? null
+  return isGrouping(stored) ? stored : 'MONTH'
+}
+
+export function rememberGrouping(grouping: Grouping) {
+  window.localStorage.setItem(GROUPING_STORAGE_KEY, grouping)
+}
+
+export type RangePreset = 'all' | 'month' | 'last3' | 'year' | 'custom'
+
+export interface RangeState {
+  preset: RangePreset
+  from: string | null
+  to: string | null
+}
+
+export const DEFAULT_RANGE: RangeState = { preset: 'all', from: null, to: null }
+
+export function rangeFromUrl(search: string): RangeState {
+  const params = new URLSearchParams(search)
+  const preset = params.get('preset')
+  const from = params.get('from')
+  const to = params.get('to')
+  if (preset === 'custom' && from && to) return { preset: 'custom', from, to }
+  if (preset === 'month' || preset === 'last3' || preset === 'year') {
+    return { preset, from: null, to: null }
+  }
+  return DEFAULT_RANGE
+}
+
+export function searchWithViewState(
+  search: string,
+  grouping: Grouping,
+  range: RangeState,
+): string {
+  const params = new URLSearchParams(search)
+  params.set('grouping', grouping)
+  if (range.preset === 'all') {
+    params.delete('preset')
+    params.delete('from')
+    params.delete('to')
+  } else if (range.preset === 'custom') {
+    params.set('preset', 'custom')
+    if (range.from) params.set('from', range.from)
+    if (range.to) params.set('to', range.to)
+  } else {
+    params.set('preset', range.preset)
+    params.delete('from')
+    params.delete('to')
+  }
+  const query = params.toString()
+  return query ? `?${query}` : ''
+}

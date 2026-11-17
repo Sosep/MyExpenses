@@ -1315,6 +1315,66 @@ button:disabled {
   @apply hidden;
 }
 
+.list-toolbar {
+  @apply mb-2.5 flex flex-wrap items-center gap-1.5;
+}
+
+.list-toolbar .chip {
+  @apply inline-flex min-h-7 items-center rounded-[var(--radius-pill)] border border-line bg-surface px-2.5 text-[12px] text-ink;
+}
+
+.list-toolbar .chip:hover {
+  @apply border-line-strong;
+}
+
+.list-toolbar .chip.active {
+  @apply border-transparent bg-[var(--tint-lavender)] font-semibold text-accent;
+}
+
+.list-toolbar .chip:focus-visible {
+  @apply outline-2 outline-offset-1 outline-focus;
+}
+
+.grouping-select {
+  @apply ml-auto flex items-center gap-1.5 text-[12px] text-muted;
+}
+
+.grouping-select select {
+  @apply min-h-7 rounded-[var(--radius-pill)] border border-line bg-surface px-2 text-[12px] text-ink;
+}
+
+.range-fields {
+  @apply mb-2.5 flex flex-wrap gap-2;
+}
+
+.table .group-row {
+  @apply cursor-pointer;
+}
+
+.table .group-row td {
+  @apply bg-sunken p-0;
+}
+
+.group-head {
+  @apply flex flex-wrap items-baseline gap-2 px-3 py-1.5;
+}
+
+.group-toggle {
+  @apply inline-flex h-5 w-5 items-center justify-center rounded text-[11px] text-muted;
+}
+
+.group-toggle:focus-visible {
+  @apply outline-2 outline-offset-1 outline-focus;
+}
+
+.group-title {
+  @apply text-[13px] font-semibold text-ink;
+}
+
+.group-sums {
+  @apply ml-auto flex flex-wrap gap-3 text-[12px] tabular-nums;
+}
+
 .filter-chips {
   @apply m-0 mb-2.5 flex flex-wrap items-center gap-1.5;
 }

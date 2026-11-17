@@ -303,7 +303,13 @@ espacio para no quedar tapado.
   Amount 120, Balance 120.
 - Cabecera de mes (agrupación): 56 px, dos líneas: nombre + totales; debajo, barra
   de reparto por categorías de 4 px y leyenda.
-- Cabecera de grupo sticky bajo la cabecera de tabla.
+- Cabecera de grupo (agrupación de la lista): fila de tabla con fondo
+  `--bg-sunken`, título del periodo, las sumas distintas de cero (ingresos en
+  verde, gastos en rojo, transferencias en neutro, cada una con `title`) y un
+  control de plegado. No sticky: plegar ya basta para situarse.
+- Barra de la lista: chips de rango (`Historial`, `Este mes`, `Últimos 3
+  meses`, `Este año`, `Desde / hasta`) y, a la derecha, «Agrupar por» con un
+  `select` nativo (enum corto). En móvil el select baja a la segunda línea.
 - Acciones por fila: al hover o en un menú de tres puntos; no se llena la fila de
   iconos.
 - Paginación por cursor o "Load more"; se muestra el total cuando se conoce.

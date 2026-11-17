@@ -273,6 +273,10 @@ msgstr "Cerrar detalles"
 msgid "Close editor"
 msgstr "Cerrar editor"
 
+#: src/components/Transactions.tsx
+msgid "Collapse period"
+msgstr "Plegar periodo"
+
 #: src/App.tsx
 msgid "Connecting to My Expenses…"
 msgstr "Conectando con My Expenses…"
@@ -373,6 +377,10 @@ msgstr "Diario"
 #: src/components/Transactions.tsx
 msgid "Date"
 msgstr "Fecha"
+
+#: src/components/Transactions.tsx
+msgid "Day"
+msgstr "Día"
 
 #: src/components/BudgetEditor.tsx
 msgid "Default amount"
@@ -503,6 +511,10 @@ msgstr "Introduce el total"
 msgid "Enter the total amount."
 msgstr "Introduce el importe total."
 
+#: src/components/Transactions.tsx
+msgid "Expand period"
+msgstr "Desplegar periodo"
+
 #: src/components/TransactionEditor.tsx
 msgid "Expense"
 msgstr "Gasto"
@@ -544,14 +556,24 @@ msgid "Filters ({activeFilterCount})"
 msgstr "Filtros ({activeFilterCount})"
 
 #: src/components/TransactionEditor.tsx
+#: src/components/Transactions.tsx
 msgid "From"
 msgstr "Desde"
+
+#: src/components/Transactions.tsx
+msgid "From / to"
+msgstr "Desde / hasta"
 
 #: src/components/TransactionEditor.tsx
 msgid "From account"
 msgstr "Cuenta de origen"
 
+#: src/components/Transactions.tsx
+msgid "Group by"
+msgstr "Agrupar por"
+
 #: src/components/Budgets.tsx
+#: src/components/Transactions.tsx
 msgid "History"
 msgstr "Historial"
 
@@ -598,6 +620,7 @@ msgid "Last 12 months"
 msgstr "Últimos 12 meses"
 
 #: src/components/Reports.tsx
+#: src/components/Transactions.tsx
 msgid "Last 3 months"
 msgstr "Últimos 3 meses"
 
@@ -648,6 +671,10 @@ msgstr "Método"
 msgid "Modified"
 msgstr "Modificado"
 
+#: src/components/Transactions.tsx
+msgid "Month"
+msgstr "Mes"
+
 #: src/components/BudgetEditor.tsx
 #: src/components/Budgets.tsx
 msgid "Monthly"
@@ -670,7 +697,6 @@ msgid "Name"
 msgstr "Nombre"
 
 #: src/components/Reports.tsx
-#: src/components/Transactions.tsx
 msgid "Net"
 msgstr "Neto"
 
@@ -697,7 +723,6 @@ msgstr "Nueva transacción"
 
 #: src/components/Budgets.tsx
 #: src/components/Reports.tsx
-#: src/components/Transactions.tsx
 msgid "Next month"
 msgstr "Mes siguiente"
 
@@ -735,8 +760,8 @@ msgstr "Sin resultados"
 
 #. placeholder {0}: formatMonthKey(month)
 #: src/components/Transactions.tsx
-msgid "No transactions in {0}"
-msgstr "No hay transacciones en {0}"
+#~ msgid "No transactions in {0}"
+#~ msgstr "No hay transacciones en {0}"
 
 #: src/components/Transactions.tsx
 msgid "No transactions match these filters"
@@ -746,7 +771,12 @@ msgstr "Ninguna transacción coincide con estos filtros"
 msgid "No transactions this month"
 msgstr "No hay transacciones este mes"
 
+#: src/components/Transactions.tsx
+msgid "No transactions yet"
+msgstr "Todavía no hay transacciones"
+
 #: src/components/TransactionEditor.tsx
+#: src/components/Transactions.tsx
 msgid "None"
 msgstr "Ninguno"
 
@@ -856,7 +886,6 @@ msgstr "Importe del periodo"
 
 #: src/components/Budgets.tsx
 #: src/components/Reports.tsx
-#: src/components/Transactions.tsx
 msgid "Previous month"
 msgstr "Mes anterior"
 
@@ -1073,10 +1102,12 @@ msgstr "Ese elemento ya no existe en el móvil."
 
 #: src/components/Dashboard.tsx
 #: src/components/Reports.tsx
+#: src/components/Transactions.tsx
 msgid "This month"
 msgstr "Este mes"
 
 #: src/components/Reports.tsx
+#: src/components/Transactions.tsx
 msgid "This year"
 msgstr "Este año"
 
@@ -1089,6 +1120,7 @@ msgid "Title"
 msgstr "Título"
 
 #: src/components/TransactionEditor.tsx
+#: src/components/Transactions.tsx
 msgid "To"
 msgstr "Hasta"
 
@@ -1143,6 +1175,7 @@ msgid "Transactions will appear here as soon as you record them in the app."
 msgstr "Las transacciones aparecerán aquí en cuanto las registres en la app."
 
 #: src/components/TransactionEditor.tsx
+#: src/components/Transactions.tsx
 #: src/format.ts
 msgid "Transfer"
 msgstr "Transferencia"
@@ -1178,6 +1211,16 @@ msgstr "Ver todo"
 msgid "Void"
 msgstr "Anulado"
 
+#: src/components/Transactions.tsx
+msgid "Week"
+msgstr "Semana"
+
+#. placeholder {0}: group.second
+#. placeholder {1}: group.year
+#: src/components/Transactions.tsx
+msgid "Week {0} · {1}"
+msgstr "Semana {0} · {1}"
+
 #: src/components/BudgetEditor.tsx
 #: src/components/Budgets.tsx
 msgid "Weekly"
@@ -1190,6 +1233,10 @@ msgstr "¿Qué quieres añadir?"
 #: src/api.ts
 msgid "Wrong password."
 msgstr "Contraseña incorrecta."
+
+#: src/components/Transactions.tsx
+msgid "Year"
+msgstr "Año"
 
 #: src/components/BudgetEditor.tsx
 #: src/components/Budgets.tsx

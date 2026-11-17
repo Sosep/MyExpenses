@@ -97,6 +97,10 @@ usa el modo Vite en caliente.
 
 ### Índice de mes
 
+El mock tiene movimientos de los últimos cuatro meses, así que agrupar por mes,
+semana o día tiene algo que enseñar. `reports/grouped` devuelve `firstDate` por
+grupo, igual que la API.
+
 Como la API real, el mock devuelve `second` con **base 0** en `reports/grouped`,
 `budgets/{id}` y su historial: noviembre es `10`. La SPA guarda el mes que
 muestra como `YYYY-MM` (1–12) y lo convierte solo al llamar a la API.
@@ -109,6 +113,8 @@ muestra como `YYYY-MM` (1–12) y lo convierte solo al llamar a la API.
 | `?locale=es` | Activa español |
 | `?view=transactions` | Transacciones |
 | `?view=transactions&filter=groceries` | Filtra por la categoría Groceries |
+| `?view=transactions&grouping=WEEK` | Agrupa por semana (`DAY`, `MONTH`, `YEAR`, `NONE`) |
+| `?view=transactions&preset=month` | Rango del mes actual (`last3`, `year`, `custom` con `from`/`to`) |
 | `?view=reports` | Informes |
 | `?view=reports&reportBy=Payee&reportType=Both` | Preselecciona dimensión y tipo |
 | `?view=reports&reportDrill=1` | Abre el detalle del primer grupo |

@@ -35,7 +35,7 @@ export function Dashboard({
   const months = lastMonths(12)
   const fromMonth = months.from.slice(0, 7)
   const groups = useAsync(
-    () => getGrouped(account.id, months.from, months.to),
+    () => getGrouped(account.id, 'MONTH', months.from, months.to),
     ['dashboard-groups', account.id, months.from, months.to],
   )
   const thisMonth = monthRange(currentMonth())
