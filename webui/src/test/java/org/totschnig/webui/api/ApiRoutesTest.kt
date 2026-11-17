@@ -401,6 +401,27 @@ class ApiRoutesTest {
         assertEquals(1L, fake.lastFilters["tagId"])
         assertEquals(4L, fake.lastFilters["methodId"])
     }
+
+    @Test
+    fun `breakdown accepts all accounts`() = testApplication {
+        installRoutes(FakeDataSource())
+        val response = client.get(
+            "/api/v1/reports/breakdown?accountId=all&by=category&type=expense" +
+                "&from=2026-11-01&to=2026-11-30"
+        )
+        assertEquals(HttpStatusCode.OK, response.status)
+        assertTrue(response.bodyAsText().contains("\"accountId\":0"))
+    }
+
+    @Test
+    fun `budget history is returned`() = testApplication {
+        installRoutes(FakeDataSource())
+        val response = client.get("/api/v1/budgets/1/history?months=3")
+        assertEquals(HttpStatusCode.OK, response.status)
+        val body = response.bodyAsText()
+        assertTrue(body.contains("November 2026"))
+        assertTrue(body.contains("\"allocatedMinor\":40000"))
+    }
 }
 
 private fun ApplicationTestBuilder.installRoutes(dataSource: WebApiDataSource) {
@@ -523,6 +544,22 @@ private class FakeDataSource : WebApiDataSource {
             emptyList()
         }
 
+    override suspend fun budgetHistory(id: Long, months: Int): List<BudgetHistoryPointDto> =
+        if (id == 1L) {
+            listOf(
+                BudgetHistoryPointDto(
+                    periodYear = 2026,
+                    periodSecond = 11,
+                    periodDescription = "November 2026",
+                    allocatedMinor = 40000,
+                    spentMinor = 31200,
+                    remainingMinor = 8800
+                )
+            )
+        } else {
+            emptyList()
+        }
+
     override suspend fun updateBudgetAllocations(
         id: Long,
         body: BudgetAllocationsWriteDto
@@ -607,6 +644,8 @@ private class FakeDataSource : WebApiDataSource {
         to = to.toString(),
         by = by,
         type = type,
+        currency = "EUR",
+        fractionDigits = 2,
         totalMinor = 180000,
         items = listOf(
             BreakdownItemDto(1, "Food > Groceries", 120000, 8, 66.67),

@@ -54,6 +54,7 @@ interface WebApiDataSource {
     fun budgets(): List<BudgetDto>
     suspend fun budgetProgress(id: Long, year: Int?, second: Int?): BudgetProgressDto?
     suspend fun budgetAllocations(id: Long, year: Int?, second: Int?): List<BudgetAllocationDto>
+    suspend fun budgetHistory(id: Long, months: Int): List<BudgetHistoryPointDto>
     suspend fun updateBudgetAllocations(
         id: Long,
         body: BudgetAllocationsWriteDto

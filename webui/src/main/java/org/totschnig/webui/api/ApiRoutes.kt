@@ -171,6 +171,11 @@ class ApiRoutes(
                 }
                 call.respond(HttpStatusCode.NoContent)
             }
+            get("/budgets/{id}/history") {
+                val id = call.requirePathId()
+                val months = call.intParam("months", 12).coerceIn(1, 24)
+                call.respond(dataSource.budgetHistory(id, months))
+            }
             get("/budgets/{id}/allocations") {
                 val id = call.requirePathId()
                 val year = call.intParamOrNull("year")

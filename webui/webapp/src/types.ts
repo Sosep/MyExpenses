@@ -250,6 +250,8 @@ export interface Breakdown {
   to: string
   by: 'category' | 'payee' | 'tag' | 'method'
   type: 'expense' | 'income' | 'both'
+  currency: string
+  fractionDigits: number
   totalMinor: number
   items: BreakdownItem[]
 }
@@ -276,4 +278,13 @@ export interface BudgetAllocationsWrite {
   second: number
   allocations: BudgetAllocationWrite[]
   rollover?: BudgetAllocationWrite[]
+}
+
+export interface BudgetHistoryPoint {
+  periodYear: number | null
+  periodSecond: number | null
+  periodDescription: string
+  allocatedMinor: number
+  spentMinor: number
+  remainingMinor: number
 }

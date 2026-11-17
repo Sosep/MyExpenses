@@ -1961,3 +1961,50 @@ button:disabled {
     justify-self: start;
   }
 }
+
+
+/* Budget history */
+
+.budget-history-btn {
+  margin-left: auto;
+}
+
+.budget-history {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.budget-history-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.budget-history-head .over {
+  color: var(--negative);
+}
+
+.budget-history-head .positive {
+  color: var(--positive);
+}
+
+.budget-history-track {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--bg-canvas);
+  border: 1px solid var(--border-subtle);
+  overflow: hidden;
+}
+
+.budget-history-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+}
+
+.budget-history-fill.over {
+  background: var(--negative);
+}

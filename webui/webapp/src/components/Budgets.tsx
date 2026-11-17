@@ -5,6 +5,7 @@ import { getBudgetProgress, getBudgets } from '../api'
 import { addMonths, currentMonth, formatMoney, formatMonth } from '../format'
 import { useAsync } from '../hooks'
 import { BudgetEditor } from './BudgetEditor'
+import { BudgetHistoryPanel } from './BudgetHistoryPanel'
 import { IconChevronLeft, IconChevronRight } from './Icons'
 
 interface BudgetEntry {
@@ -54,6 +55,7 @@ export function Budgets({
     { mode: 'create' } | { mode: 'edit'; entry: BudgetEntry } | null
   >(null)
   const [month, setMonth] = useState(currentMonth())
+  const [historyBudget, setHistoryBudget] = useState<Budget | null>(null)
   const [year, monthNumber] = month.split('-').map(Number)
   const entries = useAsync<BudgetEntry[]>(async () => {
     const budgets = await getBudgets()
@@ -283,6 +285,14 @@ export function Budgets({
                     ) : null}
                     <button
                       type="button"
+                      className="btn ghost budget-history-btn"
+                      data-action="budget-history"
+                      onClick={() => setHistoryBudget(budget)}
+                    >
+                      {t`History`}
+                    </button>
+                    <button
+                      type="button"
                       className="btn ghost budget-edit"
                       onClick={() => setEditor({ mode: 'edit', entry: { budget, progress } })}
                     >
@@ -305,6 +315,13 @@ export function Budgets({
           ) : null}
         </>
       )}
+
+      {historyBudget ? (
+        <BudgetHistoryPanel
+          budget={historyBudget}
+          onClose={() => setHistoryBudget(null)}
+        />
+      ) : null}
 
       {editor ? (
         <BudgetEditor

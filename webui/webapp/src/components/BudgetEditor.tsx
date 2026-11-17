@@ -511,12 +511,35 @@ export function BudgetEditor({
                         key={row.categoryId}
                         className="flex items-center justify-between gap-3 text-[12px]"
                       >
-                        <span
-                          className="min-w-0 truncate"
-                          style={{ paddingLeft: row.level * 12 }}
-                        >
-                          {row.label}
-                        </span>
+                        <div className="min-w-0 flex-1">
+                          <span
+                            className="block truncate"
+                            style={{ paddingLeft: row.level * 12 }}
+                          >
+                            {row.label}
+                          </span>
+                          <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full border border-line bg-canvas">
+                            <div
+                              className={`h-full rounded-full ${
+                                row.allocatedMinor > 0 && row.spentMinor > row.allocatedMinor
+                                  ? 'bg-negative'
+                                  : 'bg-accent'
+                              }`}
+                              style={{
+                                width: `${
+                                  row.allocatedMinor > 0
+                                    ? Math.min(
+                                        (row.spentMinor / row.allocatedMinor) * 100,
+                                        100,
+                                      )
+                                    : row.spentMinor > 0
+                                      ? 100
+                                      : 0
+                                }%`,
+                              }}
+                            />
+                          </div>
+                        </div>
                         <div className="flex items-center gap-2">
                           {budget.grouping === 'MONTH' || budget.grouping === 'YEAR' ? (
                             <label className="check-row" title={t`Roll over unused amount`}>

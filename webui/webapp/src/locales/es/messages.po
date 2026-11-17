@@ -186,6 +186,10 @@ msgstr "Presupuesto duplicado."
 msgid "Budget end"
 msgstr "Fin del presupuesto"
 
+#: src/components/BudgetHistoryPanel.tsx
+msgid "Budget history"
+msgstr "Historial del presupuesto"
+
 #: src/components/BudgetEditor.tsx
 msgid "Budget note"
 msgstr "Nota del presupuesto"
@@ -248,6 +252,7 @@ msgstr "Quitar filtros"
 msgid "Cleared"
 msgstr "Compensado"
 
+#: src/components/BudgetHistoryPanel.tsx
 #: src/components/ReportPanel.tsx
 #: src/components/TransactionPanel.tsx
 msgid "Close details"
@@ -487,6 +492,10 @@ msgstr "Desde"
 msgid "From account"
 msgstr "Cuenta de origen"
 
+#: src/components/Budgets.tsx
+msgid "History"
+msgstr "Historial"
+
 #: src/components/Reports.tsx
 msgid "In this month"
 msgstr "Este mes"
@@ -524,6 +533,7 @@ msgstr "Sus partes también se eliminan."
 msgid "Language"
 msgstr "Idioma"
 
+#: src/components/BudgetHistoryPanel.tsx
 #: src/components/Dashboard.tsx
 msgid "Last 12 months"
 msgstr "Últimos 12 meses"
@@ -558,6 +568,7 @@ msgid "Loading report…"
 msgstr "Cargando informe…"
 
 #: src/App.tsx
+#: src/components/BudgetHistoryPanel.tsx
 #: src/components/ReportPanel.tsx
 #: src/components/Transactions.tsx
 msgid "Loading…"
@@ -649,6 +660,10 @@ msgstr "Sin categoría"
 #: src/components/Files.tsx
 msgid "No files yet"
 msgstr "Todavía no hay ficheros"
+
+#: src/components/BudgetHistoryPanel.tsx
+msgid "No history yet."
+msgstr "Todavía no hay historial."
 
 #: src/components/SearchSelect.tsx
 msgid "No matches"

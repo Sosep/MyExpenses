@@ -157,6 +157,7 @@ export function Reports({ account, accounts }: ReportsProps) {
             <input
               type="checkbox"
               aria-label={t`All accounts`}
+              data-action="all-accounts"
               checked={allAccounts}
               onChange={(event) => setAllAccounts(event.target.checked)}
             />
@@ -285,8 +286,8 @@ export function Reports({ account, accounts }: ReportsProps) {
                       <span className="breakdown-amount">
                         {formatMoney(
                           item.amountMinor,
-                          account.currency,
-                          account.fractionDigits,
+                          data.currency,
+                          data.fractionDigits,
                         )}
                       </span>
                     </div>

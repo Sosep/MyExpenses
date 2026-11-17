@@ -463,6 +463,11 @@ function serveAppIndex(response) {
           }
           if (q.get('view') === 'reports') {
             setTimeout(function(){ document.querySelector('button[data-view="reports"]')?.click() }, 250)
+            if (q.get('allAccounts') === '1') {
+              setTimeout(function(){
+                document.querySelector('[data-action="all-accounts"]')?.click()
+              }, 1100)
+            }
             if (q.get('reportDrill') === '1') {
               setTimeout(function(){ document.querySelector('.breakdown-row.clickable')?.click() }, 1300)
             }
@@ -496,6 +501,11 @@ function serveAppIndex(response) {
               setTimeout(function(){
                 document.querySelector('.budget-edit')?.click()
               }, 900)
+            }
+            if (q.get('history') === '1') {
+              setTimeout(function(){
+                document.querySelector('[data-action="budget-history"]')?.click()
+              }, 1000)
             }
             if (q.get('periodOverride') === '1') {
               setTimeout(function(){ document.querySelector('.budget-edit')?.click() }, 900)
@@ -819,6 +829,37 @@ createServer(async (request, response) => {
       })
     }
 
+    const historyMatch = path.match(/^\/api\/v1\/budgets\/(\d+)\/history$/)
+    if (historyMatch) {
+      const id = Number(historyMatch[1])
+      const values = budgetProgresses[id]
+      if (!values) {
+        return sendJson(response, 404, { error: 'budget_not_found', message: 'Budget not found' })
+      }
+      const count = Math.min(Math.max(Number(url.searchParams.get('months')) || 12, 1), 24)
+      const points = []
+      for (let offset = count - 1; offset >= 0; offset -= 1) {
+        const date = new Date(year, month - 1 - offset, 1)
+        const allocated = values.allocated
+        const spent =
+          offset === 0
+            ? values.spent
+            : Math.round(allocated * (0.55 + ((offset * 7) % 35) / 100))
+        points.push({
+          periodYear: date.getFullYear(),
+          periodSecond: date.getMonth() + 1,
+          periodDescription: new Intl.DateTimeFormat('en-GB', {
+            month: 'long',
+            year: 'numeric',
+          }).format(date),
+          allocatedMinor: allocated,
+          spentMinor: spent,
+          remainingMinor: allocated - spent,
+        })
+      }
+      return sendJson(response, 200, points)
+    }
+
     const allocationMatch = path.match(/^\/api\/v1\/budgets\/(\d+)\/allocations$/)
     if (allocationMatch) {
       const id = Number(allocationMatch[1])
@@ -1136,6 +1177,8 @@ createServer(async (request, response) => {
         to,
         by,
         type,
+        currency: 'EUR',
+        fractionDigits: 2,
         totalMinor: total,
         items: result,
       })

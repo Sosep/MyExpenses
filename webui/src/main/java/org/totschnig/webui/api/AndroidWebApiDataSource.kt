@@ -204,24 +204,24 @@ class AndroidWebApiDataSource(
         from: LocalDate,
         to: LocalDate
     ): ReportSummaryDto {
-        if (accountId == 0L) {
-            val all = reportAccounts()
-            val parts = all.map { repository.queryReportSummary(it.id, from, to) }
-            val first = parts.first()
-            return ReportSummaryDto(
-                accountId = 0,
-                from = from.toString(),
-                to = to.toString(),
-                currency = first.currency,
-                fractionDigits = first.fractionDigits,
-                incomeMinor = parts.sumOf { it.incomeMinor },
-                expensesMinor = parts.sumOf { it.expensesMinor },
-                netMinor = parts.sumOf { it.netMinor },
-                count = parts.sumOf { it.count }
-            )
+        val allAccounts = accountId == 0L
+        val unit = if (allAccounts) {
+            currencyContext.homeCurrencyUnit
+        } else {
+            repository.getCurrencyUnitForAccount(accountId)
+                ?: throw ApiException(
+                    HttpStatusCode.NotFound,
+                    "account_not_found",
+                    "Account not found"
+                )
         }
-        requireReportAccount(accountId)
-        return repository.queryReportSummary(accountId, from, to)
+        return repository.queryReportSummary(
+            accountId = accountId.takeIf { !allAccounts },
+            from = from,
+            to = to,
+            unit = unit,
+            allAccounts = allAccounts
+        )
     }
 
     override fun breakdown(
@@ -231,44 +231,26 @@ class AndroidWebApiDataSource(
         from: LocalDate,
         to: LocalDate
     ): BreakdownDto {
-        if (accountId == 0L) {
-            val all = reportAccounts()
-            val merged = LinkedHashMap<Pair<Long, String>, BreakdownItemDto>()
-            all.forEach { account ->
-                repository.queryBreakdown(account.id, by, type, from, to).items.forEach { item ->
-                    val key = item.id to item.label
-                    val current = merged[key]
-                    merged[key] = if (current == null) {
-                        item
-                    } else {
-                        current.copy(
-                            amountMinor = current.amountMinor + item.amountMinor,
-                            count = current.count + item.count
-                        )
-                    }
-                }
-            }
-            val items = merged.values.toList()
-            val total = items.sumOf { it.amountMinor }
-            val withShare = items.map {
-                it.copy(share = if (total > 0) it.amountMinor * 100.0 / total else 0.0)
-            }.sortedWith(
-                compareByDescending<BreakdownItemDto> {
-                    it.amountMinor
-                }.thenBy { it.label }
-            )
-            return BreakdownDto(
-                accountId = 0,
-                from = from.toString(),
-                to = to.toString(),
-                by = by,
-                type = type,
-                totalMinor = total,
-                items = withShare
-            )
+        val allAccounts = accountId == 0L
+        val unit = if (allAccounts) {
+            currencyContext.homeCurrencyUnit
+        } else {
+            repository.getCurrencyUnitForAccount(accountId)
+                ?: throw ApiException(
+                    HttpStatusCode.NotFound,
+                    "account_not_found",
+                    "Account not found"
+                )
         }
-        requireReportAccount(accountId)
-        return repository.queryBreakdown(accountId, by, type, from, to)
+        return repository.queryBreakdown(
+            accountId = accountId.takeIf { !allAccounts },
+            by = by,
+            type = type,
+            from = from,
+            to = to,
+            unit = unit,
+            allAccounts = allAccounts
+        )
     }
 
     override fun reportTransactions(
@@ -313,25 +295,6 @@ class AndroidWebApiDataSource(
             limit = limit,
             offset = offset
         )
-    }
-
-    private fun reportAccounts(): List<AccountDto> {
-        val all = accounts()
-        if (all.isEmpty()) {
-            throw ApiException(
-                HttpStatusCode.NotFound,
-                "account_not_found",
-                "No accounts"
-            )
-        }
-        if (all.map { it.currency }.distinct().size > 1) {
-            throw ApiException(
-                HttpStatusCode.UnprocessableEntity,
-                "mixed_currencies",
-                "All accounts must share a currency to aggregate reports"
-            )
-        }
-        return all
     }
 
     override fun createTransaction(body: TransactionWriteDto): TransactionDto =
@@ -972,6 +935,42 @@ class AndroidWebApiDataSource(
             from = progress.groupInfo.duration.start,
             to = progress.groupInfo.duration.end
         )
+    }
+
+    override suspend fun budgetHistory(id: Long, months: Int): List<BudgetHistoryPointDto> {
+        val budget = repository.loadBudget(id) ?: throw ApiException(
+            HttpStatusCode.NotFound,
+            "budget_not_found",
+            "Budget not found"
+        )
+        if (budget.grouping != Grouping.MONTH) {
+            val progress = repository.loadBudgetProgress(id, null) ?: return emptyList()
+            return listOf(
+                BudgetHistoryPointDto(
+                    periodYear = progress.groupInfo.year,
+                    periodSecond = progress.groupInfo.second,
+                    periodDescription = progress.groupInfo.description,
+                    allocatedMinor = progress.allocated,
+                    spentMinor = progress.spent,
+                    remainingMinor = progress.remainingBudget
+                )
+            )
+        }
+        val now = LocalDate.now()
+        val count = months.coerceIn(1, 24)
+        return (count - 1 downTo 0).mapNotNull { offset ->
+            val date = now.minusMonths(offset.toLong())
+            repository.loadBudgetProgress(id, date.year to date.monthValue)?.let { progress ->
+                BudgetHistoryPointDto(
+                    periodYear = progress.groupInfo.year,
+                    periodSecond = progress.groupInfo.second,
+                    periodDescription = progress.groupInfo.description,
+                    allocatedMinor = progress.allocated,
+                    spentMinor = progress.spent,
+                    remainingMinor = progress.remainingBudget
+                )
+            }
+        }
     }
 
     override suspend fun updateBudgetAllocations(

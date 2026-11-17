@@ -20,7 +20,7 @@ presupuestos e informes.
 
 - Ficheros: lista de backups/exportaciones del teléfono con tamaño, fecha y
   descarga autenticada (fetch + blob).
-- Presupuestos: progreso del periodo actual por presupuesto, resumen cuando
+- Presupuestos: progreso del periodo por presupuesto, histórico de 12 meses y barras por categoría, resumen cuando
   comparten divisa y periodo, sobregiro explícito y días restantes. Alta,
   edición y borrado desde un panel lateral, con asignación por categoría para el
   periodo actual, total específico del periodo, rollover del importe no gastado y duplicación.
@@ -105,6 +105,7 @@ usa el modo Vite en caliente.
 | `?view=reports&reportDrill=1` | Abre el detalle del primer grupo |
 | `?view=budgets` | Presupuestos |
 | `?view=budgets&budgetMonth=-1` | Presupuestos en el mes anterior |
+| `?view=budgets&history=1` | Abre el histórico del primer presupuesto |
 | `?view=budgets&new=1` | Alta de presupuesto |
 | `?view=budgets&edit=1` | Edita el primer presupuesto |
 | `?view=budgets&edit=1&periodOverride=1` | Prueba el total distinto de este periodo |

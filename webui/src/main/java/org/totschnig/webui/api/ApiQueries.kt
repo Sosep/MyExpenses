@@ -9,6 +9,7 @@ import org.totschnig.myexpenses.db2.entities.Transaction
 import org.totschnig.myexpenses.db2.getCurrencyUnitForAccount
 import org.totschnig.myexpenses.model.CrStatus
 import org.totschnig.myexpenses.model.CurrencyContext
+import org.totschnig.myexpenses.model.CurrencyUnit
 import org.totschnig.myexpenses.model.Grouping
 import org.totschnig.myexpenses.provider.BaseTransactionProvider
 import org.totschnig.myexpenses.provider.DataBaseAccount
@@ -25,6 +26,7 @@ import org.totschnig.myexpenses.provider.KEY_CR_STATUS
 import org.totschnig.myexpenses.provider.KEY_CURRENCY
 import org.totschnig.myexpenses.provider.KEY_CURRENT_BALANCE
 import org.totschnig.myexpenses.provider.KEY_DATE
+import org.totschnig.myexpenses.provider.KEY_DISPLAY_AMOUNT
 import org.totschnig.myexpenses.provider.KEY_EXCLUDE_FROM_TOTALS
 import org.totschnig.myexpenses.provider.KEY_IS_NUMBERED
 import org.totschnig.myexpenses.provider.KEY_LABEL
@@ -271,16 +273,17 @@ internal fun Repository.queryReportTransactions(
 }
 
 internal fun Repository.queryReportSummary(
-    accountId: Long,
+    accountId: Long?,
     from: LocalDate,
-    to: LocalDate
+    to: LocalDate,
+    unit: CurrencyUnit,
+    allAccounts: Boolean
 ): ReportSummaryDto {
-    val unit = getCurrencyUnitForAccount(accountId)
-        ?: throw IllegalArgumentException("Account $accountId not found")
+    val amountColumn = if (allAccounts) KEY_DISPLAY_AMOUNT else KEY_AMOUNT
     val (selection, args) = reportSelection(accountId, from, to, "both", wholeTransactions = true)
     val projection = arrayOf(
-        "sum(CASE WHEN $KEY_AMOUNT > 0 THEN $KEY_AMOUNT ELSE 0 END) AS income",
-        "sum(CASE WHEN $KEY_AMOUNT < 0 THEN $KEY_AMOUNT ELSE 0 END) AS expenses",
+        "sum(CASE WHEN $KEY_AMOUNT > 0 THEN $amountColumn ELSE 0 END) AS income",
+        "sum(CASE WHEN $KEY_AMOUNT < 0 THEN $amountColumn ELSE 0 END) AS expenses",
         "count(*) AS transactions"
     )
     val (income, expenses, count) = contentResolver.query(
@@ -297,7 +300,7 @@ internal fun Repository.queryReportSummary(
         }
     } ?: Triple(0L, 0L, 0L)
     return ReportSummaryDto(
-        accountId = accountId,
+        accountId = accountId ?: 0,
         from = from.toString(),
         to = to.toString(),
         currency = unit.code,
@@ -310,16 +313,19 @@ internal fun Repository.queryReportSummary(
 }
 
 internal fun Repository.queryBreakdown(
-    accountId: Long,
+    accountId: Long?,
     by: String,
     type: String,
     from: LocalDate,
-    to: LocalDate
+    to: LocalDate,
+    unit: CurrencyUnit,
+    allAccounts: Boolean
 ): BreakdownDto {
+    val amountColumn = if (allAccounts) KEY_DISPLAY_AMOUNT else KEY_AMOUNT
     val items = when (by) {
-        "category" -> queryGroupedBreakdown(accountId, by, type, from, to)
-        "payee", "method" -> queryGroupedBreakdown(accountId, by, type, from, to)
-        "tag" -> queryTagBreakdown(accountId, type, from, to)
+        "category" -> queryGroupedBreakdown(accountId, by, type, from, to, amountColumn)
+        "payee", "method" -> queryGroupedBreakdown(accountId, by, type, from, to, amountColumn)
+        "tag" -> queryTagBreakdown(accountId, type, from, to, amountColumn)
         else -> throw IllegalArgumentException("Unknown breakdown $by")
     }
     val total = items.sumOf { it.amountMinor }
@@ -327,22 +333,25 @@ internal fun Repository.queryBreakdown(
         it.copy(share = if (total > 0) it.amountMinor * 100.0 / total else 0.0)
     }.sortedWith(compareByDescending<BreakdownItemDto> { it.amountMinor }.thenBy { it.label })
     return BreakdownDto(
-        accountId = accountId,
+        accountId = accountId ?: 0,
         from = from.toString(),
         to = to.toString(),
         by = by,
         type = type,
+        currency = unit.code,
+        fractionDigits = unit.fractionDigits,
         totalMinor = total,
         items = withShare
     )
 }
 
 private fun Repository.queryGroupedBreakdown(
-    accountId: Long,
+    accountId: Long?,
     by: String,
     type: String,
     from: LocalDate,
-    to: LocalDate
+    to: LocalDate,
+    amountColumn: String
 ): List<BreakdownItemDto> {
     val wholeTransactions = by != "category"
     val (baseSelection, args) =
@@ -355,7 +364,7 @@ private fun Repository.queryGroupedBreakdown(
             projection = arrayOf(
                 "$KEY_CATID AS group_id",
                 "coalesce($KEY_PATH, 'Category ' || $KEY_CATID) AS group_label",
-                "sum($KEY_AMOUNT) AS amount_minor",
+                "sum($amountColumn) AS amount_minor",
                 "count(*) AS transaction_count"
             )
             groupBy = "$KEY_CATID, $KEY_PATH"
@@ -365,7 +374,7 @@ private fun Repository.queryGroupedBreakdown(
             projection = arrayOf(
                 "coalesce($KEY_PAYEEID, 0) AS group_id",
                 "coalesce($KEY_PAYEE_NAME, 'No payee') AS group_label",
-                "sum($KEY_AMOUNT) AS amount_minor",
+                "sum($amountColumn) AS amount_minor",
                 "count(*) AS transaction_count"
             )
             groupBy = "coalesce($KEY_PAYEEID, 0), coalesce($KEY_PAYEE_NAME, 'No payee')"
@@ -375,7 +384,7 @@ private fun Repository.queryGroupedBreakdown(
             projection = arrayOf(
                 "coalesce($KEY_METHODID, 0) AS group_id",
                 "coalesce($KEY_METHOD_LABEL, 'No method') AS group_label",
-                "sum($KEY_AMOUNT) AS amount_minor",
+                "sum($amountColumn) AS amount_minor",
                 "count(*) AS transaction_count"
             )
             groupBy = "coalesce($KEY_METHODID, 0), coalesce($KEY_METHOD_LABEL, 'No method')"
@@ -397,10 +406,11 @@ private fun Repository.queryGroupedBreakdown(
 }
 
 private fun Repository.queryTagBreakdown(
-    accountId: Long,
+    accountId: Long?,
     type: String,
     from: LocalDate,
-    to: LocalDate
+    to: LocalDate,
+    amountColumn: String
 ): List<BreakdownItemDto> = queryTags().mapNotNull { tag ->
     val (baseSelection, baseArgs) =
         reportSelection(accountId, from, to, type, wholeTransactions = true)
@@ -411,7 +421,7 @@ private fun Repository.queryTagBreakdown(
     val args = (baseArgs ?: emptyArray()) + tag.id.toString()
     contentResolver.query(
         TransactionProvider.EXTENDED_URI,
-        arrayOf("sum($KEY_AMOUNT) AS amount_minor", "count(*) AS transaction_count"),
+        arrayOf("sum($amountColumn) AS amount_minor", "count(*) AS transaction_count"),
         selection,
         args,
         null
@@ -434,18 +444,23 @@ private fun Repository.queryTagBreakdown(
 }
 
 private fun reportSelection(
-    accountId: Long,
+    accountId: Long?,
     from: LocalDate,
     to: LocalDate,
     type: String,
     wholeTransactions: Boolean
 ): Pair<String, Array<String>?> {
-    val clauses = mutableListOf(
-        "$KEY_ACCOUNTID = ?",
-        "$KEY_CR_STATUS != ?",
-        "$KEY_TRANSFER_ACCOUNT IS NULL"
-    )
-    val args = mutableListOf(accountId.toString(), CrStatus.VOID.name)
+    val clauses = mutableListOf<String>()
+    val args = mutableListOf<String>()
+    if (accountId != null) {
+        clauses.add("$KEY_ACCOUNTID = ?")
+        args.add(accountId.toString())
+    } else {
+        clauses.add("$KEY_EXCLUDE_FROM_TOTALS = 0")
+    }
+    clauses.add("$KEY_CR_STATUS != ?")
+    args.add(CrStatus.VOID.name)
+    clauses.add("$KEY_TRANSFER_ACCOUNT IS NULL")
     appendDateRange(clauses, args, from, to)
     when (type) {
         "income" -> clauses.add("$KEY_AMOUNT > 0")

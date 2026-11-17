@@ -313,6 +313,7 @@ separado; el editor de transferencias no usa `payee` para elegir la cuenta.
 | Método | Ruta | Descripción |
 |---|---|---|
 | GET | `/budgets` | Lista con configuración |
+| GET | `/budgets/{id}/history?months=12` | Serie de asignado/gastado por periodo |
 | GET | `/budgets/{id}?year&second` | Progreso del periodo (gastado, asignado, restante) |
 | POST/PUT/DELETE | `/budgets[/{id}]` | CRUD |
 
@@ -438,6 +439,12 @@ presupuestos `NONE` (`422 unsupported_grouping`).
 - `BudgetProgressDto.periodAllocationMinor` es el importe específico del periodo
   o `null` si se está usando el valor por defecto.
 
+#### GET /budgets/{id}/history?months=12
+
+Serie de hasta 24 periodos mensuales (por defecto 12), del más antiguo al actual:
+`periodYear`, `periodSecond`, `periodDescription`, `allocatedMinor`, `spentMinor`,
+`remainingMinor`. Para presupuestos no mensuales devuelve solo el periodo actual.
+
 #### POST /budgets/{id}/duplicate
 
 Crea una copia con el título `… (copy)`, la misma configuración y la asignación
@@ -488,6 +495,8 @@ La serie sale de `IAccount.groupingQuery`; el resumen y el reparto usan
   "to": "2026-11-30",
   "by": "category",
   "type": "expense",
+  "currency": "EUR",
+  "fractionDigits": 2,
   "totalMinor": 113867,
   "items": [
     { "id": 2, "label": "Food > Groceries", "amountMinor": 32407, "count": 15, "share": 28.46 }
@@ -506,8 +515,10 @@ La serie sale de `IAccount.groupingQuery`; el resumen y el reparto usan
   reparto por etiqueta puede superar el gasto real del periodo.
 - `by` admite también `method`; inválido: `400 invalid_by`; `type` inválido:
   `400 invalid_type`; cuenta desconocida: `404 account_not_found`.
-- `accountId=all` agrega todas las cuentas en servidor. Si no comparten divisa
-  responde `422 mixed_currencies`.
+- `accountId=all` agrega todas las cuentas en servidor: los importes se
+  convierten a la **divisa base** con el importe equivalente de la app, así que
+  pueden convivir cuentas de divisas distintas. `BreakdownDto` incluye `currency`
+  y `fractionDigits` de la divisa resultante.
 - `/reports/transactions` lista las transacciones de un grupo (`by` + `id`); no
   admite `accountId=all` (`422 unsupported_all_accounts`).
 

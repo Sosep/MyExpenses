@@ -502,7 +502,8 @@ Everyday · November 2026
 - Mes visible con navegación `‹ ›`; el mismo mes manda en KPIs y desglose.
 - Tres segmentados: periodo (`This month`, `Last 3 months`, `This year`),
   dimensión (`Category`, `Payee`, `Tag`, `Method`) y tipo (`Expenses`, `Income`,
-  `Both`). Con `All accounts` se agrega en servidor si comparten divisa.
+  `Both`). Con `All accounts` se agrega en servidor y se convierte a la divisa
+  base, así que admite cuentas de divisas distintas.
 - KPIs: ingresos, gastos (magnitud), neto con signo y número de transacciones.
 - Cada fila: etiqueta, importe, barra proporcional, porcentaje y número de
   transacciones. La barra usa `--negative` para gastos, `--positive` para

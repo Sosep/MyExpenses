@@ -3,6 +3,7 @@ import type {
   Breakdown,
   Budget,
   BudgetAllocation,
+  BudgetHistoryPoint,
   BudgetAllocationsWrite,
   BudgetProgress,
   BudgetWrite,
@@ -314,3 +315,6 @@ export const getReportTransactions = (
 
 export const duplicateBudget = (id: number) =>
   request<Budget>(`/budgets/${id}/duplicate`, { method: 'POST' })
+
+export const getBudgetHistory = (id: number, months = 12, signal?: AbortSignal) =>
+  request<BudgetHistoryPoint[]>(`/budgets/${id}/history?months=${months}`, { signal })

@@ -286,6 +286,8 @@ data class BreakdownDto(
     val to: String,
     val by: String,
     val type: String,
+    val currency: String,
+    val fractionDigits: Int,
     val totalMinor: Long,
     val items: List<BreakdownItemDto>
 )
@@ -320,4 +322,14 @@ data class BudgetAllocationsWriteDto(
     val second: Int? = null,
     val allocations: List<BudgetAllocationWriteDto>? = null,
     val rollover: List<BudgetAllocationWriteDto>? = null
+)
+
+@Keep
+data class BudgetHistoryPointDto(
+    val periodYear: Int?,
+    val periodSecond: Int?,
+    val periodDescription: String,
+    val allocatedMinor: Long,
+    val spentMinor: Long,
+    val remainingMinor: Long
 )
