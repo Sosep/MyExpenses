@@ -337,6 +337,44 @@ class ApiRoutesTest {
         assertEquals(HttpStatusCode.BadRequest, response.status)
         assertTrue(response.bodyAsText().contains("invalid_type"))
     }
+
+    @Test
+    fun `budget allocations are returned`() = testApplication {
+        installRoutes(FakeDataSource())
+        val response = client.get("/api/v1/budgets/1/allocations?year=2026&second=11")
+        assertEquals(HttpStatusCode.OK, response.status)
+        val body = response.bodyAsText()
+        assertTrue(body.contains("Groceries"))
+        assertTrue(body.contains("\"allocatedMinor\":30000"))
+        assertTrue(body.contains("\"spentMinor\":20000"))
+    }
+
+    @Test
+    fun `budget allocations can be updated`() = testApplication {
+        val fake = FakeDataSource()
+        installRoutes(fake)
+        val response = client.put("/api/v1/budgets/1/allocations") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """{"year":2026,"second":11,"allocations":[{"categoryId":2,"amountMinor":35000}]}"""
+            )
+        }
+        assertEquals(HttpStatusCode.OK, response.status)
+        assertEquals(35000L, fake.savedAllocations?.allocations?.first()?.amountMinor)
+    }
+
+    @Test
+    fun `report drill-down returns transactions`() = testApplication {
+        installRoutes(FakeDataSource())
+        val response = client.get(
+            "/api/v1/reports/transactions?accountId=1&by=category&id=2" +
+                "&type=expense&from=2026-11-01&to=2026-11-30"
+        )
+        assertEquals(HttpStatusCode.OK, response.status)
+        val body = response.bodyAsText()
+        assertTrue(body.contains("\"total\":1"))
+        assertTrue(body.contains("\"kind\":\"SIMPLE\""))
+    }
 }
 
 private fun ApplicationTestBuilder.installRoutes(dataSource: WebApiDataSource) {
@@ -369,6 +407,7 @@ private class FakeDataSource : WebApiDataSource {
     var createdTransfer: TransferWriteDto? = null
     var createdSplit: SplitWriteDto? = null
     var savedBudget: BudgetWriteDto? = null
+    var savedAllocations: BudgetAllocationsWriteDto? = null
     private val sample = sampleTransaction()
 
     override fun meta() = MetaDto(
@@ -428,6 +467,37 @@ private class FakeDataSource : WebApiDataSource {
         from: LocalDate,
         to: LocalDate
     ) = listOf(GroupDto(2026, 11, 1000, -500, 0))
+
+    override suspend fun budgetAllocations(id: Long, year: Int?, second: Int?) =
+        if (id == 1L) {
+            listOf(
+                BudgetAllocationDto(
+                    categoryId = 2,
+                    label = "Groceries",
+                    level = 1,
+                    parentId = 1,
+                    allocatedMinor = 30000,
+                    spentMinor = 20000
+                )
+            )
+        } else {
+            emptyList()
+        }
+
+    override suspend fun updateBudgetAllocations(
+        id: Long,
+        body: BudgetAllocationsWriteDto
+    ): List<BudgetAllocationDto> {
+        if (id != 1L) {
+            throw ApiException(
+                HttpStatusCode.NotFound,
+                "budget_not_found",
+                "Budget not found"
+            )
+        }
+        savedAllocations = body
+        return budgetAllocations(id, body.year, body.second)
+    }
 
     override fun createBudget(body: BudgetWriteDto): BudgetDto {
         if (body.grouping !in setOf("DAY", "WEEK", "MONTH", "YEAR", "NONE")) {
@@ -493,6 +563,17 @@ private class FakeDataSource : WebApiDataSource {
             BreakdownItemDto(2, "Transport", 60000, 4, 33.33)
         )
     )
+
+    override fun reportTransactions(
+        accountId: Long,
+        by: String,
+        groupId: Long,
+        type: String,
+        from: LocalDate,
+        to: LocalDate,
+        limit: Int,
+        offset: Int
+    ) = PageDto(items = listOf(sample), total = 1, limit = limit, offset = offset)
 
     override fun budgets() = listOf(sampleBudget())
 

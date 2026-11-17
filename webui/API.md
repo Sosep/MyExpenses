@@ -405,6 +405,25 @@ asignaciones por periodo ni el rollover. La cuenta y el `grouping` no se pueden
 cambiar (`422 unsupported_move` / `422 unsupported_grouping_change`); omite
 `start`/`end` en `NONE` para conservar las fechas actuales.
 
+#### GET /budgets/{id}/allocations?year&second
+
+Lista por categoría con `allocatedMinor` y `spentMinor` del periodo. Sin
+`year`/`second` usa el periodo actual; `year` y `second` van juntos.
+
+#### PUT /budgets/{id}/allocations
+
+```json
+{
+  "year": 2026,
+  "second": 11,
+  "allocations": [{ "categoryId": 2, "amountMinor": 35000 }]
+}
+```
+
+Actualiza la asignación de cada categoría para ese periodo. No admite
+presupuestos `NONE` (`422 unsupported_grouping`). El rollover y la duplicación
+siguen en la app Android.
+
 #### DELETE /budgets/{id}
 
 `204` si existía, `404 budget_not_found` si no.
@@ -418,7 +437,8 @@ duplicación de presupuestos. Se siguen gestionando en la app Android.
 |---|---|---|
 | GET | `/reports/grouped?accountId&grouping=DAY\|WEEK\|MONTH\|YEAR\|NONE&from&to` | Serie temporal: ingresos, gastos, transferencias, total por grupo |
 | GET | `/reports/summary?accountId&from&to` | Totales del rango |
-| GET | `/reports/breakdown?accountId&from&to&by=category\|payee\|tag&type=expense\|income\|both` | Reparto con importe, número y porcentaje |
+| GET | `/reports/breakdown?accountId&from&to&by=category\|payee\|tag\|method&type=expense\|income\|both` | Reparto con importe, número y porcentaje |
+| GET | `/reports/transactions?accountId&by&id&type&from&to&limit&offset` | Drill-down de un grupo |
 
 `grouping` usa el mismo enum que la app, así los números coinciden con el móvil.
 La serie sale de `IAccount.groupingQuery`; el resumen y el reparto usan
@@ -465,8 +485,12 @@ La serie sale de `IAccount.groupingQuery`; el resumen y el reparto usan
   `tag` cuentan la transacción completa (padre) una vez.
 - Una transacción con varias etiquetas aparece en cada etiqueta; el total del
   reparto por etiqueta puede superar el gasto real del periodo.
-- `by` inválido: `400 invalid_by`; `type` inválido: `400 invalid_type`; cuenta
-  desconocida: `404 account_not_found`.
+- `by` admite también `method`; inválido: `400 invalid_by`; `type` inválido:
+  `400 invalid_type`; cuenta desconocida: `404 account_not_found`.
+- `accountId=all` agrega todas las cuentas en servidor. Si no comparten divisa
+  responde `422 mixed_currencies`.
+- `/reports/transactions` lista las transacciones de un grupo (`by` + `id`); no
+  admite `accountId=all` (`422 unsupported_all_accounts`).
 
 ### 4.7 Ficheros
 
@@ -555,10 +579,10 @@ Tras revisar de nuevo el código:
 ## 8. Pruebas
 
 - **Rutas en JVM**: `webui/src/test/java/org/totschnig/webui/api/ApiRoutesTest.kt`
-  con un `WebApiDataSource` fake y Ktor `testApplication`. 28 tests cubren
+  con un `WebApiDataSource` fake y Ktor `testApplication`. 31 tests cubren
   routing, validación, `201/204/404/409/422`, JSON, body malformado, los
-  endpoints de transferencias/divididas, el CRUD de presupuestos y los informes.
-  Comando:
+  endpoints de transferencias/divididas, el CRUD y las asignaciones de
+  presupuestos, y los informes con drill-down. Comando:
   `docker compose run --rm android-build :webui:testDebugUnitTest`.
 - **Capa Android**: `AndroidWebApiDataSource` y el `ContentProvider` se validan
   en el móvil o con tests instrumentados; los mapeadores puros pueden probarse

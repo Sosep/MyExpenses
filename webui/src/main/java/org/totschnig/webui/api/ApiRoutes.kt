@@ -154,6 +154,28 @@ class ApiRoutes(
                 }
                 call.respond(HttpStatusCode.NoContent)
             }
+            get("/budgets/{id}/allocations") {
+                val id = call.requirePathId()
+                val year = call.intParamOrNull("year")
+                val second = call.intParamOrNull("second")
+                if ((year == null) != (second == null)) {
+                    throw ApiException(
+                        HttpStatusCode.BadRequest,
+                        "invalid_period",
+                        "year and second must be sent together"
+                    )
+                }
+                call.respond(dataSource.budgetAllocations(id, year, second))
+            }
+            put("/budgets/{id}/allocations") {
+                val id = call.requirePathId()
+                call.respond(
+                    dataSource.updateBudgetAllocations(
+                        id,
+                        call.receive<BudgetAllocationsWriteDto>()
+                    )
+                )
+            }
             get("/budgets/{id}") {
                 val id = call.requirePathId()
                 val yearRaw = call.parameters["year"]
@@ -183,21 +205,59 @@ class ApiRoutes(
                 call.respond(progress)
             }
             get("/reports/summary") {
-                val accountId = call.requireLong("accountId")
+                val accountId = call.reportAccountId()
                 val now = LocalDate.now()
                 val from = call.dateParam("from") ?: now.withDayOfMonth(1).minusMonths(11)
                 val to = call.dateParam("to") ?: now
                 validateRange(from, to)
                 call.respond(dataSource.summary(accountId, from, to))
             }
-            get("/reports/breakdown") {
-                val accountId = call.requireLong("accountId")
+            get("/reports/transactions") {
+                val accountId = call.reportAccountId()
                 val by = (call.parameters["by"] ?: "category").lowercase(Locale.ROOT)
-                if (by !in setOf("category", "payee", "tag")) {
+                if (by !in setOf("category", "payee", "tag", "method")) {
                     throw ApiException(
                         HttpStatusCode.BadRequest,
                         "invalid_by",
-                        "by must be category, payee or tag"
+                        "by must be category, payee, tag or method"
+                    )
+                }
+                val groupId = call.requireLong("id")
+                val type = (call.parameters["type"] ?: "expense").lowercase(Locale.ROOT)
+                if (type !in setOf("income", "expense", "both")) {
+                    throw ApiException(
+                        HttpStatusCode.BadRequest,
+                        "invalid_type",
+                        "type must be income, expense or both"
+                    )
+                }
+                val now = LocalDate.now()
+                val from = call.dateParam("from") ?: now.withDayOfMonth(1).minusMonths(11)
+                val to = call.dateParam("to") ?: now
+                validateRange(from, to)
+                val limit = call.intParam("limit", 100).coerceIn(1, 500)
+                val offset = call.intParam("offset", 0).coerceAtLeast(0)
+                call.respond(
+                    dataSource.reportTransactions(
+                        accountId,
+                        by,
+                        groupId,
+                        type,
+                        from,
+                        to,
+                        limit,
+                        offset
+                    )
+                )
+            }
+            get("/reports/breakdown") {
+                val accountId = call.reportAccountId()
+                val by = (call.parameters["by"] ?: "category").lowercase(Locale.ROOT)
+                if (by !in setOf("category", "payee", "tag", "method")) {
+                    throw ApiException(
+                        HttpStatusCode.BadRequest,
+                        "invalid_by",
+                        "by must be category, payee, tag or method"
                     )
                 }
                 val type = (call.parameters["type"] ?: "expense").lowercase(Locale.ROOT)
@@ -243,6 +303,22 @@ private fun validateRange(from: LocalDate?, to: LocalDate?) {
             "from must be before or equal to to"
         )
     }
+}
+
+private fun ApplicationCall.reportAccountId(): Long {
+    val raw = parameters["accountId"]
+        ?: throw ApiException(
+            HttpStatusCode.BadRequest,
+            "missing_accountId",
+            "Query parameter 'accountId' is required"
+        )
+    if (raw == "all") return 0L
+    return raw.toLongOrNull()
+        ?: throw ApiException(
+            HttpStatusCode.BadRequest,
+            "invalid_accountId",
+            "Query parameter 'accountId' must be a number or 'all'"
+        )
 }
 
 private fun ApplicationCall.requirePathId(): Long =

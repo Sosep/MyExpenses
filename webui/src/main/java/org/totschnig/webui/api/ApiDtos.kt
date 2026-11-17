@@ -293,3 +293,26 @@ data class BreakdownDto(
 data class SessionLoginDto(
     val password: String? = null
 )
+
+@Keep
+data class BudgetAllocationDto(
+    val categoryId: Long,
+    val label: String,
+    val level: Int,
+    val parentId: Long?,
+    val allocatedMinor: Long,
+    val spentMinor: Long
+)
+
+@Keep
+data class BudgetAllocationWriteDto(
+    val categoryId: Long? = null,
+    val amountMinor: Long? = null
+)
+
+@Keep
+data class BudgetAllocationsWriteDto(
+    val year: Int? = null,
+    val second: Int? = null,
+    val allocations: List<BudgetAllocationWriteDto>? = null
+)

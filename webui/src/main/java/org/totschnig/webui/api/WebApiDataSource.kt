@@ -37,8 +37,23 @@ interface WebApiDataSource {
         from: LocalDate,
         to: LocalDate
     ): BreakdownDto
+    fun reportTransactions(
+        accountId: Long,
+        by: String,
+        groupId: Long,
+        type: String,
+        from: LocalDate,
+        to: LocalDate,
+        limit: Int,
+        offset: Int
+    ): PageDto<TransactionDto>
     fun budgets(): List<BudgetDto>
     suspend fun budgetProgress(id: Long, year: Int?, second: Int?): BudgetProgressDto?
+    suspend fun budgetAllocations(id: Long, year: Int?, second: Int?): List<BudgetAllocationDto>
+    suspend fun updateBudgetAllocations(
+        id: Long,
+        body: BudgetAllocationsWriteDto
+    ): List<BudgetAllocationDto>
     fun createBudget(body: BudgetWriteDto): BudgetDto
     fun updateBudget(id: Long, body: BudgetWriteDto): BudgetDto
     fun deleteBudget(id: Long): Boolean

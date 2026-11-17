@@ -30,9 +30,11 @@ import org.totschnig.myexpenses.model.Grouping
 import org.totschnig.myexpenses.model.generateUuid
 import org.totschnig.myexpenses.preference.PrefHandler
 import org.totschnig.myexpenses.preference.PrefKey
+import org.totschnig.myexpenses.provider.BaseTransactionProvider.Companion.budgetAllocationUri
 import org.totschnig.myexpenses.provider.KEY_BUDGET
 import org.totschnig.myexpenses.provider.KEY_BUDGETID
 import org.totschnig.myexpenses.provider.KEY_CATID
+import org.totschnig.myexpenses.provider.KEY_ONE_TIME
 import org.totschnig.myexpenses.provider.KEY_ROWID
 import org.totschnig.myexpenses.provider.KEY_SECOND_GROUP
 import org.totschnig.myexpenses.provider.KEY_TITLE
@@ -185,6 +187,22 @@ class AndroidWebApiDataSource(
         from: LocalDate,
         to: LocalDate
     ): ReportSummaryDto {
+        if (accountId == 0L) {
+            val all = reportAccounts()
+            val parts = all.map { repository.queryReportSummary(it.id, from, to) }
+            val first = parts.first()
+            return ReportSummaryDto(
+                accountId = 0,
+                from = from.toString(),
+                to = to.toString(),
+                currency = first.currency,
+                fractionDigits = first.fractionDigits,
+                incomeMinor = parts.sumOf { it.incomeMinor },
+                expensesMinor = parts.sumOf { it.expensesMinor },
+                netMinor = parts.sumOf { it.netMinor },
+                count = parts.sumOf { it.count }
+            )
+        }
         requireReportAccount(accountId)
         return repository.queryReportSummary(accountId, from, to)
     }
@@ -196,8 +214,107 @@ class AndroidWebApiDataSource(
         from: LocalDate,
         to: LocalDate
     ): BreakdownDto {
+        if (accountId == 0L) {
+            val all = reportAccounts()
+            val merged = LinkedHashMap<Pair<Long, String>, BreakdownItemDto>()
+            all.forEach { account ->
+                repository.queryBreakdown(account.id, by, type, from, to).items.forEach { item ->
+                    val key = item.id to item.label
+                    val current = merged[key]
+                    merged[key] = if (current == null) {
+                        item
+                    } else {
+                        current.copy(
+                            amountMinor = current.amountMinor + item.amountMinor,
+                            count = current.count + item.count
+                        )
+                    }
+                }
+            }
+            val items = merged.values.toList()
+            val total = items.sumOf { it.amountMinor }
+            val withShare = items.map {
+                it.copy(share = if (total > 0) it.amountMinor * 100.0 / total else 0.0)
+            }.sortedWith(
+                compareByDescending<BreakdownItemDto> {
+                    it.amountMinor
+                }.thenBy { it.label }
+            )
+            return BreakdownDto(
+                accountId = 0,
+                from = from.toString(),
+                to = to.toString(),
+                by = by,
+                type = type,
+                totalMinor = total,
+                items = withShare
+            )
+        }
         requireReportAccount(accountId)
         return repository.queryBreakdown(accountId, by, type, from, to)
+    }
+
+    override fun reportTransactions(
+        accountId: Long,
+        by: String,
+        groupId: Long,
+        type: String,
+        from: LocalDate,
+        to: LocalDate,
+        limit: Int,
+        offset: Int
+    ): PageDto<TransactionDto> {
+        if (accountId == 0L) {
+            throw ApiException(
+                HttpStatusCode.UnprocessableEntity,
+                "unsupported_all_accounts",
+                "Drill-down needs a single account"
+            )
+        }
+        val currency = repository.getCurrencyUnitForAccount(accountId)
+            ?: throw ApiException(
+                HttpStatusCode.NotFound,
+                "account_not_found",
+                "Account not found"
+            )
+        val (items, total) = repository.queryReportTransactions(
+            accountId,
+            by,
+            groupId,
+            type,
+            from,
+            to,
+            limit,
+            offset
+        )
+        val withTime = prefHandler.getBoolean(PrefKey.TRANSACTION_WITH_TIME, false)
+        return PageDto(
+            items = items.map {
+                it.toApiDto(currency, payeeMap.value, tagMap.value, withTime)
+            },
+            total = total,
+            limit = limit,
+            offset = offset
+        )
+    }
+
+    private fun reportAccounts(): List<AccountDto> {
+        val all = accounts()
+        if (all.isEmpty()) {
+            throw ApiException(
+                HttpStatusCode.NotFound,
+                "account_not_found",
+                "No accounts"
+            )
+        }
+        if (all.map { it.currency }.distinct().size > 1) {
+            throw ApiException(
+                HttpStatusCode.UnprocessableEntity,
+                "mixed_currencies",
+                "All accounts must share a currency to aggregate reports"
+            )
+        }
+        return all
     }
 
     override fun createTransaction(body: TransactionWriteDto): TransactionDto =
@@ -816,6 +933,89 @@ class AndroidWebApiDataSource(
             updateDefaultAllocation(id, amount)
         }
         return repository.loadBudget(id)!!.toDto()
+    }
+
+    override suspend fun budgetAllocations(
+        id: Long,
+        year: Int?,
+        second: Int?
+    ): List<BudgetAllocationDto> {
+        val progress = repository.loadBudgetProgress(
+            id,
+            if (year != null && second != null) year to second else null
+        ) ?: throw ApiException(
+            HttpStatusCode.NotFound,
+            "budget_not_found",
+            "Budget not found"
+        )
+        return repository.queryBudgetAllocations(
+            budgetId = id,
+            year = progress.groupInfo.year,
+            second = progress.groupInfo.second,
+            from = progress.groupInfo.duration.start,
+            to = progress.groupInfo.duration.end
+        )
+    }
+
+    override suspend fun updateBudgetAllocations(
+        id: Long,
+        body: BudgetAllocationsWriteDto
+    ): List<BudgetAllocationDto> {
+        val budget = repository.loadBudget(id) ?: throw ApiException(
+            HttpStatusCode.NotFound,
+            "budget_not_found",
+            "Budget not found"
+        )
+        if (budget.grouping == Grouping.NONE) {
+            throw ApiException(
+                HttpStatusCode.UnprocessableEntity,
+                "unsupported_grouping",
+                "One-time budgets do not have per-period allocations",
+                mapOf("grouping" to "Not supported for NONE")
+            )
+        }
+        val year = body.year ?: throw ApiException(
+            HttpStatusCode.UnprocessableEntity,
+            "validation_failed",
+            "Missing year",
+            mapOf("year" to "Required")
+        )
+        val second = body.second ?: throw ApiException(
+            HttpStatusCode.UnprocessableEntity,
+            "validation_failed",
+            "Missing second",
+            mapOf("second" to "Required")
+        )
+        body.allocations.orEmpty().forEach { allocation ->
+            val categoryId = allocation.categoryId.requirePositive("categoryId")
+            validateOptional("categoryId", "category", categoryId, CATEGORIES_URI)
+            val amount = allocation.amountMinor ?: throw ApiException(
+                HttpStatusCode.UnprocessableEntity,
+                "validation_failed",
+                "Missing amountMinor",
+                mapOf("amountMinor" to "Required")
+            )
+            if (amount < 0) {
+                throw ApiException(
+                    HttpStatusCode.UnprocessableEntity,
+                    "validation_failed",
+                    "Invalid amountMinor",
+                    mapOf("amountMinor" to "Must not be negative")
+                )
+            }
+            repository.contentResolver.update(
+                budgetAllocationUri(id, categoryId),
+                ContentValues().apply {
+                    put(KEY_YEAR, year)
+                    put(KEY_SECOND_GROUP, second)
+                    put(KEY_BUDGET, amount)
+                    put(KEY_ONE_TIME, false)
+                },
+                null,
+                null
+            )
+        }
+        return budgetAllocations(id, year, second)
     }
 
     override fun deleteBudget(id: Long): Boolean = repository.deleteBudget(id) == 1

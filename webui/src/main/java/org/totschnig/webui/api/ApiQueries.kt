@@ -1,5 +1,6 @@
 package org.totschnig.webui.api
 
+import android.content.ContentResolver
 import java.time.LocalDate
 import java.time.ZoneId
 import kotlin.math.abs
@@ -14,6 +15,8 @@ import org.totschnig.myexpenses.provider.DataBaseAccount
 import org.totschnig.myexpenses.provider.KEY_ACCOUNTID
 import org.totschnig.myexpenses.provider.KEY_ACCOUNT_TYPE_LIST
 import org.totschnig.myexpenses.provider.KEY_AMOUNT
+import org.totschnig.myexpenses.provider.KEY_BUDGET
+import org.totschnig.myexpenses.provider.KEY_BUDGETID
 import org.totschnig.myexpenses.provider.KEY_CATID
 import org.totschnig.myexpenses.provider.KEY_COLOR
 import org.totschnig.myexpenses.provider.KEY_CR_STATUS
@@ -24,6 +27,8 @@ import org.totschnig.myexpenses.provider.KEY_EXCLUDE_FROM_TOTALS
 import org.totschnig.myexpenses.provider.KEY_IS_NUMBERED
 import org.totschnig.myexpenses.provider.KEY_LABEL
 import org.totschnig.myexpenses.provider.KEY_LEVEL
+import org.totschnig.myexpenses.provider.KEY_METHODID
+import org.totschnig.myexpenses.provider.KEY_METHOD_LABEL
 import org.totschnig.myexpenses.provider.KEY_PARENTID
 import org.totschnig.myexpenses.provider.KEY_PATH
 import org.totschnig.myexpenses.provider.KEY_PAYEEID
@@ -31,6 +36,7 @@ import org.totschnig.myexpenses.provider.KEY_PAYEE_NAME
 import org.totschnig.myexpenses.provider.KEY_ROWID
 import org.totschnig.myexpenses.provider.KEY_SEALED
 import org.totschnig.myexpenses.provider.KEY_SECOND_GROUP
+import org.totschnig.myexpenses.provider.KEY_SUM
 import org.totschnig.myexpenses.provider.KEY_SUM_EXPENSES
 import org.totschnig.myexpenses.provider.KEY_SUM_INCOME
 import org.totschnig.myexpenses.provider.KEY_SUM_TRANSFERS
@@ -157,6 +163,105 @@ internal fun Repository.queryMethods(): List<MethodDto> =
         )
     } ?: emptyList()
 
+internal fun Repository.queryBudgetAllocations(
+    budgetId: Long,
+    year: Int?,
+    second: Int?,
+    from: LocalDate,
+    to: LocalDate
+): List<BudgetAllocationDto> {
+    val builder = TransactionProvider.CATEGORIES_URI.buildUpon()
+        .appendQueryParameter(TransactionProvider.QUERY_PARAMETER_HIERARCHICAL, "1")
+        .appendQueryParameter(KEY_TYPE, "false")
+        .appendQueryParameter(KEY_BUDGETID, budgetId.toString())
+    if (year != null && second != null) {
+        builder.appendQueryParameter(KEY_YEAR, year.toString())
+        builder.appendQueryParameter(KEY_SECOND_GROUP, second.toString())
+    }
+    val uri = builder.build()
+    val projection = arrayOf(
+        KEY_ROWID,
+        KEY_LABEL,
+        KEY_PARENTID,
+        KEY_LEVEL,
+        KEY_SUM,
+        KEY_BUDGET
+    )
+    val (selection, args) = dateSelection(from, to)
+    return contentResolver.query(uri, projection, selection, args, null)
+        ?.useAndMapToList { cursor ->
+            BudgetAllocationDto(
+                categoryId = cursor.getLong(KEY_ROWID),
+                label = cursor.getString(KEY_LABEL),
+                parentId = cursor.getLongOrNull(KEY_PARENTID),
+                level = cursor.getInt(KEY_LEVEL),
+                spentMinor = abs(cursor.getLongIfExistsOr0(KEY_SUM)),
+                allocatedMinor = cursor.getLongIfExistsOr0(KEY_BUDGET)
+            )
+        }
+        ?.filter { it.categoryId > 0 }
+        ?: emptyList()
+}
+
+internal fun Repository.queryReportTransactions(
+    accountId: Long,
+    by: String,
+    groupId: Long,
+    type: String,
+    from: LocalDate,
+    to: LocalDate,
+    limit: Int,
+    offset: Int
+): Pair<List<Transaction>, Long> {
+    val wholeTransactions = by != "category"
+    val (baseSelection, baseArgs) =
+        reportSelection(accountId, from, to, type, wholeTransactions)
+    val selection: String
+    val args: Array<String>
+    when (by) {
+        "category" -> {
+            selection = "$baseSelection AND $KEY_CATID = ?"
+            args = (baseArgs ?: emptyArray()) + groupId.toString()
+        }
+
+        "payee" -> {
+            selection = "$baseSelection AND coalesce($KEY_PAYEEID, 0) = ?"
+            args = (baseArgs ?: emptyArray()) + groupId.toString()
+        }
+
+        "method" -> {
+            selection = "$baseSelection AND coalesce($KEY_METHODID, 0) = ?"
+            args = (baseArgs ?: emptyArray()) + groupId.toString()
+        }
+
+        else -> {
+            selection = "$baseSelection AND EXISTS (" +
+                "SELECT 1 FROM $TABLE_TRANSACTIONS_TAGS tag_link " +
+                "WHERE tag_link.$KEY_TRANSACTIONID = $VIEW_EXTENDED.$KEY_ROWID " +
+                "AND tag_link.$KEY_TAGID = ?)"
+            args = (baseArgs ?: emptyArray()) + groupId.toString()
+        }
+    }
+    val total = contentResolver.query(
+        TransactionProvider.EXTENDED_URI,
+        arrayOf("count(*)"),
+        selection,
+        args,
+        null
+    )?.use { if (it.moveToFirst()) it.getLong(0) else 0L } ?: 0L
+    val items = contentResolver.query(
+        TransactionProvider.EXTENDED_URI.buildUpon()
+            .appendQueryParameter(ContentResolver.QUERY_ARG_LIMIT, limit.toString())
+            .appendQueryParameter(ContentResolver.QUERY_ARG_OFFSET, offset.toString())
+            .build(),
+        Transaction.projection,
+        selection,
+        args,
+        null
+    )?.useAndMapToList { Transaction.fromCursor(it) } ?: emptyList()
+    return items to total
+}
+
 internal fun Repository.queryReportSummary(
     accountId: Long,
     from: LocalDate,
@@ -205,7 +310,7 @@ internal fun Repository.queryBreakdown(
 ): BreakdownDto {
     val items = when (by) {
         "category" -> queryGroupedBreakdown(accountId, by, type, from, to)
-        "payee" -> queryGroupedBreakdown(accountId, by, type, from, to)
+        "payee", "method" -> queryGroupedBreakdown(accountId, by, type, from, to)
         "tag" -> queryTagBreakdown(accountId, type, from, to)
         else -> throw IllegalArgumentException("Unknown breakdown $by")
     }
@@ -231,7 +336,7 @@ private fun Repository.queryGroupedBreakdown(
     from: LocalDate,
     to: LocalDate
 ): List<BreakdownItemDto> {
-    val wholeTransactions = by == "payee"
+    val wholeTransactions = by != "category"
     val (baseSelection, args) =
         reportSelection(accountId, from, to, type, wholeTransactions)
     val selection = if (by == "category") "$baseSelection AND $KEY_CATID > 0" else baseSelection
@@ -248,7 +353,7 @@ private fun Repository.queryGroupedBreakdown(
             groupBy = "$KEY_CATID, $KEY_PATH"
         }
 
-        else -> {
+        "payee" -> {
             projection = arrayOf(
                 "coalesce($KEY_PAYEEID, 0) AS group_id",
                 "coalesce($KEY_PAYEE_NAME, 'No payee') AS group_label",
@@ -256,6 +361,16 @@ private fun Repository.queryGroupedBreakdown(
                 "count(*) AS transaction_count"
             )
             groupBy = "coalesce($KEY_PAYEEID, 0), coalesce($KEY_PAYEE_NAME, 'No payee')"
+        }
+
+        else -> {
+            projection = arrayOf(
+                "coalesce($KEY_METHODID, 0) AS group_id",
+                "coalesce($KEY_METHOD_LABEL, 'No method') AS group_label",
+                "sum($KEY_AMOUNT) AS amount_minor",
+                "count(*) AS transaction_count"
+            )
+            groupBy = "coalesce($KEY_METHODID, 0), coalesce($KEY_METHOD_LABEL, 'No method')"
         }
     }
     val uri = TransactionProvider.EXTENDED_URI.buildUpon()
