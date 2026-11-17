@@ -1,4 +1,5 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { t } from '@lingui/core/macro'
 
 export interface SearchOption {
@@ -25,9 +26,16 @@ function normalize(value: string): string {
     .trim()
 }
 
+function matchIndex(label: string, query: string): number {
+  if (!query) return -1
+  // Highlight only when the query matches the unaccented label contiguously.
+  const normalized = label.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  return normalized.toLowerCase().indexOf(query)
+}
+
 /**
- * Searchable combobox: focus opens the list, typing filters it, and the value
- * only changes when an option is chosen. Empty value is a valid option.
+ * SearchSelect behaves like Select2: the input is the search box, the list is
+ * rendered in a portal so panels cannot clip it, and every keystroke filters.
  */
 export function SearchSelect({
   value,
@@ -42,9 +50,41 @@ export function SearchSelect({
   const [open, setOpen] = useState(false)
   const [input, setInput] = useState(selected?.label ?? '')
   const [highlight, setHighlight] = useState(0)
+  const [rect, setRect] = useState<{
+    top?: number
+    bottom?: number
+    left: number
+    width: number
+  } | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
   const listId = useId()
+
+  const query = useMemo(() => normalize(input), [input])
+
+  const filtered = useMemo(() => {
+    if (!open || !query || input === selected?.label) return options
+    return options.filter(
+      (option) =>
+        normalize(option.label).includes(query) ||
+        normalize(option.keywords ?? '').includes(query),
+    )
+  }, [input, open, options, query, selected?.label])
+
+  function updatePosition() {
+    const box = wrapperRef.current?.getBoundingClientRect()
+    if (!box) return
+    const spaceBelow = window.innerHeight - box.bottom
+    const openAbove = spaceBelow < 260 && box.top > spaceBelow
+    setRect({
+      left: box.left,
+      width: box.width,
+      ...(openAbove
+        ? { bottom: window.innerHeight - box.top + 4 }
+        : { top: box.bottom + 4 }),
+    })
+  }
 
   useEffect(() => {
     if (!open) setInput(selected?.label ?? '')
@@ -52,25 +92,29 @@ export function SearchSelect({
 
   useEffect(() => {
     if (!open) return
+    updatePosition()
+    const onLayout = () => updatePosition()
+    window.addEventListener('resize', onLayout)
+    window.addEventListener('scroll', onLayout, true)
+    return () => {
+      window.removeEventListener('resize', onLayout)
+      window.removeEventListener('scroll', onLayout, true)
+    }
+  }, [open])
+
+  useEffect(() => {
+    if (!open) return
     const onDocument = (event: MouseEvent) => {
-      if (!wrapperRef.current?.contains(event.target as Node)) {
-        setOpen(false)
-        setInput(selected?.label ?? '')
+      const target = event.target as Node
+      if (wrapperRef.current?.contains(target) || menuRef.current?.contains(target)) {
+        return
       }
+      setOpen(false)
+      setInput(selected?.label ?? '')
     }
     document.addEventListener('mousedown', onDocument)
     return () => document.removeEventListener('mousedown', onDocument)
   }, [open, selected?.label])
-
-  const filtered = useMemo(() => {
-    if (!open || !input || input === selected?.label) return options
-    const query = normalize(input)
-    return options.filter(
-      (option) =>
-        normalize(option.label).includes(query) ||
-        normalize(option.keywords ?? '').includes(query),
-    )
-  }, [input, open, options, selected?.label])
 
   function choose(option: SearchOption) {
     onChange(option.value)
@@ -78,6 +122,59 @@ export function SearchSelect({
     setOpen(false)
     inputRef.current?.blur()
   }
+
+  const menu =
+    open && rect
+      ? createPortal(
+          <div
+            ref={menuRef}
+            id={listId}
+            className="search-select-menu"
+            role="listbox"
+            aria-label={ariaLabel}
+            style={{
+              position: 'fixed',
+              left: rect.left,
+              width: rect.width,
+              top: rect.top,
+              bottom: rect.bottom,
+              zIndex: 200,
+            }}
+          >
+            {filtered.length === 0 ? (
+              <div className="search-select-empty">{t`No matches`}</div>
+            ) : (
+              filtered.map((option, index) => {
+                const at = matchIndex(option.label, query)
+                return (
+                  <button
+                    key={option.value || 'empty'}
+                    id={`${listId}-${index}`}
+                    type="button"
+                    role="option"
+                    aria-selected={option.value === value}
+                    className={`search-select-option ${index === highlight ? 'active' : ''}`}
+                    onMouseDown={(event) => event.preventDefault()}
+                    onMouseEnter={() => setHighlight(index)}
+                    onClick={() => choose(option)}
+                  >
+                    {at >= 0 && query ? (
+                      <>
+                        {option.label.slice(0, at)}
+                        <mark>{option.label.slice(at, at + query.length)}</mark>
+                        {option.label.slice(at + query.length)}
+                      </>
+                    ) : (
+                      option.label
+                    )}
+                  </button>
+                )
+              })
+            )}
+          </div>,
+          document.body,
+        )
+      : null
 
   return (
     <div ref={wrapperRef} className={`search-select ${className ?? ''}`}>
@@ -106,14 +203,6 @@ export function SearchSelect({
           setOpen(true)
           setHighlight(0)
         }}
-        onBlur={() => {
-          window.setTimeout(() => {
-            if (!wrapperRef.current?.contains(document.activeElement)) {
-              setOpen(false)
-              setInput(selected?.label ?? '')
-            }
-          }, 0)
-        }}
         onKeyDown={(event) => {
           if (event.key === 'ArrowDown') {
             event.preventDefault()
@@ -133,29 +222,7 @@ export function SearchSelect({
           }
         }}
       />
-      {open ? (
-        <div id={listId} className="search-select-menu" role="listbox" aria-label={ariaLabel}>
-          {filtered.length === 0 ? (
-            <div className="search-select-empty">{t`No matches`}</div>
-          ) : (
-            filtered.map((option, index) => (
-              <button
-                key={option.value || 'empty'}
-                id={`${listId}-${index}`}
-                type="button"
-                role="option"
-                aria-selected={option.value === value}
-                className={`search-select-option ${index === highlight ? 'active' : ''}`}
-                onMouseDown={(event) => event.preventDefault()}
-                onMouseEnter={() => setHighlight(index)}
-                onClick={() => choose(option)}
-              >
-                {option.label}
-              </button>
-            ))
-          )}
-        </div>
-      ) : null}
+      {menu}
     </div>
   )
 }

@@ -1816,12 +1816,8 @@ button:disabled {
 }
 
 .search-select-menu {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
-  right: 0;
-  z-index: 70;
-  max-height: 240px;
+  z-index: 200;
+  max-height: 260px;
   overflow-y: auto;
   padding: 4px;
   border: 1px solid var(--border-subtle);
@@ -1852,6 +1848,13 @@ button:disabled {
 
 .search-select-option[aria-selected='true'] {
   font-weight: 600;
+}
+
+.search-select-option mark {
+  padding: 0 1px;
+  border-radius: 2px;
+  background: var(--tint-sky);
+  color: inherit;
 }
 
 .search-select-empty {
