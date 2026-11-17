@@ -113,18 +113,40 @@ assets.
 
 ## Testing the web server
 
-`webui/webapp/dev/mock-server.mjs` (`npm run mock`) serves the built SPA and an
-in-memory v1 API with 60 transactions, including `POST/PUT/DELETE`. QA switches:
-`?login=1` (clears the mock session cookie), `?locale=es`, `?view=transactions`,
-`?view=budgets`,
-`?view=budgets&new=1`,
-`?view=budgets&edit=1`, `?view=reports`, `?view=reports&reportBy=Payee&reportType=Both`,
-`?view=files`, `?panel=split`, `?panel=transfer`, `?new=1`,
-`?new=1&kind=transfer`, `?new=1&kind=split`, `?edit=simple`, `?edit=split`,
-`?edit=transfer`, `?new=1&save=1`, `?theme=dark`, `?metrics=1`. The mock writes
-simple transactions and budgets only, and serves report summary/breakdown;
-transfer/split saves need the real phone API. It tests the SPA and the contract,
-not the Kotlin queries.
+Use the mock for **every SPA change**. It is the default visual and contract
+test; the real phone API is only needed for Kotlin/provider behaviour.
+
+```bash
+cd webui/webapp
+npm run build          # regenerates webui/src/main/assets/webapp
+npm run mock           # http://localhost:4173/app/
+```
+
+- Test at **desktop 1440×900** and **mobile 390×844** (DevTools device toolbar
+  or the browser tool viewport). At ≤760 px the rail becomes a fixed bottom
+  navigation.
+- Check: no console errors, no horizontal overflow, navigation reachable,
+  page bottom not hidden by the bottom bar, editor/panels usable, both themes
+  and both locales.
+- Use `?metrics=1` to expose `scrollHeight`/`clientHeight` and row counts.
+- The mock state is in memory; restarting it resets the fixtures.
+
+QA switches: `?login=1` (clears the mock cookie), `?locale=es`,
+`?view=transactions`, `?view=reports`, `?view=reports&reportBy=Payee&reportType=Both`,
+`?view=reports&reportDrill=1`, `?view=budgets`, `?view=budgets&new=1`,
+`?view=budgets&edit=1`, `?view=budgets&edit=1&periodOverride=1`, `?view=files`,
+`?panel=split`, `?panel=transfer`, `?new=1`, `?new=1&kind=transfer`,
+`?new=1&kind=split`, `?new=1&combo=1`, `?edit=simple`, `?edit=split`,
+`?edit=transfer`, `?new=1&save=1`, `?theme=dark`, `?metrics=1`.
+
+The mock writes simple transactions, budgets (allocations, rollover, period
+override, duplicate), reports and file downloads. Transfers and splits can be
+opened and edited visually, but saving them needs the real phone API. It tests
+the SPA and the HTTP contract, not the Kotlin queries. The full guide lives in
+`webui/webapp/README.md` (section **Probar sin el móvil**).
+
+For hot reload, run the mock and `VITE_API_TARGET=http://localhost:4173 npm run dev`;
+QA query switches do not apply in that mode because Vite serves the index.
 
 ## Documentation is part of done
 
@@ -134,6 +156,7 @@ A change is not done until, in the same commit:
 - `webui/DESIGN.md` and `webui/webapp/src/styles/tokens.css` match new components,
   patterns and tokens.
 - `webui/webapp/README.md` matches build steps and QA switches.
+- If you add a QA switch or a mock capability, document it in both places.
 - This file's **Current state** and **Open work** reflect the new slice.
 - If routing or validation changed, extend `ApiRoutesTest`; the test command is
   in Build and verify.
