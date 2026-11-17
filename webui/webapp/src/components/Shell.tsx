@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import type { Account, Meta } from '../types'
 import {
   IconChart,
+  IconFile,
   IconGrid,
   IconList,
   IconLogOut,
@@ -11,7 +12,7 @@ import {
   IconSun,
 } from './Icons'
 
-export type View = 'dashboard' | 'transactions'
+export type View = 'dashboard' | 'transactions' | 'files'
 
 interface ShellProps {
   view: View
@@ -45,7 +46,9 @@ export function Shell({
           <span className="mark">Σ</span>
           <span>My Expenses</span>
         </div>
-        <span className="crumb">{view === 'dashboard' ? 'Overview' : 'Transactions'}</span>
+        <span className="crumb">
+          {view === 'dashboard' ? 'Overview' : view === 'files' ? 'Files' : 'Transactions'}
+        </span>
         <div className="top-right">
           <label className="account-picker">
             <span className="sr-only">Account</span>
@@ -102,6 +105,16 @@ export function Shell({
             aria-current={view === 'transactions' ? 'page' : undefined}
           >
             <IconList />
+          </button>
+          <button
+            type="button"
+            className={`rail-item ${view === 'files' ? 'active' : ''}`}
+            onClick={() => onView('files')}
+            title="Files"
+            aria-label="Files"
+            aria-current={view === 'files' ? 'page' : undefined}
+          >
+            <IconFile />
           </button>
           <button
             type="button"

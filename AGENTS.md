@@ -13,8 +13,11 @@ Read this before changing code. Detailed sources:
   transfers and splits.
 - API routes covered on the JVM by 15 `ApiRoutesTest` tests with a fake
   `WebApiDataSource` and Ktor `testApplication`.
-- SPA: dashboard, transactions, detail, and the simple, transfer and split
+- SPA: dashboard, transactions, detail, files, and the simple, transfer and split
   editors. The split editor uses signed amounts, a parts list and a part panel.
+- Files: `GET /api/v1/files` lists app-directory backups and `GET /api/v1/files/{name}`
+  streams one with `Content-Disposition`; the SPA downloads via fetch + blob so
+  Basic auth is sent.
 
 ## Build and verify
 
@@ -82,7 +85,7 @@ assets.
 
 `webui/webapp/dev/mock-server.mjs` (`npm run mock`) serves the built SPA and an
 in-memory v1 API with 60 transactions, including `POST/PUT/DELETE`. QA switches:
-`?login=1`, `?view=transactions`, `?panel=split`, `?panel=transfer`, `?new=1`,
+`?login=1`, `?view=transactions`, `?view=files`, `?panel=split`, `?panel=transfer`, `?new=1`,
 `?new=1&kind=transfer`, `?new=1&kind=split`, `?edit=simple`, `?edit=split`,
 `?edit=transfer`, `?new=1&save=1`, `?theme=dark`, `?metrics=1`. The mock writes
 simple transactions only; transfer/split saves need the real phone API. It tests
@@ -104,6 +107,8 @@ Update the docs while the change is fresh; do not defer them to a later commit.
 
 ## Open work
 
-- Budgets, reports and files (API and screens).
+- Budgets and reports (API and screens).
 - Then Lingui `.po`, cookie session, TanStack/Tailwind/Geist, PWA and the legacy
   form cleanup (`/` → `/app`).
+- Files are device-level: the route lives in `WebInputService` (`AppDirHelper`),
+  so `ApiRoutesTest` does not cover it; verify on the phone.

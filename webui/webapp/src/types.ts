@@ -168,3 +168,10 @@ export interface SplitWrite {
   tagIds?: number[] | null
   parts: SplitPartWrite[]
 }
+
+export interface FileEntry {
+  name: string
+  size: number
+  modified: number
+  link: string
+}

@@ -5,7 +5,7 @@ React + TypeScript + Vite, con los tokens de [`../DESIGN.md`](../DESIGN.md).
 
 ## Estado
 
-Corte actual: lectura y escritura simple, transferencias y divididas.
+Corte actual: lectura y escritura simple, transferencias, divididas y ficheros.
 
 - Login con la contraseña del Web UI (HTTP Basic).
 - Dashboard: patrimonio de la cuenta, ingresos/gastos/ahorro del mes,
@@ -17,8 +17,11 @@ Corte actual: lectura y escritura simple, transferencias y divididas.
   lista de partes y el editor de la parte seleccionada; los importes van con
   signo y la cuenta queda fija al editar.
 
-Todavía no hay presupuestos, informes desglosados ni ficheros. Esas pantallas
-llegan en los siguientes cortes.
+- Ficheros: lista de backups/exportaciones del teléfono con tamaño, fecha y
+  descarga autenticada (fetch + blob).
+
+Todavía no hay presupuestos ni informes desglosados. Esas pantallas llegan en
+los siguientes cortes.
 
 ## Desarrollo
 

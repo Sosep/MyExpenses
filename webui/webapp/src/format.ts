@@ -176,3 +176,25 @@ export function parseSignedAmountMinor(value: string, fractionDigits: number): n
 export function signedAmountInput(amountMinor: number, fractionDigits: number): string {
   return (amountMinor / 10 ** fractionDigits).toFixed(fractionDigits)
 }
+
+export function formatBytes(size: number): string {
+  if (size < 1024) return `${size} B`
+  const units = ['KB', 'MB', 'GB', 'TB']
+  let value = size / 1024
+  let unit = 0
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024
+    unit += 1
+  }
+  return `${value.toFixed(value >= 10 ? 0 : 1)} ${units[unit]}`
+}
+
+export function formatTimestamp(epochMillis: number): string {
+  return new Intl.DateTimeFormat(LOCALE, {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(epochMillis))
+}

@@ -82,6 +82,27 @@ const accounts = [
   },
 ]
 
+const files = [
+  {
+    name: 'myexpenses-2026-11-17.backup',
+    size: 482913,
+    modified: Date.now() - 1000 * 60 * 60 * 3,
+    link: '/api/v1/files/myexpenses-2026-11-17.backup',
+  },
+  {
+    name: 'myexpenses-2026-11-10.backup',
+    size: 471380,
+    modified: Date.now() - 1000 * 60 * 60 * 24 * 7,
+    link: '/api/v1/files/myexpenses-2026-11-10.backup',
+  },
+  {
+    name: 'expenses-november-2026.csv',
+    size: 18422,
+    modified: Date.now() - 1000 * 60 * 60 * 26,
+    link: '/api/v1/files/expenses-november-2026.csv',
+  },
+]
+
 const meta = {
   appVersion: 'dev',
   serverTime: `${year}-${pad(month)}-17T10:00:00`,
@@ -337,6 +358,9 @@ function serveAppIndex(response) {
           if (q.get('theme') === 'dark') {
             setTimeout(function(){ document.querySelector('button[aria-label="Switch to dark"]')?.click() }, 120)
           }
+          if (q.get('view') === 'files') {
+            setTimeout(function(){ document.querySelector('button[aria-label="Files"]')?.click() }, 250)
+          }
           if (q.get('view') === 'transactions') {
             setTimeout(function(){ document.querySelector('button[aria-label="Transactions"]')?.click() }, 250)
             var panel = q.get('panel')
@@ -587,6 +611,20 @@ createServer(async (request, response) => {
     if (path === '/api/v1/tags') return send(response, 200, JSON.stringify(tags))
     if (path === '/api/v1/methods') return send(response, 200, JSON.stringify(methods))
 
+    if (path === '/api/v1/files') return sendJson(response, 200, files)
+    const fileMatch = path.match(/^\/api\/v1\/files\/([^/]+)$/)
+    if (fileMatch) {
+      const name = fileMatch[1]
+      const file = files.find((item) => item.name === name)
+      if (!file) return send(response, 404, 'File not found', 'text/plain')
+      response.writeHead(200, {
+        'Content-Type': 'application/octet-stream',
+        'Content-Disposition': `attachment; filename="${name}"`,
+        'Cache-Control': 'no-store',
+      })
+      return response.end(`Mock file ${name}\n`)
+    }
+
     if (path === '/api/v1/reports/grouped') {
       const from = url.searchParams.get('from') ?? ''
       const to = url.searchParams.get('to') ?? ''
@@ -684,5 +722,5 @@ createServer(async (request, response) => {
   }
 }).listen(port, '127.0.0.1', () => {
   console.log(`mock web server on http://localhost:${port}/app/`)
-  console.log('QA: ?login=1 ?view=transactions ?panel=split ?new=1 ?edit=split ?theme=dark ?metrics=1')
+  console.log('QA: ?login=1 ?view=transactions ?panel=split ?new=1 ?edit=split ?view=files ?theme=dark ?metrics=1')
 })

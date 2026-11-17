@@ -1522,3 +1522,18 @@ button:disabled {
     width: 100%;
   }
 }
+
+/* Files */
+
+.table .file-action-head,
+.table .file-action {
+  text-align: right;
+  width: 1%;
+  white-space: nowrap;
+}
+
+.table .file-action .btn {
+  gap: 6px;
+  padding: 5px 10px;
+  font-size: 12px;
+}

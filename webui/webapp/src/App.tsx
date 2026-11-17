@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import type { Account, Meta } from './types'
 import { getAccounts, getMeta, hasStoredAuth, login, logout, UNAUTHORIZED_EVENT } from './api'
 import { Dashboard } from './components/Dashboard'
+import { Files } from './components/Files'
 import { Login } from './components/Login'
 import { Shell } from './components/Shell'
 import type { View } from './components/Shell'
@@ -165,6 +166,8 @@ export default function App() {
               onOpenTransactions={() => setView('transactions')}
               onNewTransaction={() => setEditor({ mode: 'create' })}
             />
+          ) : view === 'files' ? (
+            <Files />
           ) : (
             <Transactions
               account={account}

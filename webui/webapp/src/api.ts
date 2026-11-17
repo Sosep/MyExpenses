@@ -1,6 +1,7 @@
 import type {
   Account,
   Category,
+  FileEntry,
   Group,
   Meta,
   Method,
@@ -177,3 +178,33 @@ export const createSplit = (payload: SplitWrite) =>
 
 export const updateSplit = (id: number, payload: SplitWrite) =>
   request<Transaction>(`/split-transactions/${id}`, { method: 'PUT', body: payload })
+
+export const getFiles = (signal?: AbortSignal) =>
+  request<FileEntry[]>('/files', { signal })
+
+export async function downloadFile(name: string): Promise<Blob> {
+  const headers = new Headers()
+  if (authHeader) headers.set('Authorization', authHeader)
+  let response: Response
+  try {
+    response = await fetch('/api/v1/files/' + encodeURIComponent(name), {
+      headers,
+      cache: 'no-store',
+    })
+  } catch {
+    throw new ApiError(0, 'network_error', "Can't reach the phone to download the file.")
+  }
+  if (response.status === 401) {
+    logout()
+    window.dispatchEvent(new Event(UNAUTHORIZED_EVENT))
+    throw new ApiError(401, 'unauthorized', 'Wrong password')
+  }
+  if (!response.ok) {
+    throw new ApiError(
+      response.status,
+      'http_error',
+      response.status === 404 ? 'File not found' : 'Could not download the file',
+    )
+  }
+  return response.blob()
+}

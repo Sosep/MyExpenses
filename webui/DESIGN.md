@@ -500,9 +500,23 @@ Filters: [search] [account] [All|Expenses|Income] [Month]
 
 ### Descargas
 
-- Lista de ficheros con nombre, tamaño, fecha y acción Download.
+```text
+Files                                     [Refresh]
+Backups and exports stored on the phone
+
+NAME                              SIZE     MODIFIED          ACTION
+myexpenses-2026-11-17.backup      472 KB   17 Nov 2026, 09:12 [↓ Download]
+expenses-november-2026.csv         18 KB   16 Nov 2026, 18:40 [↓ Download]
+```
+
+- Lista de ficheros con nombre, tamaño, fecha y acción Download; el botón muestra
+  `Downloading…` mientras descarga.
+- La fecha se muestra en local con día, mes, año, hora y minuto; el tamaño se
+  reduce a B/KB/MB/GB.
 - Estado vacío: explica que los ficheros aparecen tras exportar o hacer backup.
 - No se muestra la ruta interna.
+- La descarga se pide con `fetch` y se guarda como blob para conservar la
+  autenticación; un fallo muestra un banner, no pierde la lista.
 
 ---
 
@@ -788,3 +802,4 @@ src/
 | 2026-11-17 | 1.1 | Tokens movidos a la SPA (`webapp/src/styles/tokens.css`); guía y código comparten fuente. |
 | 2026-11-17 | 1.2 | Patrón del editor de transacción simple y escritura simple en la SPA. |
 | 2026-11-17 | 1.3 | Transferencias y divididas: API de escritura y editores; panel ancho de partes con importes firmados. |
+| 2026-11-17 | 1.4 | Ficheros: listado y descarga autenticada; tamaño y fecha local en la tabla. |
