@@ -2,6 +2,8 @@ import type {
   Account,
   Breakdown,
   Budget,
+  BudgetAllocation,
+  BudgetAllocationsWrite,
   BudgetProgress,
   BudgetWrite,
   Category,
@@ -246,7 +248,7 @@ export const getReportSummary = (
 
 export const getBreakdown = (
   accountId: number,
-  by: 'category' | 'payee' | 'tag',
+  by: 'category' | 'payee' | 'tag' | 'method',
   type: 'expense' | 'income' | 'both',
   from: string,
   to: string,
@@ -255,5 +257,40 @@ export const getBreakdown = (
   request<Breakdown>(
     `/reports/breakdown?accountId=${accountId}&by=${by}&type=${type}` +
       `&from=${from}&to=${to}`,
+    { signal },
+  )
+
+export const getBudgetAllocations = (
+  id: number,
+  year?: number,
+  second?: number,
+  signal?: AbortSignal,
+) => {
+  const query =
+    year !== undefined && second !== undefined ? `?year=${year}&second=${second}` : ''
+  return request<BudgetAllocation[]>(`/budgets/${id}/allocations${query}`, { signal })
+}
+
+export const updateBudgetAllocations = (
+  id: number,
+  payload: BudgetAllocationsWrite,
+) =>
+  request<BudgetAllocation[]>(`/budgets/${id}/allocations`, {
+    method: 'PUT',
+    body: payload,
+  })
+
+export const getReportTransactions = (
+  accountId: number,
+  by: 'category' | 'payee' | 'tag' | 'method',
+  groupId: number,
+  type: 'expense' | 'income' | 'both',
+  from: string,
+  to: string,
+  signal?: AbortSignal,
+) =>
+  request<Page<Transaction>>(
+    `/reports/transactions?accountId=${accountId}&by=${by}&id=${groupId}` +
+      `&type=${type}&from=${from}&to=${to}&limit=100&offset=0`,
     { signal },
   )

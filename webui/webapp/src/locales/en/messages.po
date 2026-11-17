@@ -43,6 +43,8 @@ msgid "{0} spent"
 msgstr "{0} spent"
 
 #. placeholder {0}: item.count
+#. placeholder {0}: page.data?.total ?? item.count
+#: src/components/ReportPanel.tsx
 #: src/components/Reports.tsx
 msgid "{0} transactions"
 msgstr "{0} transactions"
@@ -81,8 +83,12 @@ msgid "Account"
 msgstr "Account"
 
 #: src/components/BudgetEditor.tsx
-msgid "Account and period type are fixed after creation. Category allocations and rollover are edited in the Android app."
-msgstr "Account and period type are fixed after creation. Category allocations and rollover are edited in the Android app."
+#~ msgid "Account and period type are fixed after creation. Category allocations and rollover are edited in the Android app."
+#~ msgstr "Account and period type are fixed after creation. Category allocations and rollover are edited in the Android app."
+
+#: src/components/BudgetEditor.tsx
+msgid "Account and period type are fixed after creation. Rollover and duplication stay in the Android app."
+msgstr "Account and period type are fixed after creation. Rollover and duplication stay in the Android app."
 
 #: src/components/Files.tsx
 msgid "Actions"
@@ -96,6 +102,10 @@ msgstr "Activity by {noun}"
 msgid "All"
 msgstr "All"
 
+#: src/components/Reports.tsx
+msgid "All accounts"
+msgstr "All accounts"
+
 #: src/components/Budgets.tsx
 msgid "All budgets"
 msgstr "All budgets"
@@ -104,8 +114,18 @@ msgstr "All budgets"
 msgid "allocated"
 msgstr "allocated"
 
+#. placeholder {0}: row.label
+#: src/components/BudgetEditor.tsx
+msgid "Allocation for {0}"
+msgstr "Allocation for {0}"
+
+#: src/components/BudgetEditor.tsx
+msgid "Allocations apply to the current period. Rollover and duplication stay in the Android app."
+msgstr "Allocations apply to the current period. Rollover and duplication stay in the Android app."
+
 #: src/components/BudgetEditor.tsx
 #: src/components/Dashboard.tsx
+#: src/components/ReportPanel.tsx
 #: src/components/TransactionEditor.tsx
 #: src/components/TransactionPanel.tsx
 #: src/components/Transactions.tsx
@@ -185,6 +205,7 @@ msgstr "Budgets"
 msgid "Budgets with different currencies or periods are shown separately."
 msgstr "Budgets with different currencies or periods are shown separately."
 
+#: src/components/BudgetEditor.tsx
 #: src/components/TransactionEditor.tsx
 msgid "Cancel"
 msgstr "Cancel"
@@ -201,6 +222,10 @@ msgstr "category"
 msgid "Category"
 msgstr "Category"
 
+#: src/components/BudgetEditor.tsx
+msgid "Category allocations"
+msgstr "Category allocations"
+
 #: src/components/TransactionEditor.tsx
 msgid "Choose two different accounts."
 msgstr "Choose two different accounts."
@@ -209,6 +234,7 @@ msgstr "Choose two different accounts."
 msgid "Cleared"
 msgstr "Cleared"
 
+#: src/components/ReportPanel.tsx
 #: src/components/TransactionPanel.tsx
 msgid "Close details"
 msgstr "Close details"
@@ -272,6 +298,7 @@ msgid "Daily"
 msgstr "Daily"
 
 #: src/components/Dashboard.tsx
+#: src/components/ReportPanel.tsx
 #: src/components/TransactionEditor.tsx
 #: src/components/Transactions.tsx
 msgid "Date"
@@ -285,6 +312,7 @@ msgstr "Default amount"
 msgid "Default budget"
 msgstr "Default budget"
 
+#: src/components/BudgetEditor.tsx
 #: src/components/TransactionPanel.tsx
 msgid "Delete"
 msgstr "Delete"
@@ -299,6 +327,7 @@ msgid "Deleting…"
 msgstr "Deleting…"
 
 #: src/components/Dashboard.tsx
+#: src/components/ReportPanel.tsx
 #: src/components/Transactions.tsx
 msgid "Description"
 msgstr "Description"
@@ -323,6 +352,10 @@ msgstr "Download"
 #: src/components/Files.tsx
 msgid "Downloading…"
 msgstr "Downloading…"
+
+#: src/components/ReportPanel.tsx
+msgid "Drill-down"
+msgstr "Drill-down"
 
 #: src/components/BudgetEditor.tsx
 #: src/components/Budgets.tsx
@@ -350,6 +383,10 @@ msgstr "Edit transfer"
 #: src/components/BudgetEditor.tsx
 msgid "End"
 msgstr "End"
+
+#: src/components/BudgetEditor.tsx
+msgid "Enter a valid amount for every category."
+msgstr "Enter a valid amount for every category."
 
 #: src/components/TransactionEditor.tsx
 msgid "Enter a valid amount for every part."
@@ -440,6 +477,10 @@ msgstr "Language"
 msgid "Last 12 months"
 msgstr "Last 12 months"
 
+#: src/components/Reports.tsx
+msgid "Last 3 months"
+msgstr "Last 3 months"
+
 #: src/components/Login.tsx
 msgid "Leave the password empty if you have not set one."
 msgstr "Leave the password empty if you have not set one."
@@ -448,6 +489,10 @@ msgstr "Leave the password empty if you have not set one."
 #: src/components/Transactions.tsx
 msgid "Load more ({0})"
 msgstr "Load more ({0})"
+
+#: src/components/BudgetEditor.tsx
+msgid "Loading allocations…"
+msgstr "Loading allocations…"
 
 #: src/components/Budgets.tsx
 msgid "Loading budgets…"
@@ -462,10 +507,16 @@ msgid "Loading report…"
 msgstr "Loading report…"
 
 #: src/App.tsx
+#: src/components/ReportPanel.tsx
 #: src/components/Transactions.tsx
 msgid "Loading…"
 msgstr "Loading…"
 
+#: src/components/Reports.tsx
+msgid "method"
+msgstr "method"
+
+#: src/components/Reports.tsx
 #: src/components/TransactionEditor.tsx
 #: src/components/TransactionPanel.tsx
 msgid "Method"
@@ -649,6 +700,7 @@ msgid "Payee"
 msgstr "Payee"
 
 #: src/components/BudgetEditor.tsx
+#: src/components/Reports.tsx
 msgid "Period"
 msgstr "Period"
 
@@ -732,6 +784,10 @@ msgstr "Saving…"
 #: src/components/Shell.tsx
 msgid "Sections"
 msgstr "Sections"
+
+#: src/components/Reports.tsx
+msgid "Select a single account to drill down"
+msgstr "Select a single account to drill down"
 
 #: src/components/Shell.tsx
 msgid "Settings (next milestone)"
@@ -821,6 +877,10 @@ msgstr "This cannot be undone."
 msgid "This month"
 msgstr "This month"
 
+#: src/components/Reports.tsx
+msgid "This year"
+msgstr "This year"
+
 #: src/components/TransactionEditor.tsx
 msgid "Time"
 msgstr "Time"
@@ -849,6 +909,7 @@ msgstr "Total (signed)"
 msgid "Total amount"
 msgstr "Total amount"
 
+#: src/components/ReportPanel.tsx
 #: src/components/TransactionEditor.tsx
 #: src/components/TransactionPanel.tsx
 #: src/format.ts

@@ -22,10 +22,11 @@ presupuestos e informes.
   descarga autenticada (fetch + blob).
 - Presupuestos: progreso del periodo actual por presupuesto, resumen cuando
   comparten divisa y periodo, sobregiro explícito y días restantes. Alta,
-  edición y borrado desde un panel lateral; la asignación por categorías y el
-  rollover siguen en la app.
-- Informes: KPIs del mes y desglose por categoría, beneficiario o etiqueta, con
-  tipo gasto/ingreso/ambos, importe, número y porcentaje.
+  edición y borrado desde un panel lateral, con asignación por categoría para el
+  periodo actual; el rollover y la duplicación siguen en la app.
+- Informes: KPIs y desglose por categoría, beneficiario, etiqueta o método, con
+  presets de periodo, tipo gasto/ingreso/ambos, todas las cuentas y drill-down al
+  detalle de cada grupo.
 - PWA: manifiesto, iconos y service worker. Cachea el shell de `/app` y trata el
   API como solo red; avisa sin conexión y cuando hay una versión nueva.
 - i18n: inglés y español con Lingui (`.po`). Selector de idioma en la barra
@@ -33,6 +34,8 @@ presupuestos e informes.
 - Datos de servidor con TanStack Query: caché compartida y refresco por
   invalidación tras cada escritura.
 - Geist Sans empaquetada (`@fontsource/geist-sans`), sin depender de la red.
+- Tailwind v4 configurado con los tokens de `DESIGN.md`; la UI nueva usa
+  utilidades y la existente conserva las clases semánticas.
 
 ## Traducciones
 
@@ -87,6 +90,7 @@ el API real del teléfono. Acepta estos parámetros para QA visual:
 | `?view=transactions` | Abre Transacciones |
 | `?view=reports` | Abre Informes |
 | `?view=reports&reportBy=Payee&reportType=Both` | Preselecciona dimensión y tipo en Informes |
+| `?view=reports&reportDrill=1` | Abre el detalle del primer grupo |
 | `?view=budgets` | Abre Presupuestos |
 | `?view=budgets&new=1` | Abre el editor de alta de presupuesto |
 | `?view=budgets&edit=1` | Abre el primer presupuesto en el editor |

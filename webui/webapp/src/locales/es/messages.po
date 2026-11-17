@@ -43,6 +43,8 @@ msgid "{0} spent"
 msgstr "{0} gastado"
 
 #. placeholder {0}: item.count
+#. placeholder {0}: page.data?.total ?? item.count
+#: src/components/ReportPanel.tsx
 #: src/components/Reports.tsx
 msgid "{0} transactions"
 msgstr "{0} transacciones"
@@ -81,8 +83,12 @@ msgid "Account"
 msgstr "Cuenta"
 
 #: src/components/BudgetEditor.tsx
-msgid "Account and period type are fixed after creation. Category allocations and rollover are edited in the Android app."
-msgstr "La cuenta y el tipo de periodo no se pueden cambiar después de crear el presupuesto. Las asignaciones por categoría y el rollover se editan en la app Android."
+#~ msgid "Account and period type are fixed after creation. Category allocations and rollover are edited in the Android app."
+#~ msgstr "La cuenta y el tipo de periodo no se pueden cambiar después de crear el presupuesto. Las asignaciones por categoría y el rollover se editan en la app Android."
+
+#: src/components/BudgetEditor.tsx
+msgid "Account and period type are fixed after creation. Rollover and duplication stay in the Android app."
+msgstr "La cuenta y el tipo de periodo no se pueden cambiar después de crear el presupuesto. El rollover y la duplicación siguen en la app Android."
 
 #: src/components/Files.tsx
 msgid "Actions"
@@ -96,6 +102,10 @@ msgstr "Actividad por {noun}"
 msgid "All"
 msgstr "Todos"
 
+#: src/components/Reports.tsx
+msgid "All accounts"
+msgstr "Todas las cuentas"
+
 #: src/components/Budgets.tsx
 msgid "All budgets"
 msgstr "Todos los presupuestos"
@@ -104,8 +114,18 @@ msgstr "Todos los presupuestos"
 msgid "allocated"
 msgstr "asignado"
 
+#. placeholder {0}: row.label
+#: src/components/BudgetEditor.tsx
+msgid "Allocation for {0}"
+msgstr "Asignación de {0}"
+
+#: src/components/BudgetEditor.tsx
+msgid "Allocations apply to the current period. Rollover and duplication stay in the Android app."
+msgstr "Las asignaciones se aplican al periodo actual. El rollover y la duplicación siguen en la app Android."
+
 #: src/components/BudgetEditor.tsx
 #: src/components/Dashboard.tsx
+#: src/components/ReportPanel.tsx
 #: src/components/TransactionEditor.tsx
 #: src/components/TransactionPanel.tsx
 #: src/components/Transactions.tsx
@@ -185,6 +205,7 @@ msgstr "Presupuestos"
 msgid "Budgets with different currencies or periods are shown separately."
 msgstr "Los presupuestos con divisas o periodos distintos se muestran por separado."
 
+#: src/components/BudgetEditor.tsx
 #: src/components/TransactionEditor.tsx
 msgid "Cancel"
 msgstr "Cancelar"
@@ -201,6 +222,10 @@ msgstr "categoría"
 msgid "Category"
 msgstr "Categoría"
 
+#: src/components/BudgetEditor.tsx
+msgid "Category allocations"
+msgstr "Asignaciones por categoría"
+
 #: src/components/TransactionEditor.tsx
 msgid "Choose two different accounts."
 msgstr "Elige dos cuentas distintas."
@@ -209,6 +234,7 @@ msgstr "Elige dos cuentas distintas."
 msgid "Cleared"
 msgstr "Compensado"
 
+#: src/components/ReportPanel.tsx
 #: src/components/TransactionPanel.tsx
 msgid "Close details"
 msgstr "Cerrar detalles"
@@ -272,6 +298,7 @@ msgid "Daily"
 msgstr "Diario"
 
 #: src/components/Dashboard.tsx
+#: src/components/ReportPanel.tsx
 #: src/components/TransactionEditor.tsx
 #: src/components/Transactions.tsx
 msgid "Date"
@@ -285,6 +312,7 @@ msgstr "Importe por defecto"
 msgid "Default budget"
 msgstr "Presupuesto por defecto"
 
+#: src/components/BudgetEditor.tsx
 #: src/components/TransactionPanel.tsx
 msgid "Delete"
 msgstr "Eliminar"
@@ -299,6 +327,7 @@ msgid "Deleting…"
 msgstr "Eliminando…"
 
 #: src/components/Dashboard.tsx
+#: src/components/ReportPanel.tsx
 #: src/components/Transactions.tsx
 msgid "Description"
 msgstr "Descripción"
@@ -323,6 +352,10 @@ msgstr "Descargar"
 #: src/components/Files.tsx
 msgid "Downloading…"
 msgstr "Descargando…"
+
+#: src/components/ReportPanel.tsx
+msgid "Drill-down"
+msgstr "Detalle"
 
 #: src/components/BudgetEditor.tsx
 #: src/components/Budgets.tsx
@@ -350,6 +383,10 @@ msgstr "Editar transferencia"
 #: src/components/BudgetEditor.tsx
 msgid "End"
 msgstr "Fin"
+
+#: src/components/BudgetEditor.tsx
+msgid "Enter a valid amount for every category."
+msgstr "Introduce un importe válido en cada categoría."
 
 #: src/components/TransactionEditor.tsx
 msgid "Enter a valid amount for every part."
@@ -440,6 +477,10 @@ msgstr "Idioma"
 msgid "Last 12 months"
 msgstr "Últimos 12 meses"
 
+#: src/components/Reports.tsx
+msgid "Last 3 months"
+msgstr "Últimos 3 meses"
+
 #: src/components/Login.tsx
 msgid "Leave the password empty if you have not set one."
 msgstr "Deja la contraseña vacía si no has configurado ninguna."
@@ -448,6 +489,10 @@ msgstr "Deja la contraseña vacía si no has configurado ninguna."
 #: src/components/Transactions.tsx
 msgid "Load more ({0})"
 msgstr "Cargar más ({0})"
+
+#: src/components/BudgetEditor.tsx
+msgid "Loading allocations…"
+msgstr "Cargando asignaciones…"
 
 #: src/components/Budgets.tsx
 msgid "Loading budgets…"
@@ -462,10 +507,16 @@ msgid "Loading report…"
 msgstr "Cargando informe…"
 
 #: src/App.tsx
+#: src/components/ReportPanel.tsx
 #: src/components/Transactions.tsx
 msgid "Loading…"
 msgstr "Cargando…"
 
+#: src/components/Reports.tsx
+msgid "method"
+msgstr "método"
+
+#: src/components/Reports.tsx
 #: src/components/TransactionEditor.tsx
 #: src/components/TransactionPanel.tsx
 msgid "Method"
@@ -649,6 +700,7 @@ msgid "Payee"
 msgstr "Beneficiario"
 
 #: src/components/BudgetEditor.tsx
+#: src/components/Reports.tsx
 msgid "Period"
 msgstr "Periodo"
 
@@ -732,6 +784,10 @@ msgstr "Guardando…"
 #: src/components/Shell.tsx
 msgid "Sections"
 msgstr "Secciones"
+
+#: src/components/Reports.tsx
+msgid "Select a single account to drill down"
+msgstr "Selecciona una sola cuenta para ver el detalle"
 
 #: src/components/Shell.tsx
 msgid "Settings (next milestone)"
@@ -821,6 +877,10 @@ msgstr "Esto no se puede deshacer."
 msgid "This month"
 msgstr "Este mes"
 
+#: src/components/Reports.tsx
+msgid "This year"
+msgstr "Este año"
+
 #: src/components/TransactionEditor.tsx
 msgid "Time"
 msgstr "Hora"
@@ -849,6 +909,7 @@ msgstr "Total (con signo)"
 msgid "Total amount"
 msgstr "Importe total"
 
+#: src/components/ReportPanel.tsx
 #: src/components/TransactionEditor.tsx
 #: src/components/TransactionPanel.tsx
 #: src/format.ts

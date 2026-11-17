@@ -18,9 +18,11 @@
     "@lingui/format-po": "^6.12.0",
     "@lingui/react": "^6.12.0",
     "@lingui/vite-plugin": "^6.12.0",
+    "@tailwindcss/vite": "^4.3.5",
     "@tanstack/react-query": "^5.107.2",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react-dom": "^19.2.0",
+    "tailwindcss": "^4.3.5"
   },
   "devDependencies": {
     "@types/react": "^19.2.0",

@@ -247,8 +247,28 @@ export interface Breakdown {
   accountId: number
   from: string
   to: string
-  by: 'category' | 'payee' | 'tag'
+  by: 'category' | 'payee' | 'tag' | 'method'
   type: 'expense' | 'income' | 'both'
   totalMinor: number
   items: BreakdownItem[]
+}
+
+export interface BudgetAllocation {
+  categoryId: number
+  label: string
+  level: number
+  parentId: number | null
+  allocatedMinor: number
+  spentMinor: number
+}
+
+export interface BudgetAllocationWrite {
+  categoryId: number
+  amountMinor: number
+}
+
+export interface BudgetAllocationsWrite {
+  year: number
+  second: number
+  allocations: BudgetAllocationWrite[]
 }

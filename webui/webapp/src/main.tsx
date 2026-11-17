@@ -11,6 +11,7 @@ import { activateLocale, i18n, initialLocale } from './i18n'
 import { queryClient } from './queryClient'
 import './styles/tokens.css'
 import './styles/app.css'
+import './styles/tailwind.css'
 
 const locale = initialLocale()
 activateLocale(locale)

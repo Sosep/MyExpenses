@@ -1,8 +1,16 @@
 import { useEffect, useMemo, useState } from 'react'
 import { t } from '@lingui/core/macro'
 import type { Account, Budget, BudgetProgress, BudgetWrite } from '../types'
-import { ApiError, createBudget, deleteBudget, updateBudget } from '../api'
+import {
+  ApiError,
+  createBudget,
+  deleteBudget,
+  getBudgetAllocations,
+  updateBudget,
+  updateBudgetAllocations,
+} from '../api'
 import { amountInputValue, currencySymbol, parseAmountMinor, todayIso } from '../format'
+import { useAsync } from '../hooks'
 import { IconX } from './Icons'
 
 interface BudgetEditorProps {
@@ -95,14 +103,36 @@ export function BudgetEditor({
   const [state, setState] = useState(initial)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const [allocationValues, setAllocationValues] = useState<Record<number, string>>({})
   const [saving, setSaving] = useState(false)
   const account =
     accounts.find((candidate) => candidate.id === state.accountId) ?? accounts[0]
   const fractionDigits = account?.fractionDigits ?? 2
-  const dirty = useMemo(
-    () => JSON.stringify(state) !== JSON.stringify(initial),
-    [state, initial],
+  const allocations = useAsync(
+    () =>
+      budget && progress && budget.grouping !== 'NONE' && progress.periodYear !== null
+        ? getBudgetAllocations(budget.id, progress.periodYear, progress.periodSecond ?? undefined)
+        : Promise.resolve([]),
+    ['budget-allocations', budget?.id, progress?.periodYear, progress?.periodSecond],
   )
+  const dirty = useMemo(
+    () =>
+      JSON.stringify(state) !== JSON.stringify(initial) ||
+      Object.keys(allocationValues).length > 0,
+    [state, initial, allocationValues],
+  )
+
+  useEffect(() => {
+    if (!allocations.data || !budget) return
+    setAllocationValues(
+      Object.fromEntries(
+        allocations.data.map((allocation) => [
+          allocation.categoryId,
+          amountInputValue(allocation.allocatedMinor, budget.fractionDigits),
+        ]),
+      ),
+    )
+  }, [allocations.data, budget])
 
   function update<K extends keyof BudgetState>(key: K, value: BudgetState[K]) {
     setState((previous) => ({ ...previous, [key]: value }))
@@ -128,6 +158,25 @@ export function BudgetEditor({
     setErrors(nextErrors)
     if (Object.keys(nextErrors).length > 0 || amount === null) return
 
+    let allocationPayload: { categoryId: number; amountMinor: number }[] | null = null
+    if (mode === 'edit' && budget && progress && progress.periodYear !== null) {
+      const rows = allocations.data ?? []
+      allocationPayload = []
+      for (const row of rows) {
+        const raw = allocationValues[row.categoryId] ?? ''
+        const parsed = raw.trim() === '' ? 0 : parseAmountMinor(raw, fractionDigits)
+        if (parsed === null) {
+          nextErrors.allocations = t`Enter a valid amount for every category.`
+          break
+        }
+        allocationPayload.push({ categoryId: row.categoryId, amountMinor: parsed })
+      }
+      if (nextErrors.allocations) {
+        setErrors(nextErrors)
+        return
+      }
+    }
+
     const payload: BudgetWrite = {
       accountId: state.accountId,
       title: state.title.trim(),
@@ -145,6 +194,18 @@ export function BudgetEditor({
         await createBudget(payload)
       } else if (budget) {
         await updateBudget(budget.id, payload)
+        if (
+          allocationPayload &&
+          progress &&
+          progress.periodYear !== null &&
+          progress.periodSecond !== null
+        ) {
+          await updateBudgetAllocations(budget.id, {
+            year: progress.periodYear,
+            second: progress.periodSecond,
+            allocations: allocationPayload,
+          })
+        }
       }
       onSaved(mode === 'create' ? t`Budget created.` : t`Budget saved.`)
     } catch (cause) {
@@ -263,7 +324,7 @@ export function BudgetEditor({
 
           {mode === 'edit' ? (
             <p className="card-note">
-              {t`Account and period type are fixed after creation. Category allocations and rollover are edited in the Android app.`}
+              {t`Account and period type are fixed after creation. Rollover and duplication stay in the Android app.`}
             </p>
           ) : null}
 
@@ -327,6 +388,55 @@ export function BudgetEditor({
             </label>
           )}
 
+          {mode === 'edit' && budget && budget.grouping !== 'NONE' ? (
+            <section className="field">
+              <span className="field-label">{t`Category allocations`}</span>
+              {allocations.loading ? (
+                <p className="card-note">{t`Loading allocations…`}</p>
+              ) : (
+                <div className="mt-1 flex flex-col gap-1.5">
+                  {(allocations.data ?? [])
+                    .filter(
+                      (row) =>
+                        row.allocatedMinor > 0 || row.spentMinor > 0 || row.level > 0,
+                    )
+                    .map((row) => (
+                      <div
+                        key={row.categoryId}
+                        className="flex items-center justify-between gap-3 text-[12px]"
+                      >
+                        <span
+                          className="min-w-0 truncate"
+                          style={{ paddingLeft: row.level * 12 }}
+                        >
+                          {row.label}
+                        </span>
+                        <input
+                          className="input w-28 text-right"
+                          inputMode="decimal"
+                          aria-label={t`Allocation for ${row.label}`}
+                          value={allocationValues[row.categoryId] ?? ''}
+                          onChange={(event) =>
+                            setAllocationValues((previous) => ({
+                              ...previous,
+                              [row.categoryId]: event.target.value.replace(/[^\d.,]/g, ''),
+                            }))
+                          }
+                          placeholder="0.00"
+                        />
+                      </div>
+                    ))}
+                </div>
+              )}
+              {errors.allocations ? (
+                <span className="field-error">{errors.allocations}</span>
+              ) : null}
+              <p className="card-note">
+                {t`Allocations apply to the current period. Rollover and duplication stay in the Android app.`}
+              </p>
+            </section>
+          ) : null}
+
           <label className="field">
             <span className="field-label">{t`Note`}</span>
             <textarea
@@ -345,11 +455,11 @@ export function BudgetEditor({
               onClick={() => void remove()}
               disabled={saving}
             >
-              Delete
+              {t`Delete`}
             </button>
           ) : null}
           <button type="button" className="btn ghost" onClick={requestClose}>
-            Cancel
+            {t`Cancel`}
           </button>
           <button
             type="button"

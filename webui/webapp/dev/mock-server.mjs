@@ -162,6 +162,22 @@ const budgetProgresses = {
 }
 let nextBudgetId = 5
 
+const budgetAllocations = {
+  1: [
+    { categoryId: 2, label: 'Groceries', level: 1, parentId: 1, allocatedMinor: 30000, spentMinor: 24000 },
+    { categoryId: 5, label: 'Restaurants', level: 1, parentId: 1, allocatedMinor: 10000, spentMinor: 7200 },
+  ],
+  2: [
+    { categoryId: 5, label: 'Restaurants', level: 1, parentId: 1, allocatedMinor: 12000, spentMinor: 14600 },
+  ],
+  3: [
+    { categoryId: 4, label: 'Transport', level: 0, parentId: null, allocatedMinor: 18000, spentMinor: 9630 },
+  ],
+  4: [
+    { categoryId: 8, label: 'Household', level: 1, parentId: 6, allocatedMinor: 25000, spentMinor: 12400 },
+  ],
+}
+
 const files = [
   {
     name: 'myexpenses-2026-11-17.backup',
@@ -443,6 +459,9 @@ function serveAppIndex(response) {
           }
           if (q.get('view') === 'reports') {
             setTimeout(function(){ document.querySelector('button[data-view="reports"]')?.click() }, 250)
+            if (q.get('reportDrill') === '1') {
+              setTimeout(function(){ document.querySelector('.breakdown-row.clickable')?.click() }, 1300)
+            }
             ;[['reportBy', 900], ['reportType', 1000]].forEach(function(entry){
               var value = q.get(entry[0])
               if (!value) return
@@ -461,24 +480,12 @@ function serveAppIndex(response) {
             setTimeout(function(){ document.querySelector('button[data-view="budgets"]')?.click() }, 250)
             if (q.get('new') === '1') {
               setTimeout(function(){
-                var buttons = document.querySelectorAll('button')
-                for (var i = 0; i < buttons.length; i++) {
-                  if (buttons[i].textContent && buttons[i].textContent.trim() === 'New budget') {
-                    buttons[i].click()
-                    break
-                  }
-                }
+                document.querySelector('.page-actions .btn.primary')?.click()
               }, 900)
             }
             if (q.get('edit') === '1') {
               setTimeout(function(){
-                var buttons = document.querySelectorAll('button')
-                for (var i = 0; i < buttons.length; i++) {
-                  if (buttons[i].textContent && buttons[i].textContent.trim() === 'Edit') {
-                    buttons[i].click()
-                    break
-                  }
-                }
+                document.querySelector('.budget-edit')?.click()
               }, 900)
             }
           }
@@ -738,6 +745,35 @@ createServer(async (request, response) => {
     if (path === '/api/v1/tags') return send(response, 200, JSON.stringify(tags))
     if (path === '/api/v1/methods') return send(response, 200, JSON.stringify(methods))
 
+    const allocationMatch = path.match(/^\/api\/v1\/budgets\/(\d+)\/allocations$/)
+    if (allocationMatch) {
+      const id = Number(allocationMatch[1])
+      if (!budgets.some((item) => item.id === id)) {
+        return sendJson(response, 404, { error: 'budget_not_found', message: 'Budget not found' })
+      }
+      if (request.method === 'PUT') {
+        const body = await readJson(request)
+        const rows = budgetAllocations[id] ?? []
+        for (const allocation of body.allocations ?? []) {
+          const row = rows.find((item) => item.categoryId === allocation.categoryId)
+          if (row) row.allocatedMinor = allocation.amountMinor
+          else {
+            rows.push({
+              categoryId: allocation.categoryId,
+              label: `Category ${allocation.categoryId}`,
+              level: 1,
+              parentId: null,
+              allocatedMinor: allocation.amountMinor,
+              spentMinor: 0,
+            })
+          }
+        }
+        budgetAllocations[id] = rows
+        return sendJson(response, 200, rows)
+      }
+      return sendJson(response, 200, budgetAllocations[id] ?? [])
+    }
+
     if (path === '/api/v1/budgets' && request.method === 'GET') {
       return sendJson(response, 200, budgets)
     }
@@ -831,6 +867,59 @@ createServer(async (request, response) => {
       })
     }
 
+    if (path === '/api/v1/reports/transactions') {
+      const from = url.searchParams.get('from') ?? ''
+      const to = url.searchParams.get('to') ?? ''
+      const by = url.searchParams.get('by') ?? 'category'
+      const type = url.searchParams.get('type') ?? 'expense'
+      const groupId = Number(url.searchParams.get('id') ?? 0)
+      const matchesType = (item) =>
+        type === 'both' || (type === 'income' ? item.amountMinor > 0 : item.amountMinor < 0)
+      const parents = transactions.filter(
+        (item) =>
+          item.date >= from &&
+          item.date <= to &&
+          !item.transferPeerId &&
+          matchesType(item),
+      )
+      const rows = []
+      for (const item of parents) {
+        if (by === 'category' && item.kind === 'SPLIT') {
+          for (const part of splitParts) {
+            if (part.category?.id !== groupId || !matchesType(part)) continue
+            rows.push({
+              ...item,
+              id: part.id,
+              kind: 'SIMPLE',
+              amountMinor: part.amountMinor,
+              payee: part.payee,
+              category: part.category,
+              tags: part.tags,
+              comment: part.comment,
+              method: part.method,
+              splitParts: null,
+            })
+          }
+          continue
+        }
+        const matches =
+          by === 'category'
+            ? item.category?.id === groupId
+            : by === 'payee'
+              ? (item.payee?.id ?? 0) === groupId
+              : by === 'method'
+                ? (item.method?.id ?? 0) === groupId
+                : (item.tags ?? []).some((tag) => tag.id === groupId)
+        if (matches) rows.push({ ...item, splitParts: null })
+      }
+      return sendJson(response, 200, {
+        items: rows,
+        total: rows.length,
+        limit: 100,
+        offset: 0,
+      })
+    }
+
     if (path === '/api/v1/reports/summary') {
       const from = url.searchParams.get('from') ?? ''
       const to = url.searchParams.get('to') ?? ''
@@ -844,7 +933,7 @@ createServer(async (request, response) => {
         .filter((item) => item.amountMinor < 0)
         .reduce((total, item) => total + item.amountMinor, 0)
       return sendJson(response, 200, {
-        accountId: Number(url.searchParams.get('accountId')),
+        accountId: url.searchParams.get('accountId') === 'all' ? 0 : Number(url.searchParams.get('accountId')),
         from,
         to,
         currency: 'EUR',
@@ -901,6 +990,15 @@ createServer(async (request, response) => {
             count: 1,
           })
         }
+      } else if (by === 'method') {
+        for (const item of parents) {
+          entries.push({
+            id: item.method?.id ?? 0,
+            label: item.method?.label ?? 'No method',
+            amountMinor: Math.abs(item.amountMinor),
+            count: 1,
+          })
+        }
       } else {
         for (const item of parents) {
           const list = item.tags?.length ? item.tags : []
@@ -931,7 +1029,7 @@ createServer(async (request, response) => {
         }))
         .sort((a, b) => b.amountMinor - a.amountMinor || a.label.localeCompare(b.label))
       return sendJson(response, 200, {
-        accountId: Number(url.searchParams.get('accountId')),
+        accountId: url.searchParams.get('accountId') === 'all' ? 0 : Number(url.searchParams.get('accountId')),
         from,
         to,
         by,

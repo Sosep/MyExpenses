@@ -482,8 +482,9 @@ Everyday · November 2026
 ```
 
 - Mes visible con navegación `‹ ›`; el mismo mes manda en KPIs y desglose.
-- Dos segmentados: dimensión (`Category`, `Payee`, `Tag`) y tipo (`Expenses`,
-  `Income`, `Both`).
+- Tres segmentados: periodo (`This month`, `Last 3 months`, `This year`),
+  dimensión (`Category`, `Payee`, `Tag`, `Method`) y tipo (`Expenses`, `Income`,
+  `Both`). Con `All accounts` se agrega en servidor si comparten divisa.
 - KPIs: ingresos, gastos (magnitud), neto con signo y número de transacciones.
 - Cada fila: etiqueta, importe, barra proporcional, porcentaje y número de
   transacciones. La barra usa `--negative` para gastos, `--positive` para
@@ -492,6 +493,8 @@ Everyday · November 2026
 - Vacío: explica que no hay actividad y sugiere cambiar de mes o de tipo.
 - El badge de etiqueta puede solaparse entre sí; es un reparto por etiqueta, no
   una partición del gasto.
+- Cada fila abre un panel de detalle con las transacciones del grupo. Con
+  `All accounts` el detalle se desactiva: necesita una sola cuenta.
 
 ### Presupuestos
 
@@ -525,8 +528,9 @@ November 2026                     All budgets
   defecto, no los overrides por periodo.
 - `Delete` vive en el pie del editor y pide confirmación. Tras guardar se
   refresca la lista y se muestra un toast.
-- La asignación por categorías y el rollover siguen en la app Android; el editor
-  lo indica con una nota.
+- La asignación por categorías se edita en el mismo panel: lista con sangría por
+  nivel y un importe por categoría para el periodo actual. Se guarda junto al
+  presupuesto. El rollover y la duplicación siguen en la app Android.
 
 ### Maestros
 
@@ -854,3 +858,4 @@ src/
 | 2026-11-17 | 1.6 | Presupuestos: alta, edición y borrado con asignación por defecto; cuenta y periodo fijos al editar. |
 | 2026-11-17 | 1.7 | Informes: resumen y desglose por categoría, beneficiario o etiqueta con barras y porcentajes. |
 | 2026-11-17 | 1.8 | Lingui EN/ES, selector de idioma, Geist Sans empaquetada, caché TanStack y avisos PWA. |
+| 2026-11-17 | 1.9 | Informes v2 (presets, métodos, todas las cuentas y drill-down), asignaciones por categoría y Tailwind v4 para la UI nueva. |

@@ -192,7 +192,7 @@ export default function App({ initialLocale: initial }: { initialLocale: Locale 
               onNewTransaction={() => setEditor({ mode: 'create' })}
             />
           ) : view === 'reports' ? (
-            <Reports account={account} />
+            <Reports account={account} accounts={accounts} />
           ) : view === 'files' ? (
             <Files />
           ) : view === 'budgets' ? (
