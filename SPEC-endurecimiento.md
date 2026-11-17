@@ -81,7 +81,10 @@ de contraseña y acotar los importes que acepta la API.
   tamaño en `curl`.
 - `/app` y `/api/v1` responden con las cabeceras acordadas y la SPA arranca sin
   errores de consola en el móvil.
-- El sexto intento fallido en un minuto recibe `429`; el primero correcto entra.
+- El sexto intento en un minuto recibe `429` con `Retry-After` (60 s). Durante la
+  ventana también se rechaza la contraseña correcta: es deliberado, para que el
+  límite frene la fuerza bruta; el coste es que alguien en la misma red puede
+  bloquear el acceso durante un minuto.
 - Un importe de 10^15 unidades menores se rechaza con 422 y no altera el saldo.
 
 ## Fuera de alcance
