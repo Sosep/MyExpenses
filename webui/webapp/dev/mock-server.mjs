@@ -101,6 +101,7 @@ const categories = [
   { id: 7, parentId: 6, label: 'Utilities', level: 1, color: null, type: -1 },
   { id: 8, parentId: 6, label: 'Household', level: 1, color: null, type: -1 },
   { id: 9, parentId: 1, label: 'Treats', level: 1, color: null, type: -1 },
+  { id: 10, parentId: null, label: 'Leisure', level: 0, color: null, type: -1 },
 ]
 
 const payees = [
@@ -110,6 +111,11 @@ const payees = [
   { id: 4, name: 'Pizzeria Antonella' },
   { id: 5, name: 'Electricity' },
   { id: 6, name: 'Bookshop' },
+  { id: 20, name: 'Cafe' },
+  { id: 21, name: 'Supermarket' },
+  { id: 22, name: 'Pharmacy' },
+  { id: 23, name: 'Cinema' },
+  { id: 24, name: 'Fuel' },
 ]
 
 const tags = [
@@ -222,13 +228,18 @@ const special = [
     date: iso(2),
     valueDate: iso(2),
     payee: { id: 6, label: 'Bookshop' },
-    category: { id: 7, label: 'Leisure', path: 'Leisure' },
+    category: { id: 10, label: 'Leisure', path: 'Leisure' },
     tags: [{ id: 4, label: 'gift' }],
   }),
 ]
 
 const fillerNames = ['Cafe', 'Supermarket', 'Pharmacy', 'Cinema', 'Fuel']
-const fillerPaths = ['Food > Groceries', 'Food > Restaurants', 'Home > Household', 'Transport']
+const fillerCategories = [
+  { id: 2, label: 'Groceries', path: 'Food > Groceries' },
+  { id: 5, label: 'Restaurants', path: 'Food > Restaurants' },
+  { id: 8, label: 'Household', path: 'Home > Household' },
+  { id: 4, label: 'Transport', path: 'Transport' },
+]
 const fillers = Array.from({ length: 52 }, (_, index) =>
   tx({
     id: 100 + index,
@@ -236,11 +247,7 @@ const fillers = Array.from({ length: 52 }, (_, index) =>
     date: iso((index % 27) + 1),
     valueDate: iso((index % 27) + 1),
     payee: { id: 20 + (index % 5), label: fillerNames[index % 5] },
-    category: {
-      id: 20 + (index % 4),
-      label: fillerPaths[index % 4].split(' > ').at(-1),
-      path: fillerPaths[index % 4],
-    },
+    category: fillerCategories[index % 4],
     tags: index % 3 === 0 ? [{ id: 10, label: 'daily' }] : [],
     crStatus: index % 4 === 0 ? 'RECONCILED' : 'UNRECONCILED',
   }),
@@ -342,6 +349,52 @@ function serveAppIndex(response) {
               }, 900)
             }
           }
+          if (q.get('new') === '1') {
+            setTimeout(function(){
+              var buttons = document.querySelectorAll('button')
+              for (var i = 0; i < buttons.length; i++) {
+                if (buttons[i].textContent && buttons[i].textContent.trim() === 'New transaction') {
+                  buttons[i].click()
+                  break
+                }
+              }
+            }, 350)
+          }
+          var edit = q.get('edit')
+          if (edit) {
+            if (edit === 'simple') {
+              setTimeout(function(){
+                document.querySelector('tbody tr')?.click()
+              }, 900)
+            }
+            setTimeout(function(){
+              var buttons = document.querySelectorAll('.panel-footer button')
+              for (var i = 0; i < buttons.length; i++) {
+                if (buttons[i].textContent && buttons[i].textContent.trim() === 'Edit') {
+                  buttons[i].click()
+                  break
+                }
+              }
+            }, 1400)
+          }
+          if (q.get('save') === '1') {
+            setTimeout(function(){
+              var input = document.querySelector('input[aria-label="Amount"]')
+              if (!input) return
+              var setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set
+              if (setter) setter.call(input, '12.34')
+              input.dispatchEvent(new Event('input', { bubbles: true }))
+              setTimeout(function(){
+                var buttons = document.querySelectorAll('button')
+                for (var i = 0; i < buttons.length; i++) {
+                  if (buttons[i].textContent && buttons[i].textContent.trim() === 'Save') {
+                    buttons[i].click()
+                    break
+                  }
+                }
+              }, 300)
+            }, 1500)
+          }
           if (q.get('metrics') === '1') {
             setTimeout(function(){
               var main = document.querySelector('.main')
@@ -373,78 +426,231 @@ const mime = {
   '.ico': 'image/x-icon',
 }
 
-createServer((request, response) => {
-  const url = new URL(request.url ?? '/', `http://localhost:${port}`)
-  const path = decodeURIComponent(url.pathname)
+let nextId = 1000
 
-  if (path === '/app' || path === '/app/') return serveAppIndex(response)
-
-  if (path.startsWith('/app/')) {
-    const file = join(webapp, path.slice('/app/'.length))
-    if (existsSync(file)) {
-      return send(response, 200, readFileSync(file), mime[extname(file)] ?? 'application/octet-stream')
-    }
-    return serveAppIndex(response)
+function categoryRef(id) {
+  const category = categories.find((item) => item.id === id)
+  if (!category) return null
+  const parent = category.parentId ? categoryRef(category.parentId) : null
+  return {
+    id: category.id,
+    label: category.label,
+    path: parent ? `${parent.path} > ${category.label}` : category.label,
   }
+}
 
-  if (path === '/favicon.ico') {
-    return send(response, 200, readFileSync(favicon), 'image/x-icon')
-  }
+function payeeRef(id) {
+  const payee = payees.find((item) => item.id === id)
+  return payee ? { id: payee.id, label: payee.name } : null
+}
 
-  if (path === '/api/v1/meta') return send(response, 200, JSON.stringify(meta))
-  if (path === '/api/v1/accounts') return send(response, 200, JSON.stringify(accounts))
-  if (path === '/api/v1/categories') return send(response, 200, JSON.stringify(categories))
-  if (path === '/api/v1/payees') return send(response, 200, JSON.stringify(payees))
-  if (path === '/api/v1/tags') return send(response, 200, JSON.stringify(tags))
-  if (path === '/api/v1/methods') return send(response, 200, JSON.stringify(methods))
+function methodRef(id) {
+  const method = methods.find((item) => item.id === id)
+  return method ? { id: method.id, label: method.label } : null
+}
 
-  if (path === '/api/v1/reports/grouped') {
-    const from = url.searchParams.get('from') ?? ''
-    const to = url.searchParams.get('to') ?? ''
-    const fromYear = Number(from.slice(0, 4))
-    const fromMonth = Number(from.slice(5, 7))
-    const toYear = Number(to.slice(0, 4))
-    const toMonth = Number(to.slice(5, 7))
-    const filtered = groups.filter((group) => {
-      const value = group.year * 12 + group.second
-      return value >= fromYear * 12 + fromMonth && value <= toYear * 12 + toMonth
+function tagRefs(ids) {
+  return (ids ?? [])
+    .map((id) => tags.find((item) => item.id === id))
+    .filter(Boolean)
+    .map((tag) => ({ id: tag.id, label: tag.label }))
+}
+
+function accountFor(id) {
+  return accounts.find((item) => item.id === id) ?? accounts[0]
+}
+
+function adjustBalance(accountId, delta) {
+  const account = accounts.find((item) => item.id === accountId)
+  if (account) account.currentBalanceMinor += delta
+}
+
+function sortTransactions() {
+  transactions.sort((left, right) => right.date.localeCompare(left.date))
+}
+
+function recomputeTotals() {
+  const group = groups[groups.length - 1]
+  group.incomeMinor = transactions
+    .filter((item) => item.amountMinor > 0)
+    .reduce((total, item) => total + item.amountMinor, 0)
+  group.expensesMinor = transactions
+    .filter((item) => item.amountMinor < 0)
+    .reduce((total, item) => total + item.amountMinor, 0)
+}
+
+function readJson(request) {
+  return new Promise((resolve, reject) => {
+    let data = ''
+    request.on('data', (chunk) => {
+      data += chunk
     })
-    return send(response, 200, JSON.stringify(filtered))
-  }
+    request.on('end', () => {
+      try {
+        resolve(data ? JSON.parse(data) : {})
+      } catch (error) {
+        reject(error)
+      }
+    })
+    request.on('error', reject)
+  })
+}
 
-  if (path === '/api/v1/transactions') {
-    const from = url.searchParams.get('from') ?? ''
-    const to = url.searchParams.get('to') ?? ''
-    const type = url.searchParams.get('type') ?? 'both'
-    const limit = Number(url.searchParams.get('limit') ?? 50)
-    const offset = Number(url.searchParams.get('offset') ?? 0)
-    let items = transactions.filter((item) => item.date >= from && item.date <= to)
-    if (type === 'income') items = items.filter((item) => item.amountMinor > 0)
-    if (type === 'expense') items = items.filter((item) => item.amountMinor < 0)
-    const total = items.length
-    items = items.slice(offset, offset + limit).map((item) => ({ ...item, splitParts: null }))
-    return send(response, 200, JSON.stringify({ items, total, limit, offset }))
+function transactionFromBody(body, id, previous) {
+  const account = accountFor(Number(body.accountId))
+  return {
+    ...(previous ?? tx({})),
+    id,
+    kind: 'SIMPLE',
+    accountId: account.id,
+    amountMinor: Number(body.amountMinor),
+    currency: account.currency,
+    fractionDigits: account.fractionDigits,
+    date: body.date,
+    time: body.time ?? previous?.time ?? null,
+    valueDate: body.valueDate ?? body.date,
+    payee: payeeRef(body.payeeId),
+    category: categoryRef(body.categoryId),
+    tags: tagRefs(body.tagIds),
+    comment: body.comment ?? '',
+    method: methodRef(body.methodId),
+    referenceNumber: body.referenceNumber ?? null,
+    crStatus: previous?.crStatus ?? 'UNRECONCILED',
+    splitParts: null,
   }
+}
 
-  const match = path.match(/^\/api\/v1\/transactions\/(\d+)$/)
-  if (match) {
-    const id = Number(match[1])
-    const transaction = transactions.find((item) => item.id === id)
-    if (!transaction) {
-      return send(response, 404, JSON.stringify({ error: 'not_found', message: 'Not found' }))
+function sendJson(response, status, value, extraHeaders = {}) {
+  response.writeHead(status, {
+    'Content-Type': 'application/json',
+    'Cache-Control': 'no-store',
+    ...extraHeaders,
+  })
+  response.end(JSON.stringify(value))
+}
+
+createServer(async (request, response) => {
+  try {
+    const url = new URL(request.url ?? '/', `http://localhost:${port}`)
+    const path = decodeURIComponent(url.pathname)
+
+    if (path === '/app' || path === '/app/') return serveAppIndex(response)
+
+    if (path.startsWith('/app/')) {
+      const file = join(webapp, path.slice('/app/'.length))
+      if (existsSync(file)) {
+        return send(response, 200, readFileSync(file), mime[extname(file)] ?? 'application/octet-stream')
+      }
+      return serveAppIndex(response)
     }
-    return send(
-      response,
-      200,
-      JSON.stringify({
-        ...transaction,
-        splitParts: transaction.kind === 'SPLIT' ? splitParts : null,
-      }),
-    )
-  }
 
-  send(response, 404, 'Not found', 'text/plain')
+    if (path === '/favicon.ico') {
+      return send(response, 200, readFileSync(favicon), 'image/x-icon')
+    }
+
+    if (path === '/api/v1/meta') return send(response, 200, JSON.stringify(meta))
+    if (path === '/api/v1/accounts') return send(response, 200, JSON.stringify(accounts))
+    if (path === '/api/v1/categories') return send(response, 200, JSON.stringify(categories))
+    if (path === '/api/v1/payees') return send(response, 200, JSON.stringify(payees))
+    if (path === '/api/v1/tags') return send(response, 200, JSON.stringify(tags))
+    if (path === '/api/v1/methods') return send(response, 200, JSON.stringify(methods))
+
+    if (path === '/api/v1/reports/grouped') {
+      const from = url.searchParams.get('from') ?? ''
+      const to = url.searchParams.get('to') ?? ''
+      const fromYear = Number(from.slice(0, 4))
+      const fromMonth = Number(from.slice(5, 7))
+      const toYear = Number(to.slice(0, 4))
+      const toMonth = Number(to.slice(5, 7))
+      const filtered = groups.filter((group) => {
+        const value = group.year * 12 + group.second
+        return value >= fromYear * 12 + fromMonth && value <= toYear * 12 + toMonth
+      })
+      return sendJson(response, 200, filtered)
+    }
+
+    if (path === '/api/v1/transactions' && request.method === 'GET') {
+      const from = url.searchParams.get('from') ?? ''
+      const to = url.searchParams.get('to') ?? ''
+      const type = url.searchParams.get('type') ?? 'both'
+      const limit = Number(url.searchParams.get('limit') ?? 50)
+      const offset = Number(url.searchParams.get('offset') ?? 0)
+      let items = transactions.filter((item) => item.date >= from && item.date <= to)
+      if (type === 'income') items = items.filter((item) => item.amountMinor > 0)
+      if (type === 'expense') items = items.filter((item) => item.amountMinor < 0)
+      const total = items.length
+      items = items.slice(offset, offset + limit).map((item) => ({ ...item, splitParts: null }))
+      return sendJson(response, 200, { items, total, limit, offset })
+    }
+
+    if (path === '/api/v1/transactions' && request.method === 'POST') {
+      const body = await readJson(request)
+      if (!body.accountId || !body.amountMinor || !body.date) {
+        return sendJson(response, 422, {
+          error: 'validation_failed',
+          message: 'accountId, amountMinor and date are required',
+          fields: { amountMinor: 'Required' },
+        })
+      }
+      const item = transactionFromBody(body, nextId++)
+      transactions.push(item)
+      adjustBalance(item.accountId, item.amountMinor)
+      sortTransactions()
+      recomputeTotals()
+      return sendJson(response, 201, item, {
+        Location: `/api/v1/transactions/${item.id}`,
+      })
+    }
+
+    const match = path.match(/^\/api\/v1\/transactions\/(\d+)$/)
+    if (match) {
+      const id = Number(match[1])
+      const index = transactions.findIndex((item) => item.id === id)
+      if (index < 0) {
+        return sendJson(response, 404, { error: 'not_found', message: 'Not found' })
+      }
+      if (request.method === 'GET') {
+        const transaction = transactions[index]
+        return sendJson(response, 200, {
+          ...transaction,
+          splitParts: transaction.kind === 'SPLIT' ? splitParts : null,
+        })
+      }
+      if (request.method === 'PUT') {
+        const previous = transactions[index]
+        if (previous.kind !== 'SIMPLE') {
+          return sendJson(response, 409, {
+            error: 'unsupported_kind',
+            message: 'Transfers and split transactions need their own endpoint',
+          })
+        }
+        const body = await readJson(request)
+        const updated = transactionFromBody(body, id, previous)
+        transactions[index] = updated
+        adjustBalance(previous.accountId, -previous.amountMinor)
+        adjustBalance(updated.accountId, updated.amountMinor)
+        sortTransactions()
+        recomputeTotals()
+        return sendJson(response, 200, updated)
+      }
+      if (request.method === 'DELETE') {
+        const [removed] = transactions.splice(index, 1)
+        adjustBalance(removed.accountId, -removed.amountMinor)
+        recomputeTotals()
+        response.writeHead(204, { 'Cache-Control': 'no-store' })
+        return response.end()
+      }
+      return sendJson(response, 405, { error: 'method_not_allowed', message: 'Method not allowed' })
+    }
+
+    send(response, 404, 'Not found', 'text/plain')
+  } catch (error) {
+    sendJson(response, 400, {
+      error: 'bad_request',
+      message: error instanceof Error ? error.message : 'Invalid request',
+    })
+  }
 }).listen(port, '127.0.0.1', () => {
   console.log(`mock web server on http://localhost:${port}/app/`)
-  console.log('QA: ?login=1 ?view=transactions ?panel=split ?theme=dark ?metrics=1')
+  console.log('QA: ?login=1 ?view=transactions ?panel=split ?new=1 ?edit=split ?theme=dark ?metrics=1')
 })

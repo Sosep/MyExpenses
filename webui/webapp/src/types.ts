@@ -86,3 +86,45 @@ export interface Group {
   expensesMinor: number
   transfersMinor: number
 }
+
+export interface Category {
+  id: number
+  parentId: number | null
+  label: string
+  level: number
+  color: number | null
+  type: number | null
+}
+
+export interface Payee {
+  id: number
+  name: string
+}
+
+export interface Tag {
+  id: number
+  label: string
+  color: number | null
+}
+
+export interface Method {
+  id: number
+  label: string
+  isNumbered: boolean
+  type: number
+  accountTypes: string[]
+}
+
+export interface TransactionWrite {
+  accountId: number
+  amountMinor: number
+  date: string
+  time?: string | null
+  valueDate?: string | null
+  payeeId?: number | null
+  categoryId?: number | null
+  tagIds: number[]
+  comment: string
+  methodId?: number | null
+  referenceNumber?: string | null
+}

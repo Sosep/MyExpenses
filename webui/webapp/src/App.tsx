@@ -5,9 +5,11 @@ import { Dashboard } from './components/Dashboard'
 import { Login } from './components/Login'
 import { Shell } from './components/Shell'
 import type { View } from './components/Shell'
+import { TransactionEditor } from './components/TransactionEditor'
 import { Transactions } from './components/Transactions'
 
 type Status = 'checking' | 'login' | 'ready'
+type EditorState = { mode: 'create' } | { mode: 'edit'; id: number }
 
 const THEME_KEY = 'myexpenses.theme'
 const ACCOUNT_KEY = 'myexpenses.accountId'
@@ -31,6 +33,9 @@ export default function App() {
   const [accountId, setAccountId] = useState<number | null>(initialAccountId)
   const [view, setView] = useState<View>('dashboard')
   const [theme, setTheme] = useState<'light' | 'dark'>(initialTheme)
+  const [editor, setEditor] = useState<EditorState | null>(null)
+  const [dataVersion, setDataVersion] = useState(0)
+  const [toast, setToast] = useState<string | null>(null)
 
   useEffect(() => {
     const onUnauthorized = () => {
@@ -77,6 +82,12 @@ export default function App() {
     }
   }, [accountId])
 
+  useEffect(() => {
+    if (!toast) return
+    const timer = window.setTimeout(() => setToast(null), 4000)
+    return () => window.clearTimeout(timer)
+  }, [toast])
+
   async function handleLogin(password: string) {
     const nextMeta = await login(password)
     const nextAccounts = await getAccounts()
@@ -91,7 +102,15 @@ export default function App() {
     setMeta(null)
     setAccounts([])
     setAuthError(null)
+    setEditor(null)
+    setToast(null)
     setStatus('login')
+  }
+
+  function refreshData(message?: string) {
+    setDataVersion((version) => version + 1)
+    getAccounts().then(setAccounts).catch(() => {})
+    if (message) setToast(message)
   }
 
   if (status === 'checking') {
@@ -119,36 +138,68 @@ export default function App() {
   const account = accounts.find((candidate) => candidate.id === accountId) ?? accounts[0]
 
   return (
-    <Shell
-      view={view}
-      onView={setView}
-      accounts={accounts}
-      accountId={accountId}
-      onAccount={setAccountId}
-      theme={theme}
-      onTheme={() => setTheme((current) => (current === 'dark' ? 'light' : 'dark'))}
-      onLogout={handleLogout}
-      meta={meta}
-    >
-      {accounts.length === 0 ? (
-        <div className="empty-page">
-          <div className="card empty-card">
-            <h2>No accounts yet</h2>
-            <p>Create an account in the Android app and reload this page.</p>
+    <>
+      <Shell
+        view={view}
+        onView={setView}
+        accounts={accounts}
+        accountId={accountId}
+        onAccount={setAccountId}
+        theme={theme}
+        onTheme={() => setTheme((current) => (current === 'dark' ? 'light' : 'dark'))}
+        onLogout={handleLogout}
+        meta={meta}
+      >
+        {accounts.length === 0 ? (
+          <div className="empty-page">
+            <div className="card empty-card">
+              <h2>No accounts yet</h2>
+              <p>Create an account in the Android app and reload this page.</p>
+            </div>
           </div>
-        </div>
-      ) : account ? (
-        view === 'dashboard' ? (
-          <Dashboard account={account} onOpenTransactions={() => setView('transactions')} />
+        ) : account ? (
+          view === 'dashboard' ? (
+            <Dashboard
+              account={account}
+              dataVersion={dataVersion}
+              onOpenTransactions={() => setView('transactions')}
+              onNewTransaction={() => setEditor({ mode: 'create' })}
+            />
+          ) : (
+            <Transactions
+              account={account}
+              dataVersion={dataVersion}
+              onNewTransaction={() => setEditor({ mode: 'create' })}
+              onEditTransaction={(id) => setEditor({ mode: 'edit', id })}
+              onDataChanged={() => refreshData('Transaction deleted.')}
+            />
+          )
         ) : (
-          <Transactions account={account} />
-        )
-      ) : (
-        <div className="boot">
-          <span className="mark">Σ</span>
-          <span>Loading…</span>
+          <div className="boot">
+            <span className="mark">Σ</span>
+            <span>Loading…</span>
+          </div>
+        )}
+      </Shell>
+      {editor ? (
+        <TransactionEditor
+          mode={editor.mode}
+          id={editor.mode === 'edit' ? editor.id : undefined}
+          accounts={accounts}
+          defaultAccountId={account?.id ?? accountId ?? accounts[0]?.id ?? 0}
+          meta={meta}
+          onClose={() => setEditor(null)}
+          onSaved={() => {
+            setEditor(null)
+            refreshData('Transaction saved.')
+          }}
+        />
+      ) : null}
+      {toast ? (
+        <div className="toast" role="status">
+          {toast}
         </div>
-      )}
-    </Shell>
+      ) : null}
+    </>
   )
 }

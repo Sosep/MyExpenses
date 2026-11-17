@@ -1,7 +1,7 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { Account } from '../types'
-import { getTransaction } from '../api'
+import { deleteTransaction, getTransaction } from '../api'
 import { formatDate, formatMoney, kindLabel, statusLabel } from '../format'
 import { useAsync } from '../hooks'
 import { IconX } from './Icons'
@@ -10,6 +10,8 @@ interface PanelProps {
   id: number
   account: Account
   onClose: () => void
+  onEdit: (id: number) => void
+  onDeleted: () => void
 }
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
@@ -21,12 +23,26 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   )
 }
 
-export function TransactionPanel({ id, account, onClose }: PanelProps) {
+export function TransactionPanel({
+  id,
+  account,
+  onClose,
+  onEdit,
+  onDeleted,
+}: PanelProps) {
   const detail = useAsync(() => getTransaction(id), [id])
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose()
+      if (event.key !== 'Escape') return
+      if (confirmingDelete) {
+        setConfirmingDelete(false)
+      } else {
+        onClose()
+      }
     }
     const previous = document.body.style.overflow
     document.body.style.overflow = 'hidden'
@@ -35,9 +51,22 @@ export function TransactionPanel({ id, account, onClose }: PanelProps) {
       document.body.style.overflow = previous
       window.removeEventListener('keydown', onKeyDown)
     }
-  }, [onClose])
+  }, [confirmingDelete, onClose])
 
   const transaction = detail.data
+
+  async function remove() {
+    if (!transaction) return
+    setDeleting(true)
+    setDeleteError(null)
+    try {
+      await deleteTransaction(transaction.id)
+      onDeleted()
+    } catch (cause) {
+      setDeleteError(cause instanceof Error ? cause.message : 'Could not delete the transaction.')
+      setDeleting(false)
+    }
+  }
 
   return (
     <>
@@ -190,10 +219,61 @@ export function TransactionPanel({ id, account, onClose }: PanelProps) {
                 </div>
               ) : null}
 
-              <p className="hint">Editing will be enabled in the next slice.</p>
             </>
           ) : null}
         </div>
+        {transaction && !detail.loading && !detail.error ? (
+          <div className="panel-footer">
+            {deleteError ? <p className="error-text">{deleteError}</p> : null}
+            {confirmingDelete ? (
+              <div className="confirm-box">
+                <p>
+                  Delete this transaction?{' '}
+                  {transaction.kind === 'SPLIT'
+                    ? 'Its parts are deleted too.'
+                    : transaction.kind === 'TRANSFER'
+                      ? 'The linked side is deleted too.'
+                      : 'This cannot be undone.'}
+                </p>
+                <div className="confirm-actions">
+                  <button
+                    type="button"
+                    className="btn ghost"
+                    onClick={() => setConfirmingDelete(false)}
+                    disabled={deleting}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    className="btn destructive"
+                    onClick={() => void remove()}
+                    disabled={deleting}
+                  >
+                    {deleting ? 'Deleting…' : 'Delete'}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="panel-actions">
+                {transaction.kind === 'SIMPLE' ? (
+                  <button type="button" className="btn ghost" onClick={() => onEdit(transaction.id)}>
+                    Edit
+                  </button>
+                ) : (
+                  <span className="hint">Editing transfers and splits comes next.</span>
+                )}
+                <button
+                  type="button"
+                  className="btn ghost danger"
+                  onClick={() => setConfirmingDelete(true)}
+                >
+                  Delete
+                </button>
+              </div>
+            )}
+          </div>
+        ) : null}
       </aside>
     </>
   )

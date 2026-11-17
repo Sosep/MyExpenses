@@ -380,6 +380,35 @@ Filters: [search] [account] [All|Expenses|Income] [Month]
   recalcula sobre la página visible.
 - Búsqueda y filtros en la URL, compartibles.
 
+### Transacción simple (editor)
+
+```text
+┌ New transaction ──────────────────────────────┐
+│ [Expense | Income]      [ 0.00        EUR ]   │
+│ Account [Everyday]      Date [17 Nov 2026]    │
+│ Payee [Mercadona]       Method [Card]         │
+│ Category [Food > Groceries]                   │
+│ Tags [#weekly] [#home]                        │
+│ Reference [________]                          │
+│ Note [________________________]               │
+│                               Cancel   Save   │
+└───────────────────────────────────────────────┘
+```
+
+- Panel lateral, no modal; el importe es el héroe y el signo va separado.
+- El importe se escribe en unidades mayores y se convierte a menores con los
+  `fractionDigits` de la cuenta; nunca se redondea con `parseFloat` al persistir.
+- Fecha, hora y fecha valor siguen las preferencias del móvil y el tipo de
+  cuenta: las cuentas `CASH` no muestran fecha valor.
+- Categoría con la ruta completa; etiquetas como chips; método filtrado por tipo
+  de cuenta y signo.
+- Validación en vivo y errores 422 por campo; `Ctrl/Cmd+Enter` guarda, `Esc`
+  cierra y confirma si hay cambios.
+- Tras guardar se refrescan cuenta(s), resumen y lista, y se muestra un toast
+  breve. El editor no recarga la página.
+- Las transferencias y divididas no se editan aquí en este corte; el detalle lo
+  indica y conserva su lectura.
+
 ### Transacción dividida
 
 ```text
@@ -729,3 +758,4 @@ src/
 |---|---|---|
 | 2026-11-17 | 1.0 | Dirección inicial: Soft Ledger, tokens claro/oscuro, componentes, patrones de dashboard, transacciones, dividida y presupuestos. |
 | 2026-11-17 | 1.1 | Tokens movidos a la SPA (`webapp/src/styles/tokens.css`); guía y código comparten fuente. |
+| 2026-11-17 | 1.2 | Patrón del editor de transacción simple y escritura simple en la SPA. |

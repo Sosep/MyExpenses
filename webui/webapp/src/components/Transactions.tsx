@@ -18,6 +18,10 @@ import { TransactionPanel } from './TransactionPanel'
 
 interface TransactionsProps {
   account: Account
+  dataVersion: number
+  onNewTransaction: () => void
+  onEditTransaction: (id: number) => void
+  onDataChanged: () => void
 }
 
 type TypeFilter = 'all' | 'income' | 'expense'
@@ -33,7 +37,13 @@ function amountClass(transaction: Transaction): string {
   return transaction.amountMinor > 0 ? 'amount-pos' : 'amount-neg'
 }
 
-export function Transactions({ account }: TransactionsProps) {
+export function Transactions({
+  account,
+  dataVersion,
+  onNewTransaction,
+  onEditTransaction,
+  onDataChanged,
+}: TransactionsProps) {
   const [month, setMonth] = useState(currentMonth())
   const [type, setType] = useState<TypeFilter>('all')
   const [extra, setExtra] = useState<Transaction[]>([])
@@ -45,11 +55,11 @@ export function Transactions({ account }: TransactionsProps) {
   const apiType = type === 'all' ? 'both' : type
   const summary = useAsync(
     () => getGrouped(account.id, range.from, range.to),
-    [account.id, range.from, range.to],
+    [account.id, range.from, range.to, dataVersion],
   )
   const page = useAsync(
     () => getTransactions(account.id, range.from, range.to, apiType, 50, 0),
-    [account.id, range.from, range.to, apiType],
+    [account.id, range.from, range.to, apiType, dataVersion],
   )
 
   useEffect(() => {
@@ -115,6 +125,9 @@ export function Transactions({ account }: TransactionsProps) {
               <IconChevronRight />
             </button>
           </div>
+          <button type="button" className="btn primary" onClick={onNewTransaction}>
+            New transaction
+          </button>
         </div>
       </div>
 
@@ -284,6 +297,14 @@ export function Transactions({ account }: TransactionsProps) {
           id={selectedId}
           account={account}
           onClose={() => setSelectedId(null)}
+          onEdit={(id) => {
+            setSelectedId(null)
+            onEditTransaction(id)
+          }}
+          onDeleted={() => {
+            setSelectedId(null)
+            onDataChanged()
+          }}
         />
       ) : null}
     </>

@@ -1,4 +1,15 @@
-import type { Account, Group, Meta, Page, Transaction } from './types'
+import type {
+  Account,
+  Category,
+  Group,
+  Meta,
+  Method,
+  Page,
+  Payee,
+  Tag,
+  Transaction,
+  TransactionWrite,
+} from './types'
 
 const AUTH_KEY = 'myexpenses.auth'
 export const UNAUTHORIZED_EVENT = 'myexpenses:unauthorized'
@@ -8,6 +19,7 @@ export class ApiError extends Error {
     public status: number,
     public code: string,
     message: string,
+    public fields?: Record<string, string>,
   ) {
     super(message)
     this.name = 'ApiError'
@@ -34,14 +46,27 @@ export function logout(): void {
   sessionStorage.removeItem(AUTH_KEY)
 }
 
-async function request<T>(path: string, signal?: AbortSignal): Promise<T> {
+interface RequestOptions {
+  method?: string
+  body?: unknown
+  signal?: AbortSignal
+}
+
+async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const headers = new Headers()
   if (authHeader) headers.set('Authorization', authHeader)
+  let body: string | undefined
+  if (options.body !== undefined) {
+    headers.set('Content-Type', 'application/json')
+    body = JSON.stringify(options.body)
+  }
   let response: Response
   try {
     response = await fetch('/api/v1' + path, {
+      method: options.method ?? 'GET',
       headers,
-      signal,
+      body,
+      signal: options.signal,
       cache: 'no-store',
     })
   } catch (error) {
@@ -58,18 +83,20 @@ async function request<T>(path: string, signal?: AbortSignal): Promise<T> {
     throw new ApiError(401, 'unauthorized', 'Wrong password')
   }
   if (!response.ok) {
-    let body: { error?: string; message?: string } | null = null
+    let payload: { error?: string; message?: string; fields?: Record<string, string> } | null = null
     try {
-      body = await response.json()
+      payload = await response.json()
     } catch {
       // Response was not JSON.
     }
     throw new ApiError(
       response.status,
-      body?.error ?? 'http_error',
-      body?.message ?? response.statusText,
+      payload?.error ?? 'http_error',
+      payload?.message ?? response.statusText,
+      payload?.fields,
     )
   }
+  if (response.status === 204) return undefined as T
   return (await response.json()) as T
 }
 
@@ -86,9 +113,18 @@ export async function login(password: string): Promise<Meta> {
   }
 }
 
-export const getMeta = (signal?: AbortSignal) => request<Meta>('/meta', signal)
+export const getMeta = (signal?: AbortSignal) => request<Meta>('/meta', { signal })
 
-export const getAccounts = (signal?: AbortSignal) => request<Account[]>('/accounts', signal)
+export const getAccounts = (signal?: AbortSignal) => request<Account[]>('/accounts', { signal })
+
+export const getCategories = (signal?: AbortSignal) =>
+  request<Category[]>('/categories', { signal })
+
+export const getPayees = (signal?: AbortSignal) => request<Payee[]>('/payees', { signal })
+
+export const getTags = (signal?: AbortSignal) => request<Tag[]>('/tags', { signal })
+
+export const getMethods = (signal?: AbortSignal) => request<Method[]>('/methods', { signal })
 
 export const getGrouped = (
   accountId: number,
@@ -98,7 +134,7 @@ export const getGrouped = (
 ) =>
   request<Group[]>(
     `/reports/grouped?accountId=${accountId}&from=${from}&to=${to}&grouping=MONTH`,
-    signal,
+    { signal },
   )
 
 export const getTransactions = (
@@ -113,8 +149,17 @@ export const getTransactions = (
   request<Page<Transaction>>(
     `/transactions?accountId=${accountId}&from=${from}&to=${to}` +
       `&type=${type}&limit=${limit}&offset=${offset}`,
-    signal,
+    { signal },
   )
 
 export const getTransaction = (id: number, signal?: AbortSignal) =>
-  request<Transaction>(`/transactions/${id}`, signal)
+  request<Transaction>(`/transactions/${id}`, { signal })
+
+export const createTransaction = (payload: TransactionWrite) =>
+  request<Transaction>('/transactions', { method: 'POST', body: payload })
+
+export const updateTransaction = (id: number, payload: TransactionWrite) =>
+  request<Transaction>(`/transactions/${id}`, { method: 'PUT', body: payload })
+
+export const deleteTransaction = (id: number) =>
+  request<void>(`/transactions/${id}`, { method: 'DELETE' })

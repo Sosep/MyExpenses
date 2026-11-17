@@ -16,7 +16,9 @@ import { Chart } from './Chart'
 
 interface DashboardProps {
   account: Account
+  dataVersion: number
   onOpenTransactions: () => void
+  onNewTransaction: () => void
 }
 
 function fillSeries(groups: Group[], fromMonth: string, count: number): Group[] {
@@ -45,17 +47,22 @@ function description(transaction: Transaction): string {
   return kindLabel(transaction.kind)
 }
 
-export function Dashboard({ account, onOpenTransactions }: DashboardProps) {
+export function Dashboard({
+  account,
+  dataVersion,
+  onOpenTransactions,
+  onNewTransaction,
+}: DashboardProps) {
   const months = lastMonths(12)
   const fromMonth = months.from.slice(0, 7)
   const groups = useAsync(
     () => getGrouped(account.id, months.from, months.to),
-    [account.id, months.from, months.to],
+    [account.id, months.from, months.to, dataVersion],
   )
   const thisMonth = monthRange(currentMonth())
   const recent = useAsync(
     () => getTransactions(account.id, thisMonth.from, thisMonth.to, 'both', 8, 0),
-    [account.id, thisMonth.from, thisMonth.to],
+    [account.id, thisMonth.from, thisMonth.to, dataVersion],
   )
 
   const series = useMemo(
@@ -92,6 +99,9 @@ export function Dashboard({ account, onOpenTransactions }: DashboardProps) {
             }}
           >
             Refresh
+          </button>
+          <button type="button" className="btn primary" onClick={onNewTransaction}>
+            New transaction
           </button>
         </div>
       </div>

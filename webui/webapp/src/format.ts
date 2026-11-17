@@ -1,3 +1,5 @@
+import type { Category } from './types'
+
 // The UI is English; Lingui will supply the active locale once i18n lands.
 const LOCALE = 'en-GB'
 
@@ -109,4 +111,55 @@ export function statusClass(status: string): string {
     default:
       return 'status-unreconciled'
   }
+}
+
+export function todayIso(): string {
+  const now = new Date()
+  return `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())}`
+}
+
+export function nowTime(): string {
+  const now = new Date()
+  return `${pad2(now.getHours())}:${pad2(now.getMinutes())}`
+}
+
+export function parseAmountMinor(value: string, fractionDigits: number): number | null {
+  const normalized = value.trim().replace(/\s/g, '').replace(',', '.')
+  if (!/^\d+(\.\d*)?$/.test(normalized)) return null
+  const [whole, fraction = ''] = normalized.split('.')
+  const padded = (fraction + '0'.repeat(fractionDigits)).slice(0, fractionDigits)
+  const minor = Number(whole) * 10 ** fractionDigits + Number(padded || '0')
+  if (!Number.isSafeInteger(minor) || minor <= 0) return null
+  return minor
+}
+
+export function amountInputValue(amountMinor: number, fractionDigits: number): string {
+  if (amountMinor === 0) return ''
+  return (Math.abs(amountMinor) / 10 ** fractionDigits).toFixed(fractionDigits)
+}
+
+export function currencySymbol(currency: string): string {
+  const parts = new Intl.NumberFormat(LOCALE, {
+    style: 'currency',
+    currency,
+  }).formatToParts(0)
+  return parts.find((part) => part.type === 'currency')?.value ?? currency
+}
+
+export function categoryPathMap(categories: Category[]): Map<number, string> {
+  const byId = new Map(categories.map((category) => [category.id, category]))
+  const paths = new Map<number, string>()
+  const resolve = (id: number): string => {
+    const cached = paths.get(id)
+    if (cached) return cached
+    const category = byId.get(id)
+    if (!category) return ''
+    const own = category.label
+    const parent = category.parentId ? resolve(category.parentId) : ''
+    const path = parent ? `${parent} > ${own}` : own
+    paths.set(id, path)
+    return path
+  }
+  categories.forEach((category) => resolve(category.id))
+  return paths
 }
