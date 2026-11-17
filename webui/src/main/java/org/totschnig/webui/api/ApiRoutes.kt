@@ -128,6 +128,37 @@ class ApiRoutes(
                     dataSource.updateSplit(id, call.receive<SplitWriteDto>())
                 )
             }
+            get("/budgets") {
+                call.respond(dataSource.budgets())
+            }
+            get("/budgets/{id}") {
+                val id = call.requirePathId()
+                val yearRaw = call.parameters["year"]
+                val secondRaw = call.parameters["second"]
+                if ((yearRaw == null) != (secondRaw == null)) {
+                    throw ApiException(
+                        HttpStatusCode.BadRequest,
+                        "invalid_period",
+                        "year and second must be sent together"
+                    )
+                }
+                val year = call.intParamOrNull("year")
+                val second = call.intParamOrNull("second")
+                if ((year != null && year < 1) || (second != null && second < 1)) {
+                    throw ApiException(
+                        HttpStatusCode.BadRequest,
+                        "invalid_period",
+                        "year and second must be positive"
+                    )
+                }
+                val progress = dataSource.budgetProgress(id, year, second)
+                    ?: throw ApiException(
+                        HttpStatusCode.NotFound,
+                        "budget_not_found",
+                        "Budget not found"
+                    )
+                call.respond(progress)
+            }
             get("/reports/grouped") {
                 val accountId = call.requireLong("accountId")
                 val grouping = (call.parameters["grouping"] ?: "MONTH")
@@ -179,6 +210,16 @@ private fun ApplicationCall.requireLong(name: String): Long {
             HttpStatusCode.BadRequest,
             "invalid_$name",
             "Query parameter '$name' must be a number"
+        )
+}
+
+private fun ApplicationCall.intParamOrNull(name: String): Int? {
+    val raw = parameters[name] ?: return null
+    return raw.toIntOrNull()
+        ?: throw ApiException(
+            HttpStatusCode.BadRequest,
+            "invalid_$name",
+            "Query parameter '$name' must be an integer"
         )
 }
 

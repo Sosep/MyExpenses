@@ -1,7 +1,7 @@
 # API web de MyExpenses (borrador de contrato)
 
-Estado: **lectura, escritura simple, transferencias, divididas y ficheros
-implementados**. Presupuestos e informes siguen como contrato objetivo.
+Estado: **lectura, escritura simple, transferencias, divididas, ficheros y
+presupuestos (lectura) implementados**. Informes siguen como contrato objetivo.
 Alcance: API JSON consumida por la web app de escritorio. La app Android sigue
 siendo la fuente de verdad; el servidor corre en el móvil (Ktor, dentro del
 módulo `:webui`). Interfaz y sistema visual: [`DESIGN.md`](./DESIGN.md).
@@ -310,10 +310,62 @@ separado; el editor de transferencias no usa `payee` para elegir la cuenta.
 |---|---|---|
 | GET | `/budgets` | Lista con configuración |
 | GET | `/budgets/{id}?year&second` | Progreso del periodo (gastado, asignado, restante) |
-| POST/PUT/DELETE | `/budgets[/{id}]` | CRUD |
+| POST/PUT/DELETE | `/budgets[/{id}]` | CRUD (siguiente corte) |
 
-El progreso reutiliza `loadBudgetProgress` y `sumLoaderForBudget`; el cliente no
-suma transacciones.
+`BudgetDto`:
+
+```json
+{
+  "id": 1,
+  "accountId": 1,
+  "title": "Groceries",
+  "description": null,
+  "currency": "EUR",
+  "fractionDigits": 2,
+  "grouping": "MONTH",
+  "color": 0,
+  "start": null,
+  "end": null,
+  "accountName": "Everyday",
+  "isDefault": false,
+  "uuid": "…"
+}
+```
+
+`BudgetProgressDto` (periodo actual si se omite `year`/`second`):
+
+```json
+{
+  "budgetId": 1,
+  "accountId": 1,
+  "title": "Groceries",
+  "currency": "EUR",
+  "fractionDigits": 2,
+  "grouping": "MONTH",
+  "periodYear": 2026,
+  "periodSecond": 11,
+  "periodStart": "2026-11-01",
+  "periodEnd": "2026-11-30",
+  "periodDescription": "November 2026",
+  "allocatedMinor": 40000,
+  "spentMinor": 31200,
+  "remainingMinor": 8800,
+  "totalDays": 30,
+  "currentDay": 17
+}
+```
+
+- `spentMinor` es positivo (gasto del periodo); `remainingMinor = allocated - spent`
+  y puede ser negativo (sobregiro).
+- El servidor reutiliza `loadBudgetProgress` y `sumLoaderForBudget`; el cliente no
+  suma transacciones.
+- `year` y `second` van juntos; si falta uno, `400 invalid_period`. `second` sigue
+  la agrupación (día del año, semana, mes o año).
+- `GET /budgets/{id}` devuelve el progreso, no la configuración; la configuración
+  viene en la lista. Un id desconocido es `404 budget_not_found`.
+- Los presupuestos de cuentas y divisas distintas se devuelven en la misma lista;
+  el cliente solo agrega importes cuando comparten divisa y periodo.
+- `grouping` usa los nombres de la app: `DAY`, `WEEK`, `MONTH`, `YEAR`, `NONE`.
 
 ### 4.6 Informes y agrupaciones
 
@@ -418,9 +470,9 @@ Tras revisar de nuevo el código:
 ## 8. Pruebas
 
 - **Rutas en JVM**: `webui/src/test/java/org/totschnig/webui/api/ApiRoutesTest.kt`
-  con un `WebApiDataSource` fake y Ktor `testApplication`. 15 tests cubren
-  routing, validación, `201/204/404/409/422`, JSON, body malformado y los
-  endpoints de transferencias/divididas. Comando:
+  con un `WebApiDataSource` fake y Ktor `testApplication`. 19 tests cubren
+  routing, validación, `201/204/404/409/422`, JSON, body malformado, los
+  endpoints de transferencias/divididas y presupuestos. Comando:
   `docker compose run --rm android-build :webui:testDebugUnitTest`.
 - **Capa Android**: `AndroidWebApiDataSource` y el `ContentProvider` se validan
   en el móvil o con tests instrumentados; los mapeadores puros pueden probarse

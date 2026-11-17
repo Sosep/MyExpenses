@@ -186,6 +186,44 @@ class ApiRoutesTest {
         }
         assertEquals(HttpStatusCode.Conflict, response.status)
     }
+
+    @Test
+    fun `budgets are returned as json`() = testApplication {
+        installRoutes(FakeDataSource())
+        val response = client.get("/api/v1/budgets")
+        assertEquals(HttpStatusCode.OK, response.status)
+        val body = response.bodyAsText()
+        assertTrue(body.contains("Groceries"))
+        assertTrue(body.contains("MONTH"))
+    }
+
+    @Test
+    fun `budget progress returns period totals`() = testApplication {
+        installRoutes(FakeDataSource())
+        val response = client.get("/api/v1/budgets/1?year=2026&second=11")
+        assertEquals(HttpStatusCode.OK, response.status)
+        val body = response.bodyAsText()
+        assertTrue(body.contains("\"allocatedMinor\":40000"))
+        assertTrue(body.contains("\"spentMinor\":31200"))
+        assertTrue(body.contains("\"remainingMinor\":8800"))
+        assertTrue(body.contains("November 2026"))
+    }
+
+    @Test
+    fun `half a budget period is a 400`() = testApplication {
+        installRoutes(FakeDataSource())
+        val response = client.get("/api/v1/budgets/1?year=2026")
+        assertEquals(HttpStatusCode.BadRequest, response.status)
+        assertTrue(response.bodyAsText().contains("invalid_period"))
+    }
+
+    @Test
+    fun `unknown budget is a 404`() = testApplication {
+        installRoutes(FakeDataSource())
+        val response = client.get("/api/v1/budgets/99")
+        assertEquals(HttpStatusCode.NotFound, response.status)
+        assertTrue(response.bodyAsText().contains("budget_not_found"))
+    }
 }
 
 private fun ApplicationTestBuilder.installRoutes(dataSource: WebApiDataSource) {
@@ -276,6 +314,11 @@ private class FakeDataSource : WebApiDataSource {
         from: LocalDate,
         to: LocalDate
     ) = listOf(GroupDto(2026, 11, 1000, -500, 0))
+
+    override fun budgets() = listOf(sampleBudget())
+
+    override suspend fun budgetProgress(id: Long, year: Int?, second: Int?) =
+        if (id == 1L) sampleBudgetProgress() else null
 
     override fun createTransaction(body: TransactionWriteDto): TransactionDto {
         created = body
@@ -421,4 +464,39 @@ private fun sampleSplit() = TransactionDto(
             transferAccountId = null
         )
     )
+)
+
+private fun sampleBudget() = BudgetDto(
+    id = 1,
+    accountId = 1,
+    title = "Groceries",
+    description = null,
+    currency = "EUR",
+    fractionDigits = 2,
+    grouping = "MONTH",
+    color = 0,
+    start = null,
+    end = null,
+    accountName = "Everyday",
+    isDefault = false,
+    uuid = "budget-uuid"
+)
+
+private fun sampleBudgetProgress() = BudgetProgressDto(
+    budgetId = 1,
+    accountId = 1,
+    title = "Groceries",
+    currency = "EUR",
+    fractionDigits = 2,
+    grouping = "MONTH",
+    periodYear = 2026,
+    periodSecond = 11,
+    periodStart = "2026-11-01",
+    periodEnd = "2026-11-30",
+    periodDescription = "November 2026",
+    allocatedMinor = 40000,
+    spentMinor = 31200,
+    remainingMinor = 8800,
+    totalDays = 30,
+    currentDay = 17
 )

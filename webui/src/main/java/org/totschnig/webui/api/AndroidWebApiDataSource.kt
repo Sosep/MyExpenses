@@ -16,6 +16,8 @@ import org.totschnig.myexpenses.db2.RepositoryTransaction
 import org.totschnig.myexpenses.db2.createTransaction
 import org.totschnig.myexpenses.db2.entities.Transaction
 import org.totschnig.myexpenses.db2.getCurrencyUnitForAccount
+import org.totschnig.myexpenses.db2.loadBudget
+import org.totschnig.myexpenses.db2.loadBudgetProgress
 import org.totschnig.myexpenses.db2.loadTransaction
 import org.totschnig.myexpenses.db2.updateTransaction
 import org.totschnig.myexpenses.model.CrStatus
@@ -25,13 +27,16 @@ import org.totschnig.myexpenses.model.generateUuid
 import org.totschnig.myexpenses.preference.PrefHandler
 import org.totschnig.myexpenses.preference.PrefKey
 import org.totschnig.myexpenses.provider.KEY_ROWID
+import org.totschnig.myexpenses.provider.KEY_TITLE
 import org.totschnig.myexpenses.provider.SPLIT_CATID
+import org.totschnig.myexpenses.provider.TransactionProvider.BUDGETS_URI
 import org.totschnig.myexpenses.provider.TransactionProvider.CATEGORIES_URI
 import org.totschnig.myexpenses.provider.TransactionProvider.METHODS_URI
 import org.totschnig.myexpenses.provider.TransactionProvider.PAYEES_URI
 import org.totschnig.myexpenses.provider.TransactionProvider.TAGS_URI
 import org.totschnig.myexpenses.util.epoch2ZonedDateTime
 import org.totschnig.myexpenses.util.toEpoch
+import org.totschnig.myexpenses.viewmodel.data.Budget
 
 class AndroidWebApiDataSource(
     private val repository: Repository,
@@ -62,6 +67,49 @@ class AndroidWebApiDataSource(
     override fun tags() = repository.queryTags()
 
     override fun methods() = repository.queryMethods()
+
+    override fun budgets(): List<BudgetDto> =
+        repository.contentResolver.query(
+            BUDGETS_URI,
+            null,
+            null,
+            null,
+            KEY_TITLE
+        )?.use { cursor ->
+            buildList {
+                while (cursor.moveToNext()) {
+                    add(repository.budgetCreatorFunction(cursor).toDto())
+                }
+            }
+        }.orEmpty()
+
+    override suspend fun budgetProgress(
+        id: Long,
+        year: Int?,
+        second: Int?
+    ): BudgetProgressDto? {
+        val budget = repository.loadBudget(id) ?: return null
+        val period = if (year != null && second != null) year to second else null
+        val progress = repository.loadBudgetProgress(id, period) ?: return null
+        return BudgetProgressDto(
+            budgetId = budget.id,
+            accountId = budget.accountId,
+            title = progress.title,
+            currency = progress.currency,
+            fractionDigits = currencyContext[progress.currency].fractionDigits,
+            grouping = budget.grouping.name,
+            periodYear = progress.groupInfo.year,
+            periodSecond = progress.groupInfo.second,
+            periodStart = progress.groupInfo.duration.start.toString(),
+            periodEnd = progress.groupInfo.duration.end.toString(),
+            periodDescription = progress.groupInfo.description,
+            allocatedMinor = progress.allocated,
+            spentMinor = progress.spent,
+            remainingMinor = progress.remainingBudget,
+            totalDays = progress.totalDays,
+            currentDay = progress.currentDay
+        )
+    }
 
     override fun transactionPage(
         accountId: Long,
@@ -614,6 +662,22 @@ class AndroidWebApiDataSource(
             "Transaction not found"
         )
     }
+
+    private fun Budget.toDto() = BudgetDto(
+        id = id,
+        accountId = accountId,
+        title = title,
+        description = description,
+        currency = currency,
+        fractionDigits = currencyContext[currency].fractionDigits,
+        grouping = grouping.name,
+        color = color,
+        start = start?.toString(),
+        end = end?.toString(),
+        accountName = accountName,
+        isDefault = default,
+        uuid = uuid
+    )
 
     private fun loadTransactionDto(id: Long): TransactionDto {
         val transaction = try {

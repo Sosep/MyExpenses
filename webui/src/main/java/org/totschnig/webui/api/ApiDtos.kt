@@ -205,3 +205,40 @@ data class FileDto(
     val modified: Long,
     val link: String
 )
+
+@Keep
+data class BudgetDto(
+    val id: Long,
+    val accountId: Long,
+    val title: String,
+    val description: String?,
+    val currency: String,
+    val fractionDigits: Int,
+    val grouping: String,
+    val color: Int,
+    val start: String?,
+    val end: String?,
+    val accountName: String?,
+    val isDefault: Boolean,
+    val uuid: String?
+)
+
+@Keep
+data class BudgetProgressDto(
+    val budgetId: Long,
+    val accountId: Long,
+    val title: String,
+    val currency: String,
+    val fractionDigits: Int,
+    val grouping: String,
+    val periodYear: Int?,
+    val periodSecond: Int?,
+    val periodStart: String,
+    val periodEnd: String,
+    val periodDescription: String,
+    val allocatedMinor: Long,
+    val spentMinor: Long,
+    val remainingMinor: Long,
+    val totalDays: Long,
+    val currentDay: Long
+)
