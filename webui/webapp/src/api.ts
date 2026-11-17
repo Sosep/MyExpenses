@@ -180,12 +180,9 @@ export const getGrouped = (
     { signal },
   )
 
-export interface TransactionFilters {
-  categoryId?: number | null
-  payeeId?: number | null
-  tagId?: number | null
-  methodId?: number | null
-}
+import type { Filters } from './filters'
+
+export type TransactionFilters = Partial<Filters>
 
 export const getTransactions = (
   accountId: number,
@@ -206,10 +203,20 @@ export const getTransactions = (
   // Without a range the list is the whole history, newest first.
   if (from) params.set('from', from)
   if (to) params.set('to', to)
-  for (const key of ['categoryId', 'payeeId', 'tagId', 'methodId'] as const) {
-    const value = filters[key]
-    if (value != null) params.set(key, String(value))
+  for (const [key, values] of [
+    ['categoryId', filters.categoryIds],
+    ['payeeId', filters.payeeIds],
+    ['tagId', filters.tagIds],
+    ['methodId', filters.methodIds],
+  ] as const) {
+    for (const value of values ?? []) params.append(key, String(value))
   }
+  if (filters.text) params.set('q', filters.text)
+  if (filters.amountMin != null) params.set('amountMin', String(filters.amountMin))
+  if (filters.amountMax != null) params.set('amountMax', String(filters.amountMax))
+  for (const status of filters.statuses ?? []) params.append('status', status)
+  if (filters.transfer === 'only') params.set('transfer', 'true')
+  if (filters.transfer === 'none') params.set('transfer', 'false')
   return request<Page<Transaction>>(`/transactions?${params.toString()}`, { signal })
 }
 

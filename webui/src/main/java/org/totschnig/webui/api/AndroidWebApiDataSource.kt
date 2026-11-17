@@ -137,10 +137,7 @@ class AndroidWebApiDataSource(
         from: LocalDate?,
         to: LocalDate?,
         type: String?,
-        categoryId: Long?,
-        payeeId: Long?,
-        tagId: Long?,
-        methodId: Long?,
+        filters: TransactionQueryFilters,
         limit: Int,
         offset: Int
     ): PageDto<TransactionDto> {
@@ -155,10 +152,7 @@ class AndroidWebApiDataSource(
             from = from,
             to = to,
             type = type,
-            categoryId = categoryId,
-            payeeId = payeeId,
-            tagId = tagId,
-            methodId = methodId,
+            filters = filters,
             limit = limit,
             offset = offset
         )

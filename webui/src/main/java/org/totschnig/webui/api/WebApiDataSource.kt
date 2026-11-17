@@ -19,12 +19,9 @@ interface WebApiDataSource {
         from: LocalDate?,
         to: LocalDate?,
         type: String?,
-        categoryId: Long?,
-        payeeId: Long?,
-        tagId: Long?,
-        methodId: Long?,
-        limit: Int,
-        offset: Int
+        filters: TransactionQueryFilters = TransactionQueryFilters(),
+        limit: Int = 50,
+        offset: Int = 0
     ): PageDto<TransactionDto>
     fun transaction(id: Long): TransactionDto?
     fun groups(
@@ -70,4 +67,23 @@ interface WebApiDataSource {
     fun createSplit(body: SplitWriteDto): TransactionDto
     fun updateSplit(id: Long, body: SplitWriteDto): TransactionDto
     fun deleteTransaction(id: Long): Boolean
+}
+
+/** Criteria of the transaction list, all optional and combined with AND. */
+data class TransactionQueryFilters(
+    val categoryIds: List<Long> = emptyList(),
+    val payeeIds: List<Long> = emptyList(),
+    val tagIds: List<Long> = emptyList(),
+    val methodIds: List<Long> = emptyList(),
+    val text: String? = null,
+    val amountMin: Long? = null,
+    val amountMax: Long? = null,
+    val statuses: List<String> = emptyList(),
+    /** null: any; false: only non-transfers; true: only transfers. */
+    val transfer: Boolean? = null
+) {
+    val isEmpty: Boolean
+        get() = categoryIds.isEmpty() && payeeIds.isEmpty() && tagIds.isEmpty() &&
+            methodIds.isEmpty() && text.isNullOrBlank() && amountMin == null &&
+            amountMax == null && statuses.isEmpty() && transfer == null
 }

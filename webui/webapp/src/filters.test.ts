@@ -9,37 +9,59 @@ import {
 } from './filters'
 
 describe('filters in the URL', () => {
-  it('reads the four ids and keeps the rest of the query', () => {
-    expect(filtersFromUrl('?categoryId=3&tagId=7&view=transactions')).toEqual({
-      categoryId: 3,
-      payeeId: null,
-      tagId: 7,
-      methodId: null,
+  it('reads repeated ids and keeps the rest of the query', () => {
+    const filters = filtersFromUrl(
+      '?categoryId=3&categoryId=5&tagId=7&view=transactions&q=cafe',
+    )
+    expect(filters.categoryIds).toEqual([3, 5])
+    expect(filters.payeeIds).toEqual([])
+    expect(filters.tagIds).toEqual([7])
+    expect(filters.text).toBe('cafe')
+  })
+
+  it('reads amounts, statuses and the transfer switch', () => {
+    const filters = filtersFromUrl(
+      '?amountMin=100&amountMax=5000&status=CLEARED&status=nope&transfer=true',
+    )
+    expect(filters.amountMin).toBe(100)
+    expect(filters.amountMax).toBe(5000)
+    expect(filters.statuses).toEqual(['CLEARED'])
+    expect(filters.transfer).toBe('only')
+  })
+
+  it('ignores values that are not usable', () => {
+    expect(filtersFromUrl('?categoryId=0&payeeId=-2&tagId=abc&amountMin=x')).toEqual({
+      ...NO_FILTERS,
     })
   })
 
-  it('ignores values that are not positive integers', () => {
-    expect(filtersFromUrl('?categoryId=0&payeeId=-2&tagId=abc')).toEqual(NO_FILTERS)
-  })
-
-  it('writes and removes the filters without losing the other parameters', () => {
-    const search = searchWithFilters('?locale=es&categoryId=3', {
-      categoryId: null,
-      payeeId: 5,
-      tagId: null,
-      methodId: null,
+  it('writes repeated parameters without losing the other ones', () => {
+    const search = searchWithFilters('?locale=es&categoryId=9', {
+      ...NO_FILTERS,
+      categoryIds: [3, 5],
+      text: 'cafe',
+      statuses: ['CLEARED'],
+      transfer: 'none',
     })
-
-    expect(search).toContain('locale=es')
-    expect(search).not.toContain('categoryId')
-    expect(search).toContain('payeeId=5')
+    const params = new URLSearchParams(search)
+    expect(params.getAll('categoryId')).toEqual(['3', '5'])
+    expect(params.get('q')).toBe('cafe')
+    expect(params.get('status')).toBe('CLEARED')
+    expect(params.get('transfer')).toBe('false')
+    expect(params.get('locale')).toBe('es')
   })
 
-  it('returns an empty query when no filters are set', () => {
-    expect(searchWithFilters('?categoryId=3', NO_FILTERS)).toBe('')
+  it('removing a filter drops only its parameters', () => {
+    const search = searchWithFilters('?categoryId=3&tagId=7&q=x', {
+      ...NO_FILTERS,
+      tagIds: [7],
+    })
+    const params = new URLSearchParams(search)
+    expect(params.getAll('categoryId')).toEqual([])
+    expect(params.get('q')).toBeNull()
+    expect(params.getAll('tagId')).toEqual(['7'])
   })
 })
-
 
 describe('grouping and range in the URL', () => {
   it('reads the grouping, and falls back to the stored value, then MONTH', () => {

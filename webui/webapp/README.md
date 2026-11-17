@@ -98,7 +98,9 @@ usa el modo Vite en caliente.
 ### Índice de mes
 
 El mock tiene movimientos de los últimos cuatro meses, así que agrupar por mes,
-semana o día tiene algo que enseñar. `reports/grouped` devuelve `firstDate` por
+semana o día tiene algo que enseñar. La lista del mock aplica los mismos
+criterios que la API (texto, importe, estado, transferencias y valores
+múltiples). `reports/grouped` devuelve `firstDate` por
 grupo, igual que la API.
 
 Como la API real, el mock devuelve `second` con **base 0** en `reports/grouped`,
@@ -115,6 +117,8 @@ muestra como `YYYY-MM` (1–12) y lo convierte solo al llamar a la API.
 | `?view=transactions&filter=groceries` | Filtra por la categoría Groceries |
 | `?view=transactions&grouping=WEEK` | Agrupa por semana (`DAY`, `MONTH`, `YEAR`, `NONE`) |
 | `?view=transactions&preset=month` | Rango del mes actual (`last3`, `year`, `custom` con `from`/`to`) |
+| `?view=transactions&q=cafe` | Busca en descripción, beneficiario y referencia |
+| `?view=transactions&status=CLEARED&transfer=false` | Estado y transferencias |
 | `?view=reports` | Informes |
 | `?view=reports&reportBy=Payee&reportType=Both` | Preselecciona dimensión y tipo |
 | `?view=reports&reportDrill=1` | Abre el detalle del primer grupo |

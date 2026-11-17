@@ -44,9 +44,12 @@ Read this before changing code. Detailed sources:
 - Tailwind v4 processes all component styles: `app.css` lives in the `components`
   layer and its semantic classes are authored with `@apply` over the DESIGN
   tokens. Only resets, keyframes and a few exact keywords remain plain CSS.
-- Transactions list supports `categoryId`, `payeeId`, `tagId` and `methodId`
-  filters (AND); the SPA exposes them with `SearchSelect`, keeps them in the URL
-  and as removable chips, and collapses them behind `Filters (n)` on phones.
+- Transactions list supports repeated `categoryId`, `payeeId`, `tagId` and
+  `methodId` (OR within a dimension, AND across), a text search (`q` over
+  comment, payee and reference), `amountMin`/`amountMax` (absolute minor units),
+  repeated `status` and a `transfer` switch; the SPA exposes them with
+  `MultiPicker`/`SearchSelect`, keeps them in the URL and as removable chips, and
+  collapses them behind `Filters (n)` on phones.
   The list is not tied to a month: the grouping (`NONE/DAY/WEEK/MONTH/YEAR`) is a
   visual choice kept in the URL and `localStorage`, each period header carries
   its income, expenses and transfers from `/reports/grouped` (`firstDate`

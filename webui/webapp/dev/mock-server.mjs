@@ -1276,29 +1276,60 @@ createServer(async (request, response) => {
       const type = url.searchParams.get('type') ?? 'both'
       const limit = Number(url.searchParams.get('limit') ?? 50)
       const offset = Number(url.searchParams.get('offset') ?? 0)
-      const categoryId = Number(url.searchParams.get('categoryId')) || null
-      const payeeId = Number(url.searchParams.get('payeeId')) || null
-      const tagId = Number(url.searchParams.get('tagId')) || null
-      const methodId = Number(url.searchParams.get('methodId')) || null
-      let items = transactions.filter((item) => item.date >= from && item.date <= to)
-      if (type === 'income') items = items.filter((item) => item.amountMinor > 0)
-      if (type === 'expense') items = items.filter((item) => item.amountMinor < 0)
-      if (categoryId !== null) {
-        items = items.filter(
-          (item) =>
-            item.category?.id === categoryId ||
-            (item.kind === 'SPLIT' &&
-              splitParts.some((part) => part.category?.id === categoryId)),
-        )
-      }
-      if (payeeId !== null) items = items.filter((item) => item.payee?.id === payeeId)
-      if (tagId !== null) {
-        items = items.filter((item) => (item.tags ?? []).some((tag) => tag.id === tagId))
-      }
-      if (methodId !== null) items = items.filter((item) => item.method?.id === methodId)
-      const total = items.length
-      items = items.slice(offset, offset + limit).map((item) => ({ ...item, splitParts: null }))
-      return sendJson(response, 200, { items, total, limit, offset })
+      const ids = (name) =>
+        url.searchParams
+          .getAll(name)
+          .flatMap((value) => value.split(','))
+          .map(Number)
+          .filter((value) => Number.isInteger(value) && value > 0)
+      const categoryIds = ids('categoryId')
+      const payeeIds = ids('payeeId')
+      const tagIds = ids('tagId')
+      const methodIds = ids('methodId')
+      const statuses = url.searchParams
+        .getAll('status')
+        .flatMap((value) => value.split(','))
+        .map((value) => value.trim().toUpperCase())
+        .filter(Boolean)
+      const text = (url.searchParams.get('q') ?? '').trim().toLowerCase()
+      const amountMin = Number(url.searchParams.get('amountMin')) || null
+      const amountMax = Number(url.searchParams.get('amountMax')) || null
+      const transfer = url.searchParams.get('transfer')
+
+      const matches = transactions.filter((item) => {
+        if (item.date < from || item.date > to) return false
+        if (type === 'income' && item.amountMinor <= 0) return false
+        if (type === 'expense' && item.amountMinor >= 0) return false
+        if (categoryIds.length && !categoryIds.includes(item.category?.id)) return false
+        if (payeeIds.length && !payeeIds.includes(item.payee?.id)) return false
+        if (methodIds.length && !methodIds.includes(item.method?.id)) return false
+        if (tagIds.length && !(item.tags ?? []).some((tag) => tagIds.includes(tag.id))) {
+          return false
+        }
+        if (statuses.length && !statuses.includes(item.crStatus)) return false
+        if (transfer === 'true' && !item.transferPeerId) return false
+        if (transfer === 'false' && item.transferPeerId) return false
+        if (amountMin !== null && Math.abs(item.amountMinor) < amountMin) return false
+        if (amountMax !== null && Math.abs(item.amountMinor) > amountMax) return false
+        if (text) {
+          const haystack = [item.comment, item.payee?.label, item.referenceNumber]
+            .filter(Boolean)
+            .join(' ')
+            .toLowerCase()
+          if (!haystack.includes(text)) return false
+        }
+        return true
+      })
+
+      const items = matches
+        .slice(offset, offset + limit)
+        .map((item) => ({ ...item, splitParts: null }))
+      return sendJson(response, 200, {
+        items,
+        total: matches.length,
+        limit,
+        offset,
+      })
     }
 
     if (path === '/api/v1/transactions' && request.method === 'POST') {

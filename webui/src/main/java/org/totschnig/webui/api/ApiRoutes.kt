@@ -15,6 +15,7 @@ import io.ktor.server.routing.route
 import java.time.LocalDate
 import java.time.format.DateTimeParseException
 import java.util.Locale
+import kotlin.math.abs
 
 class ApiRoutes(
     private val dataSource: WebApiDataSource
@@ -55,20 +56,13 @@ class ApiRoutes(
                 val from = call.dateParam("from")
                 val to = call.dateParam("to")
                 validateRange(from, to)
-                val categoryId = call.longParamOrNull("categoryId")
-                val payeeId = call.longParamOrNull("payeeId")
-                val tagId = call.longParamOrNull("tagId")
-                val methodId = call.longParamOrNull("methodId")
                 call.respond(
                     dataSource.transactionPage(
                         accountId = accountId,
                         from = from,
                         to = to,
                         type = type,
-                        categoryId = categoryId,
-                        payeeId = payeeId,
-                        tagId = tagId,
-                        methodId = methodId,
+                        filters = call.transactionFilters(),
                         limit = limit,
                         offset = offset
                     )
@@ -366,7 +360,85 @@ private fun ApplicationCall.requireLong(name: String): Long {
         )
 }
 
-private fun ApplicationCall.longParamOrNull(name: String): Long? {
+/** Repeated parameters are accepted (`?tagId=1&tagId=2`), so ids may come as a set. */
+private fun ApplicationCall.idsParam(name: String): List<Long> =
+    parameters.getAll(name)
+        ?.flatMap { it.split(',') }
+        ?.map { it.trim() }
+        ?.filter { it.isNotEmpty() }
+        ?.map {
+            val value = it.toLongOrNull()
+            if (value == null || value <= 0) {
+                throw ApiException(
+                    HttpStatusCode.BadRequest,
+                    "invalid_$name",
+                    "Query parameter '$name' must be a list of positive numbers"
+                )
+            }
+            value
+        }
+        ?.distinct()
+        ?: emptyList()
+
+private fun ApplicationCall.transactionFilters(): TransactionQueryFilters {
+    val statuses = parameters.getAll("status")
+        ?.flatMap { it.split(',') }
+        ?.map { it.trim().uppercase(Locale.ROOT) }
+        ?.filter { it.isNotEmpty() }
+        ?.distinct()
+        ?: emptyList()
+    val allowedStatuses = setOf("UNRECONCILED", "CLEARED", "RECONCILED", "VOID")
+    statuses.firstOrNull { it !in allowedStatuses }?.let {
+        throw ApiException(
+            HttpStatusCode.BadRequest,
+            "invalid_status",
+            "status must be UNRECONCILED, CLEARED, RECONCILED or VOID"
+        )
+    }
+    val text = parameters["q"]?.trim()?.takeIf { it.isNotEmpty() }
+    if (text != null && text.length > 200) {
+        throw ApiException(
+            HttpStatusCode.BadRequest,
+            "invalid_q",
+            "Query parameter 'q' is too long"
+        )
+    }
+    val amountMin = longParamOrNull("amountMin", positive = false)
+    val amountMax = longParamOrNull("amountMax", positive = false)
+    if (amountMin != null && amountMax != null && amountMin > amountMax) {
+        throw ApiException(
+            HttpStatusCode.BadRequest,
+            "invalid_range",
+            "amountMin must be less than or equal to amountMax"
+        )
+    }
+    val transfer = parameters["transfer"]?.let {
+        when (it.lowercase(Locale.ROOT)) {
+            "true", "1" -> true
+
+            "false", "0" -> false
+
+            else -> throw ApiException(
+                HttpStatusCode.BadRequest,
+                "invalid_transfer",
+                "Query parameter 'transfer' must be true or false"
+            )
+        }
+    }
+    return TransactionQueryFilters(
+        categoryIds = idsParam("categoryId"),
+        payeeIds = idsParam("payeeId"),
+        tagIds = idsParam("tagId"),
+        methodIds = idsParam("methodId"),
+        text = text,
+        amountMin = amountMin?.let { abs(it) },
+        amountMax = amountMax?.let { abs(it) },
+        statuses = statuses,
+        transfer = transfer
+    )
+}
+
+private fun ApplicationCall.longParamOrNull(name: String, positive: Boolean = true): Long? {
     val raw = parameters[name] ?: return null
     val value = raw.toLongOrNull()
         ?: throw ApiException(
@@ -374,7 +446,7 @@ private fun ApplicationCall.longParamOrNull(name: String): Long? {
             "invalid_$name",
             "Query parameter '$name' must be a number"
         )
-    if (value <= 0) {
+    if (positive && value <= 0) {
         throw ApiException(
             HttpStatusCode.BadRequest,
             "invalid_$name",

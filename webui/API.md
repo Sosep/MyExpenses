@@ -192,7 +192,7 @@ Endpoints:
 
 | Método | Ruta | Descripción |
 |---|---|---|
-| GET | `/transactions?accountId&from&to&type&categoryId&payeeId&tagId&methodId&limit&offset` | Lista paginada; `type`: `income`/`expense`/`both` |
+| GET | `/transactions?accountId&from&to&type&limit&offset&…criterios` | Lista paginada; ver criterios abajo |
 | GET | `/transactions/{id}` | Detalle con partes, peer y etiquetas |
 | POST | `/transactions` | Crear simple |
 | PUT | `/transactions/{id}` | Actualizar simple |
@@ -201,6 +201,26 @@ Endpoints:
 | PUT | `/transfers/{id}` | Actualizar transferencia (id de cualquiera de las dos caras) |
 | POST | `/split-transactions` | Crear dividida |
 | PUT | `/split-transactions/{id}` | Reemplazar partes y datos del padre |
+
+#### Criterios de la lista
+
+Todos opcionales, combinados con **AND**; dentro de una dimensión, OR.
+
+| Parámetro | Semántica |
+|---|---|
+| `accountId` | obligatorio |
+| `from`, `to` | rango de fechas inclusivo; sin ellos, todo el historial |
+| `type` | `income`, `expense` o `both` |
+| `categoryId` | repetible (`?categoryId=1&categoryId=2`); una dividida entra si alguna parte la tiene |
+| `payeeId`, `tagId`, `methodId` | repetibles; `tagId` coincide con cualquiera de las etiquetas |
+| `q` | texto en comentario, nombre del beneficiario y referencia, sin distinguir mayúsculas (los acentos dependen de FTS, fuera de este corte); máximo 200 caracteres |
+| `amountMin`, `amountMax` | importe absoluto en unidades menores, ambos inclusive |
+| `status` | repetible; `UNRECONCILED`, `CLEARED`, `RECONCILED`, `VOID` |
+| `transfer` | `true` solo transferencias, `false` excluye las transferencias; ausente = todas |
+| `limit`, `offset` | paginación; `limit` 1–500 (por defecto 50) |
+
+Errores: `400 invalid_categoryId` (lista con un valor ≤ 0), `400 invalid_status`,
+`400 invalid_range` (`amountMin > amountMax`), `400 invalid_transfer`.
 
 #### POST /transactions
 

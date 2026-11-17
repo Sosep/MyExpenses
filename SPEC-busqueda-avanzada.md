@@ -28,11 +28,11 @@ Criterios, todos opcionales y combinados con AND:
 
 | Criterio | Semántica (como la app) | Parámetros |
 |---|---|---|
-| Texto | Comentario contiene, sin distinguir mayúsculas ni acentos; busca también en el nombre del beneficiario y la referencia | `q` |
+| Texto | Comentario, nombre del beneficiario y referencia, sin distinguir mayúsculas (los acentos requieren FTS, fuera de este corte) | `q` |
 | Fechas | desde / hasta / entre; presets de la app (hoy, esta semana, este mes, este año) | `from`, `to` |
 | Importe | mínimo y máximo sobre el valor absoluto, con signo opcional (solo gastos / solo ingresos) | `amountMin`, `amountMax`, `type` |
 | Tipo | gastos, ingresos, ambos; transferencias incluidas o excluidas | `type`, `transfer` |
-| Categorías | una o varias; una categoría padre incluye sus hijas, y una dividida entra si alguna parte la tiene | `categoryId` (repetido o lista) |
+| Categorías | una o varias por id; una dividida entra si alguna parte la tiene (las hijas de una categoría padre quedan para cuando el API exponga el árbol) | `categoryId` (repetido o lista) |
 | Beneficiarios | uno o varios | `payeeId` |
 | Etiquetas | una o varias; coincide con cualquiera | `tagId` |
 | Métodos | uno o varios | `methodId` |

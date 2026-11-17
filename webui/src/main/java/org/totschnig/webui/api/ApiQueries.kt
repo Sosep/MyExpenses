@@ -25,6 +25,7 @@ import org.totschnig.myexpenses.provider.KEY_BUDGET_ROLLOVER_NEXT
 import org.totschnig.myexpenses.provider.KEY_BUDGET_ROLLOVER_PREVIOUS
 import org.totschnig.myexpenses.provider.KEY_CATID
 import org.totschnig.myexpenses.provider.KEY_COLOR
+import org.totschnig.myexpenses.provider.KEY_COMMENT
 import org.totschnig.myexpenses.provider.KEY_CR_STATUS
 import org.totschnig.myexpenses.provider.KEY_CURRENCY
 import org.totschnig.myexpenses.provider.KEY_CURRENT_BALANCE
@@ -41,6 +42,7 @@ import org.totschnig.myexpenses.provider.KEY_PARENTID
 import org.totschnig.myexpenses.provider.KEY_PATH
 import org.totschnig.myexpenses.provider.KEY_PAYEEID
 import org.totschnig.myexpenses.provider.KEY_PAYEE_NAME
+import org.totschnig.myexpenses.provider.KEY_REFERENCE_NUMBER
 import org.totschnig.myexpenses.provider.KEY_ROWID
 import org.totschnig.myexpenses.provider.KEY_SEALED
 import org.totschnig.myexpenses.provider.KEY_SECOND_GROUP
@@ -546,10 +548,7 @@ internal fun Repository.queryTransactionsPage(
     from: LocalDate?,
     to: LocalDate?,
     type: String?,
-    categoryId: Long?,
-    payeeId: Long?,
-    tagId: Long?,
-    methodId: Long?,
+    filters: TransactionQueryFilters,
     limit: Int,
     offset: Int
 ): Pair<List<Transaction>, Long> {
@@ -557,15 +556,7 @@ internal fun Repository.queryTransactionsPage(
         accountId = accountId,
         extended = true
     ).build()
-    val (selection, selectionArgs) = transactionSelection(
-        from,
-        to,
-        type,
-        categoryId,
-        payeeId,
-        tagId,
-        methodId
-    )
+    val (selection, selectionArgs) = transactionSelection(from, to, type, filters)
     val total = contentResolver.query(
         baseUri,
         arrayOf("count(*)"),
@@ -587,10 +578,7 @@ private fun transactionSelection(
     from: LocalDate?,
     to: LocalDate?,
     type: String?,
-    categoryId: Long?,
-    payeeId: Long?,
-    tagId: Long?,
-    methodId: Long?
+    filters: TransactionQueryFilters
 ): Pair<String, Array<String>?> {
     val clauses = mutableListOf("$KEY_PARENTID IS NULL")
     val args = mutableListOf<String>()
@@ -599,31 +587,60 @@ private fun transactionSelection(
         "income" -> clauses.add("$KEY_AMOUNT > 0")
         "expense" -> clauses.add("$KEY_AMOUNT < 0")
     }
-    categoryId?.let {
+    if (filters.categoryIds.isNotEmpty()) {
+        val placeholders = filters.categoryIds.joinToString(",") { "?" }
+        // A split counts when any of its parts carries the category.
         clauses.add(
-            "($KEY_CATID = ? OR ($KEY_CATID = $SPLIT_CATID AND EXISTS (" +
+            "($KEY_CATID IN ($placeholders) OR ($KEY_CATID = $SPLIT_CATID AND EXISTS (" +
                 "SELECT 1 FROM $TABLE_TRANSACTIONS child " +
                 "WHERE child.$KEY_PARENTID = $CTE_SEARCH.$KEY_ROWID " +
-                "AND child.$KEY_CATID = ?)))"
+                "AND child.$KEY_CATID IN ($placeholders))))"
         )
-        args.add(it.toString())
-        args.add(it.toString())
+        filters.categoryIds.forEach { args.add(it.toString()) }
+        filters.categoryIds.forEach { args.add(it.toString()) }
     }
-    payeeId?.let {
-        clauses.add("$KEY_PAYEEID = ?")
-        args.add(it.toString())
+    if (filters.payeeIds.isNotEmpty()) {
+        clauses.add("$KEY_PAYEEID IN (${filters.payeeIds.joinToString(",") { "?" }})")
+        filters.payeeIds.forEach { args.add(it.toString()) }
     }
-    methodId?.let {
-        clauses.add("$KEY_METHODID = ?")
-        args.add(it.toString())
+    if (filters.methodIds.isNotEmpty()) {
+        clauses.add("$KEY_METHODID IN (${filters.methodIds.joinToString(",") { "?" }})")
+        filters.methodIds.forEach { args.add(it.toString()) }
     }
-    tagId?.let {
+    if (filters.tagIds.isNotEmpty()) {
+        // Any of the chosen tags, like the app's tag criterion.
         clauses.add(
             "EXISTS (SELECT 1 FROM $TABLE_TRANSACTIONS_TAGS tag_filter " +
                 "WHERE tag_filter.$KEY_TRANSACTIONID = $CTE_SEARCH.$KEY_ROWID " +
-                "AND tag_filter.$KEY_TAGID = ?)"
+                "AND tag_filter.$KEY_TAGID IN (${filters.tagIds.joinToString(",") { "?" }}))"
         )
+        filters.tagIds.forEach { args.add(it.toString()) }
+    }
+    filters.text?.trim()?.takeIf { it.isNotEmpty() }?.let { text ->
+        val needle = "%$text%"
+        clauses.add(
+            "(coalesce($KEY_COMMENT, '') LIKE ? COLLATE NOCASE OR " +
+                "coalesce($KEY_PAYEE_NAME, '') LIKE ? COLLATE NOCASE OR " +
+                "coalesce($KEY_REFERENCE_NUMBER, '') LIKE ? COLLATE NOCASE)"
+        )
+        repeat(3) { args.add(needle) }
+    }
+    filters.amountMin?.let {
+        clauses.add("abs($KEY_AMOUNT) >= ?")
         args.add(it.toString())
+    }
+    filters.amountMax?.let {
+        clauses.add("abs($KEY_AMOUNT) <= ?")
+        args.add(it.toString())
+    }
+    if (filters.statuses.isNotEmpty()) {
+        clauses.add("$KEY_CR_STATUS IN (${filters.statuses.joinToString(",") { "?" }})")
+        filters.statuses.forEach { args.add(it) }
+    }
+    when (filters.transfer) {
+        true -> clauses.add("$KEY_TRANSFER_ACCOUNT IS NOT NULL")
+        false -> clauses.add("$KEY_TRANSFER_ACCOUNT IS NULL")
+        null -> Unit
     }
     return clauses.joinToString(" AND ") to args.takeIf { it.isNotEmpty() }?.toTypedArray()
 }

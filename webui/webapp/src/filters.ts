@@ -1,52 +1,119 @@
 export interface Filters {
-  categoryId: number | null
-  payeeId: number | null
-  tagId: number | null
-  methodId: number | null
+  categoryIds: number[]
+  payeeIds: number[]
+  tagIds: number[]
+  methodIds: number[]
+  text: string | null
+  /** Minor units, absolute value. */
+  amountMin: number | null
+  amountMax: number | null
+  statuses: string[]
+  transfer: 'any' | 'only' | 'none'
 }
 
-export const FILTER_KEYS = ['categoryId', 'payeeId', 'tagId', 'methodId'] as const
+export type Grouping = 'NONE' | 'DAY' | 'WEEK' | 'MONTH' | 'YEAR'
+
+export const GROUPINGS: Grouping[] = ['NONE', 'DAY', 'WEEK', 'MONTH', 'YEAR']
 
 export const NO_FILTERS: Filters = {
-  categoryId: null,
-  payeeId: null,
-  tagId: null,
-  methodId: null,
+  categoryIds: [],
+  payeeIds: [],
+  tagIds: [],
+  methodIds: [],
+  text: null,
+  amountMin: null,
+  amountMax: null,
+  statuses: [],
+  transfer: 'any',
 }
 
+const ID_KEYS = [
+  ['categoryIds', 'categoryId'],
+  ['payeeIds', 'payeeId'],
+  ['tagIds', 'tagId'],
+  ['methodIds', 'methodId'],
+] as const
+
+const STATUS_VALUES = ['UNRECONCILED', 'CLEARED', 'RECONCILED', 'VOID']
+
 /**
- * Filters live in the URL so a filtered list can be shared or reloaded. Only
- * positive ids are accepted; anything else falls back to "all".
+ * Filters live in the URL so a filtered list can be shared or reloaded. Lists
+ * are repeated parameters (`?tagId=1&tagId=2`), which is what the API accepts.
  */
 export function filtersFromUrl(search: string): Filters {
   const params = new URLSearchParams(search)
-  const read = (key: (typeof FILTER_KEYS)[number]) => {
-    const value = Number(params.get(key))
-    return Number.isInteger(value) && value > 0 ? value : null
+  const ids = (name: string) =>
+    params
+      .getAll(name)
+      .flatMap((value) => value.split(','))
+      .map((value) => Number(value))
+      .filter((value) => Number.isInteger(value) && value > 0)
+
+  const number = (name: string) => {
+    const raw = params.get(name)
+    if (raw === null || raw.trim() === '') return null
+    const value = Number(raw)
+    return Number.isFinite(value) && value >= 0 ? Math.round(value) : null
   }
+
+  const text = params.get('q')?.trim() ?? ''
+  const transfer = params.get('transfer')
+
   return {
-    categoryId: read('categoryId'),
-    payeeId: read('payeeId'),
-    tagId: read('tagId'),
-    methodId: read('methodId'),
+    categoryIds: ids('categoryId'),
+    payeeIds: ids('payeeId'),
+    tagIds: ids('tagId'),
+    methodIds: ids('methodId'),
+    text: text === '' ? null : text,
+    amountMin: number('amountMin'),
+    amountMax: number('amountMax'),
+    statuses: params
+      .getAll('status')
+      .flatMap((value) => value.split(','))
+      .map((value) => value.trim().toUpperCase())
+      .filter((value) => STATUS_VALUES.includes(value)),
+    transfer: transfer === 'true' ? 'only' : transfer === 'false' ? 'none' : 'any',
   }
 }
 
 export function searchWithFilters(search: string, filters: Filters): string {
   const params = new URLSearchParams(search)
-  for (const key of FILTER_KEYS) {
-    const value = filters[key]
-    if (value === null) params.delete(key)
-    else params.set(key, String(value))
+  for (const [field, name] of ID_KEYS) {
+    params.delete(name)
+    for (const id of filters[field]) params.append(name, String(id))
   }
+  params.delete('status')
+  for (const status of filters.statuses) params.append('status', status)
+
+  const simple: Array<[string, string | number | null]> = [
+    ['q', filters.text],
+    ['amountMin', filters.amountMin],
+    ['amountMax', filters.amountMax],
+  ]
+  for (const [name, value] of simple) {
+    if (value === null || value === '') params.delete(name)
+    else params.set(name, String(value))
+  }
+
+  if (filters.transfer === 'any') params.delete('transfer')
+  else params.set('transfer', filters.transfer === 'only' ? 'true' : 'false')
+
   const query = params.toString()
   return query ? `?${query}` : ''
 }
 
-
-export type Grouping = 'NONE' | 'DAY' | 'WEEK' | 'MONTH' | 'YEAR'
-
-export const GROUPINGS: Grouping[] = ['NONE', 'DAY', 'WEEK', 'MONTH', 'YEAR']
+export function activeFilterCount(filters: Filters): number {
+  return (
+    filters.categoryIds.length +
+    filters.payeeIds.length +
+    filters.tagIds.length +
+    filters.methodIds.length +
+    filters.statuses.length +
+    (filters.text ? 1 : 0) +
+    (filters.amountMin !== null || filters.amountMax !== null ? 1 : 0) +
+    (filters.transfer === 'any' ? 0 : 1)
+  )
+}
 
 const GROUPING_STORAGE_KEY = 'myexpenses.grouping'
 

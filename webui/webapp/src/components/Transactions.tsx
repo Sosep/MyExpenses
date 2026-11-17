@@ -18,15 +18,17 @@ import {
   monthRange,
   categoryPathMap,
   kindLabel,
+  parseAmountMinor,
   statusClass,
   statusLabel,
 } from '../format'
 import { t } from '@lingui/core/macro'
 import { useAsync } from '../hooks'
-import { SearchSelect } from './SearchSelect'
+import { MultiPicker } from './MultiPicker'
 import { NO_FILTERS, filtersFromUrl, searchWithFilters } from '../filters'
 import type { Filters, Grouping, RangePreset, RangeState } from '../filters'
 import {
+  activeFilterCount as countFilters,
   searchWithViewState,
   groupingFromUrl,
   rangeFromUrl,
@@ -52,6 +54,12 @@ function description(transaction: Transaction): string {
 function amountClass(transaction: Transaction): string {
   if (transaction.kind === 'TRANSFER') return 'amount-neutral'
   return transaction.amountMinor > 0 ? 'amount-pos' : 'amount-neg'
+}
+
+/** Minor units typed back into the decimal field the user edits. */
+function amountText(value: number | null, fractionDigits: number): string {
+  if (value === null) return ''
+  return (value / Math.pow(10, fractionDigits)).toString().replace('.', ',')
 }
 
 /** `second` is 0-based for months; for days it is the day of the year (1-based). */
@@ -111,8 +119,8 @@ export function Transactions({
   const window_ = resolveRange(range.preset, range)
   const apiType = type === 'all' ? 'both' : type
   const filtersKey = JSON.stringify(filters)
-  const hasFilters = Object.values(filters).some((value) => value !== null)
-  const activeFilterCount = Object.values(filters).filter((value) => value !== null).length
+  const activeFilterCount = countFilters(filters)
+  const hasFilters = activeFilterCount > 0
 
   useEffect(() => {
     rememberGrouping(grouping)
@@ -153,21 +161,75 @@ export function Transactions({
     [references.data?.categories, paths],
   )
   const chips = useMemo(() => {
-    const list = [
-      ['categoryId', 'categories'],
-      ['payeeId', 'payees'],
-      ['tagId', 'tags'],
-      ['methodId', 'methods'],
+    const list: Array<{ key: string; label: string; clear: () => void }> = []
+    const idChips = [
+      ['categoryIds', 'categories', 'categoryId'],
+      ['payeeIds', 'payees', 'payeeId'],
+      ['tagIds', 'tags', 'tagId'],
+      ['methodIds', 'methods', 'methodId'],
     ] as const
-    return list.flatMap(([key, source]) => {
-      const id = filters[key]
-      if (id === null) return []
-      const item = (references.data?.[source] ?? []).find((entry) => entry.id === id)
-      const text = item && 'label' in item ? item.label : item && 'name' in item ? item.name : null
-      const label = key === 'categoryId' ? (paths.get(id) ?? text ?? String(id)) : (text ?? String(id))
-      return [{ key, label }]
-    })
-  }, [filters, references.data, paths])
+    for (const [field, source, name] of idChips) {
+      for (const id of filters[field]) {
+        const item = (references.data?.[source] ?? []).find((entry) => entry.id === id)
+        const text =
+          item && 'label' in item ? item.label : item && 'name' in item ? item.name : null
+        const label =
+          field === 'categoryIds' ? (paths.get(id) ?? text ?? String(id)) : (text ?? String(id))
+        list.push({
+          key: `${name}-${id}`,
+          label,
+          clear: () =>
+            setFilters((previous) => ({
+              ...previous,
+              [field]: previous[field].filter((value) => value !== id),
+            })),
+        })
+      }
+    }
+    if (filters.text) {
+      list.push({
+        key: 'q',
+        label: `“${filters.text}”`,
+        clear: () => setFilters((previous) => ({ ...previous, text: null })),
+      })
+    }
+    if (filters.amountMin !== null || filters.amountMax !== null) {
+      const min = filters.amountMin ?? 0
+      const max = filters.amountMax
+      list.push({
+        key: 'amount',
+        label:
+          max === null
+            ? `≥ ${formatMoney(min, account.currency, account.fractionDigits)}`
+            : `${formatMoney(min, account.currency, account.fractionDigits)} – ${formatMoney(
+                max,
+                account.currency,
+                account.fractionDigits,
+              )}`,
+        clear: () =>
+          setFilters((previous) => ({ ...previous, amountMin: null, amountMax: null })),
+      })
+    }
+    for (const status of filters.statuses) {
+      list.push({
+        key: `status-${status}`,
+        label: statusLabel(status),
+        clear: () =>
+          setFilters((previous) => ({
+            ...previous,
+            statuses: previous.statuses.filter((value) => value !== status),
+          })),
+      })
+    }
+    if (filters.transfer !== 'any') {
+      list.push({
+        key: 'transfer',
+        label: filters.transfer === 'only' ? t`Only transfers` : t`No transfers`,
+        clear: () => setFilters((previous) => ({ ...previous, transfer: 'any' })),
+      })
+    }
+    return list
+  }, [filters, references.data, paths, account.currency, account.fractionDigits])
 
   const grouped = useAsync(
     () => getGrouped(account.id, grouping, window_.from ?? '1970-01-01', window_.to ?? '2999-12-31'),
@@ -435,7 +497,7 @@ export function Transactions({
               type="button"
               className="filter-chip"
               aria-label={t`Remove filter: ${chip.label}`}
-              onClick={() => setFilters((previous) => ({ ...previous, [chip.key]: null }))}
+              onClick={chip.clear}
             >
               {chip.label}
               <span aria-hidden="true">×</span>
@@ -449,79 +511,154 @@ export function Transactions({
         className={`transaction-filters ${filtersOpen ? 'open' : ''}`}
       >
         <label className="field">
+          <span className="field-label">{t`Search`}</span>
+          <input
+            type="search"
+            aria-label={t`Search in description, payee and reference`}
+            placeholder={t`Description, payee or reference`}
+            value={filters.text ?? ''}
+            onChange={(event) => {
+              const value = event.target.value
+              setFilters((previous) => ({ ...previous, text: value === '' ? null : value }))
+            }}
+          />
+        </label>
+        <label className="field">
+          <span className="field-label">{t`Amount from`}</span>
+          <input
+            inputMode="decimal"
+            aria-label={t`Amount from`}
+            placeholder="0"
+            value={amountText(filters.amountMin, account.fractionDigits)}
+            onChange={(event) => {
+              const value = parseAmountMinor(event.target.value, account.fractionDigits)
+              setFilters((previous) => ({ ...previous, amountMin: value }))
+            }}
+          />
+        </label>
+        <label className="field">
+          <span className="field-label">{t`Amount to`}</span>
+          <input
+            inputMode="decimal"
+            aria-label={t`Amount to`}
+            placeholder="—"
+            value={amountText(filters.amountMax, account.fractionDigits)}
+            onChange={(event) => {
+              const value = parseAmountMinor(event.target.value, account.fractionDigits)
+              setFilters((previous) => ({ ...previous, amountMax: value }))
+            }}
+          />
+        </label>
+        <label className="field">
           <span className="field-label">{t`Category`}</span>
-          <SearchSelect
+          <MultiPicker
             ariaLabel={t`Filter by category`}
-            value={filters.categoryId === null ? '' : String(filters.categoryId)}
             options={categoryOptions}
-            onChange={(value) =>
+            values={filters.categoryIds.map(String)}
+            onChange={(values) =>
               setFilters((previous) => ({
                 ...previous,
-                categoryId: value ? Number(value) : null,
+                categoryIds: values.map(Number),
               }))
             }
           />
         </label>
         <label className="field">
           <span className="field-label">{t`Payee`}</span>
-          <SearchSelect
+          <MultiPicker
             ariaLabel={t`Filter by payee`}
-            value={filters.payeeId === null ? '' : String(filters.payeeId)}
-            options={[
-              { value: '', label: t`All` },
-              ...(references.data?.payees ?? []).map((payee) => ({
-                value: String(payee.id),
-                label: payee.name,
-              })),
-            ]}
-            onChange={(value) =>
+            options={(references.data?.payees ?? []).map((payee) => ({
+              value: String(payee.id),
+              label: payee.name,
+            }))}
+            values={filters.payeeIds.map(String)}
+            onChange={(values) =>
               setFilters((previous) => ({
                 ...previous,
-                payeeId: value ? Number(value) : null,
+                payeeIds: values.map(Number),
               }))
             }
           />
         </label>
         <label className="field">
           <span className="field-label">{t`Tag`}</span>
-          <SearchSelect
+          <MultiPicker
             ariaLabel={t`Filter by tag`}
-            value={filters.tagId === null ? '' : String(filters.tagId)}
-            options={[
-              { value: '', label: t`All` },
-              ...(references.data?.tags ?? []).map((tag) => ({
-                value: String(tag.id),
-                label: tag.label,
-              })),
-            ]}
-            onChange={(value) =>
+            options={(references.data?.tags ?? []).map((tag) => ({
+              value: String(tag.id),
+              label: tag.label,
+            }))}
+            values={filters.tagIds.map(String)}
+            onChange={(values) =>
               setFilters((previous) => ({
                 ...previous,
-                tagId: value ? Number(value) : null,
+                tagIds: values.map(Number),
               }))
             }
           />
         </label>
         <label className="field">
           <span className="field-label">{t`Method`}</span>
-          <SearchSelect
+          <MultiPicker
             ariaLabel={t`Filter by method`}
-            value={filters.methodId === null ? '' : String(filters.methodId)}
-            options={[
-              { value: '', label: t`All` },
-              ...(references.data?.methods ?? []).map((method) => ({
-                value: String(method.id),
-                label: method.label,
-              })),
-            ]}
-            onChange={(value) =>
+            options={(references.data?.methods ?? []).map((method) => ({
+              value: String(method.id),
+              label: method.label,
+            }))}
+            values={filters.methodIds.map(String)}
+            onChange={(values) =>
               setFilters((previous) => ({
                 ...previous,
-                methodId: value ? Number(value) : null,
+                methodIds: values.map(Number),
               }))
             }
           />
         </label>
+        <div className="field">
+          <span className="field-label">{t`Status`}</span>
+          <div className="segmented" role="group" aria-label={t`Status`}>
+            {(['UNRECONCILED', 'CLEARED', 'RECONCILED'] as const).map((status) => (
+              <button
+                key={status}
+                type="button"
+                className={filters.statuses.includes(status) ? 'active' : ''}
+                aria-pressed={filters.statuses.includes(status)}
+                onClick={() =>
+                  setFilters((previous) => ({
+                    ...previous,
+                    statuses: previous.statuses.includes(status)
+                      ? previous.statuses.filter((value) => value !== status)
+                      : [...previous.statuses, status],
+                  }))
+                }
+              >
+                {statusLabel(status)}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="field">
+          <span className="field-label">{t`Transfers`}</span>
+          <div className="segmented" role="group" aria-label={t`Transfers`}>
+            {(
+              [
+                ['any', t`All`],
+                ['only', t`Only transfers`],
+                ['none', t`No transfers`],
+              ] as const
+            ).map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                className={filters.transfer === value ? 'active' : ''}
+                aria-pressed={filters.transfer === value}
+                onClick={() => setFilters((previous) => ({ ...previous, transfer: value }))}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
         {hasFilters ? (
           <button
             type="button"

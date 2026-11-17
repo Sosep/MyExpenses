@@ -109,6 +109,10 @@ msgstr "Actions"
 msgid "Activity by {noun}"
 msgstr "Activity by {noun}"
 
+#: src/components/MultiPicker.tsx
+msgid "Add…"
+msgstr "Add…"
+
 #: src/components/Transactions.tsx
 msgid "All"
 msgstr "All"
@@ -146,6 +150,14 @@ msgstr "Amount"
 #: src/components/TransactionEditor.tsx
 msgid "Amount (signed)"
 msgstr "Amount (signed)"
+
+#: src/components/Transactions.tsx
+msgid "Amount from"
+msgstr "Amount from"
+
+#: src/components/Transactions.tsx
+msgid "Amount to"
+msgstr "Amount to"
 
 #: src/components/Files.tsx
 msgid "Backups and exports stored on the phone"
@@ -413,6 +425,10 @@ msgstr "Deleting…"
 #: src/components/Transactions.tsx
 msgid "Description"
 msgstr "Description"
+
+#: src/components/Transactions.tsx
+msgid "Description, payee or reference"
+msgstr "Description, payee or reference"
 
 #: src/components/TransactionPanel.tsx
 msgid "Details"
@@ -775,6 +791,10 @@ msgstr "No transactions this month"
 msgid "No transactions yet"
 msgstr "No transactions yet"
 
+#: src/components/Transactions.tsx
+msgid "No transfers"
+msgstr "No transfers"
+
 #: src/components/TransactionEditor.tsx
 #: src/components/Transactions.tsx
 msgid "None"
@@ -801,6 +821,10 @@ msgstr "One-time"
 #: src/components/BudgetEditor.tsx
 msgid "One-time period"
 msgstr "One-time period"
+
+#: src/components/Transactions.tsx
+msgid "Only transfers"
+msgstr "Only transfers"
 
 #. placeholder {0}: description(transaction)
 #: src/components/Transactions.tsx
@@ -928,6 +952,8 @@ msgid "Remove a filter to see more."
 msgstr "Remove a filter to see more."
 
 #. placeholder {0}: chip.label
+#. placeholder {0}: labels.get(value) ?? value
+#: src/components/MultiPicker.tsx
 #: src/components/Transactions.tsx
 msgid "Remove filter: {0}"
 msgstr "Remove filter: {0}"
@@ -983,6 +1009,14 @@ msgstr "saved this month"
 #: src/components/TransactionEditor.tsx
 msgid "Saving…"
 msgstr "Saving…"
+
+#: src/components/Transactions.tsx
+msgid "Search"
+msgstr "Search"
+
+#: src/components/Transactions.tsx
+msgid "Search in description, payee and reference"
+msgstr "Search in description, payee and reference"
 
 #: src/components/Shell.tsx
 msgid "Sections"
@@ -1042,6 +1076,7 @@ msgid "Start"
 msgstr "Start"
 
 #: src/components/TransactionPanel.tsx
+#: src/components/Transactions.tsx
 msgid "Status"
 msgstr "Status"
 
@@ -1179,6 +1214,10 @@ msgstr "Transactions will appear here as soon as you record them in the app."
 #: src/format.ts
 msgid "Transfer"
 msgstr "Transfer"
+
+#: src/components/Transactions.tsx
+msgid "Transfers"
+msgstr "Transfers"
 
 #: src/components/Budgets.tsx
 #: src/components/Files.tsx
