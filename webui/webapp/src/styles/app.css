@@ -97,16 +97,71 @@ button:disabled {
   flex: none;
 }
 
-.crumb {
-  color: var(--text-muted);
-  font-size: 12px;
-}
-
 .top-right {
   margin-left: auto;
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.top-inline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* The menu only exists on narrow screens: there the language, theme and session
+   controls do not fit next to the account picker. */
+.more-menu {
+  display: none;
+  position: relative;
+}
+
+.menu-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 60;
+  min-width: 220px;
+  padding: 6px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  box-shadow: var(--shadow-card);
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: var(--control-h);
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 14px;
+  text-align: left;
+}
+
+.menu-item:hover {
+  background: var(--bg-canvas);
+}
+
+.menu-item:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+
+.menu-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 4px 10px 8px;
+  font-size: 12px;
+  color: var(--text-muted);
 }
 
 .account-picker {
@@ -244,7 +299,7 @@ button:disabled {
 .page-head p {
   margin: 4px 0 0;
   color: var(--text-muted);
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .page-actions {
@@ -261,7 +316,7 @@ button:disabled {
   background: var(--bg-surface);
   color: var(--text-primary);
   padding: 0 12px;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   display: inline-flex;
   align-items: center;
@@ -382,6 +437,10 @@ button:disabled {
   background: var(--tint-lavender);
 }
 
+.kpi.sky {
+  background: var(--tint-sky);
+}
+
 .kpi-value {
   font-size: 20px;
   font-weight: 600;
@@ -483,7 +542,7 @@ button:disabled {
 
 .chart-label {
   text-align: center;
-  font-size: 10px;
+  font-size: 11px;
   color: var(--text-muted);
   margin-top: 6px;
   white-space: nowrap;
@@ -568,7 +627,7 @@ button:disabled {
 .table td {
   padding: 11px 16px;
   border-bottom: 1px solid var(--border-subtle);
-  font-size: 13px;
+  font-size: 14px;
   vertical-align: middle;
 }
 
@@ -731,14 +790,14 @@ button:disabled {
 }
 
 .summary-strip span {
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--text-muted);
 }
 
 .summary-strip b {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -831,7 +890,7 @@ button:disabled {
 
 .panel-date {
   color: var(--text-muted);
-  font-size: 13px;
+  font-size: 14px;
   margin-top: 4px;
 }
 
@@ -854,7 +913,7 @@ button:disabled {
 }
 
 .field-value {
-  font-size: 13px;
+  font-size: 14px;
   overflow-wrap: anywhere;
 }
 
@@ -863,7 +922,7 @@ button:disabled {
   border-radius: 10px;
   background: var(--tint-sky);
   color: var(--text-secondary);
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .section-title {
@@ -879,7 +938,7 @@ button:disabled {
 
 .parts-table th {
   text-align: left;
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--text-muted);
@@ -891,7 +950,7 @@ button:disabled {
 .parts-table td {
   padding: 8px 0;
   border-bottom: 1px solid var(--border-subtle);
-  font-size: 13px;
+  font-size: 14px;
   vertical-align: top;
 }
 
@@ -905,7 +964,7 @@ button:disabled {
   display: flex;
   justify-content: space-between;
   padding-top: 8px;
-  font-size: 13px;
+  font-size: 14px;
   font-variant-numeric: tabular-nums;
 }
 
@@ -942,14 +1001,14 @@ button:disabled {
   justify-content: center;
   gap: 12px;
   color: var(--text-muted);
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .boot .mark {
   width: 34px;
   height: 34px;
   border-radius: 9px;
-  font-size: 17px;
+  font-size: 16px;
 }
 
 .login-card {
@@ -982,7 +1041,7 @@ button:disabled {
 .login-card p {
   margin: 4px 0 0;
   color: var(--text-muted);
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .login-form {
@@ -1015,7 +1074,7 @@ button:disabled {
 .error-text {
   margin: 0;
   color: var(--negative);
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .empty {
@@ -1055,7 +1114,7 @@ button:disabled {
 .empty-card p {
   margin: 0;
   color: var(--text-muted);
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .banner {
@@ -1066,7 +1125,7 @@ button:disabled {
   border-radius: 10px;
   background: var(--tint-rose);
   color: var(--negative);
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .banner span {
@@ -1148,7 +1207,7 @@ button:disabled {
 
   .rail-label {
     display: block;
-    font-size: 10px;
+    font-size: 11px;
     line-height: 1.1;
     white-space: nowrap;
   }
@@ -1167,24 +1226,12 @@ button:disabled {
     padding: 0 12px;
   }
 
-  .crumb {
-    display: none;
-  }
-
   .account-select {
     max-width: 140px;
   }
 
   .topbar {
     gap: 8px;
-  }
-
-  .kpis {
-    grid-template-columns: 1fr;
-  }
-
-  .hero {
-    grid-column: auto;
   }
 
   .hide-sm {
@@ -1309,7 +1356,7 @@ button:disabled {
 
 .confirm-box p {
   margin: 0 0 10px;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--text-secondary);
 }
 
@@ -1433,7 +1480,7 @@ button:disabled {
   color: var(--bg-canvas);
   padding: 10px 14px;
   border-radius: 10px;
-  font-size: 13px;
+  font-size: 14px;
   box-shadow: var(--shadow-card);
 }
 
@@ -1647,7 +1694,7 @@ button:disabled {
   display: flex;
   flex-wrap: wrap;
   gap: 16px;
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .budget-summary-figures strong {
@@ -1686,7 +1733,7 @@ button:disabled {
 
 .budget-card-head h2 {
   margin: 0;
-  font-size: 15px;
+  font-size: 16px;
 }
 
 .budget-card-head p {
@@ -1736,11 +1783,35 @@ button:disabled {
   background: var(--negative);
 }
 
+.budget-fill.warn {
+  background: var(--warning);
+}
+
+.budget-summary-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.budget-summary-bar .budget-bar {
+  flex: 1;
+}
+
+.budget-summary-pct {
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
 .budget-card-foot {
   display: flex;
-  justify-content: space-between;
+  align-items: center;
   gap: 8px;
   font-size: 11px;
+
+  /* The meta stays on one line; the two actions go to the right edge. */
+  white-space: nowrap;
+
   color: var(--text-muted);
 }
 
@@ -1768,7 +1839,7 @@ button:disabled {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--text-primary);
 }
 
@@ -1831,7 +1902,7 @@ button:disabled {
 }
 
 .breakdown-label {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1839,7 +1910,7 @@ button:disabled {
 }
 
 .breakdown-amount {
-  font-size: 13px;
+  font-size: 14px;
   font-variant-numeric: tabular-nums;
   text-align: right;
   white-space: nowrap;
@@ -2000,8 +2071,16 @@ button:disabled {
   align-items: end;
 }
 
+.filters-toggle {
+  display: none;
+}
+
 .transaction-filters .field {
   min-width: 0;
+}
+
+.transaction-filters.open {
+  display: grid;
 }
 
 .clear-filters {
@@ -2009,7 +2088,13 @@ button:disabled {
 }
 
 @media (max-width: 760px) {
+  .filters-toggle {
+    display: inline-flex;
+    margin-bottom: 10px;
+  }
+
   .transaction-filters {
+    display: none;
     grid-template-columns: 1fr 1fr;
     gap: 8px;
   }
@@ -2065,4 +2150,96 @@ button:disabled {
 
 .budget-history-fill.over {
   background: var(--negative);
+}
+
+@media (max-width: 760px) {
+  .top-inline {
+    display: none;
+  }
+
+  .more-menu {
+    display: block;
+  }
+}
+
+/* Phones: the four KPIs sit in two columns so the month numbers stay above the
+   fold; the hero keeps the full width. */
+@media (max-width: 560px) {
+  .hero {
+    min-height: 88px;
+  }
+
+  .kpi {
+    padding: 10px 12px;
+    min-height: 84px;
+  }
+
+  .kpi-value {
+    font-size: 18px;
+  }
+}
+
+/* The floating action replaces the header button on phones. */
+.fab {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .fab {
+    position: fixed;
+    right: 16px;
+    bottom: calc(72px + env(safe-area-inset-bottom));
+    z-index: 45;
+    display: grid;
+    place-items: center;
+    width: 56px;
+    height: 56px;
+    border: 0;
+    border-radius: 50%;
+    background: var(--text-primary);
+    color: var(--bg-canvas);
+    font-size: 26px;
+    line-height: 1;
+    box-shadow: 0 8px 20px rgba(13, 18, 32, 0.28);
+  }
+
+  .fab:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 3px;
+  }
+
+  .new-transaction {
+    display: none;
+  }
+}
+
+/* Reports on a phone: the segmenteds shrink so the toolbar takes three rows
+   instead of four, and the four KPIs sit in two columns. */
+@media (max-width: 560px) {
+  .report-controls {
+    gap: 8px;
+  }
+
+  .segmented button {
+    padding: 0 8px;
+    font-size: 11px;
+  }
+}
+
+.budget-card-foot .budget-history-btn {
+  margin-left: auto;
+}
+
+/* Files: the name carries the date and the extension, so it wraps instead of
+   being cut; the card does not stretch across a 1440px monitor. */
+.files-card {
+  max-width: 760px;
+}
+
+@media (max-width: 760px) {
+  .files-card .table .desc {
+    max-width: 190px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
 }

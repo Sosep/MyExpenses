@@ -205,8 +205,9 @@ píxeles como especificación.
   56                         padding 24
 ```
 
-- Topbar: 48 px, `--bg-surface`, borde inferior de 1 px. Marca a la izquierda;
-  búsqueda, periodo, tema y avatar a la derecha.
+- Topbar: 48 px, `--bg-surface`, borde inferior de 1 px. Marca a la izquierda; cuenta a la
+  derecha y, en pantallas estrechas, un menú `⋯` con idioma, tema y sesión. El nombre de la
+  vista no se repite en la barra: lo dice el H1 de cada pantalla.
 - Rail: 56 px, `--bg-rail`, iconos de 18 px y pill activa de 36 px. Secciones:
   Overview, Transactions, Reports, Budgets, Files; Settings abajo. En móvil se
 convierte en una barra inferior fija con icono y etiqueta, y el contenido reserva

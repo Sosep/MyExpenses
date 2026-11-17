@@ -53,6 +53,7 @@ export function Transactions({
     tagId: number | null
     methodId: number | null
   }>({ categoryId: null, payeeId: null, tagId: null, methodId: null })
+  const [filtersOpen, setFiltersOpen] = useState(false)
   const [extra, setExtra] = useState<Transaction[]>([])
   const [loadingMore, setLoadingMore] = useState(false)
   const [moreError, setMoreError] = useState<string | null>(null)
@@ -62,6 +63,7 @@ export function Transactions({
   const apiType = type === 'all' ? 'both' : type
   const filtersKey = JSON.stringify(filters)
   const hasFilters = Object.values(filters).some((value) => value !== null)
+  const activeFilterCount = Object.values(filters).filter((value) => value !== null).length
   const references = useAsync(async () => {
     const [categories, payees, tags, methods] = await Promise.all([
       getCategories(),
@@ -165,7 +167,11 @@ export function Transactions({
               <IconChevronRight />
             </button>
           </div>
-          <button type="button" className="btn primary" onClick={onNewTransaction}>
+          <button
+            type="button"
+            className="btn primary new-transaction"
+            onClick={onNewTransaction}
+          >
             {t`New transaction`}
           </button>
         </div>
@@ -221,7 +227,20 @@ export function Transactions({
         ) : null}
       </div>
 
-      <div className="transaction-filters">
+      <button
+        type="button"
+        className="btn ghost filters-toggle"
+        aria-expanded={filtersOpen}
+        aria-controls="transaction-filters"
+        onClick={() => setFiltersOpen((open) => !open)}
+      >
+        {activeFilterCount > 0 ? t`Filters (${activeFilterCount})` : t`Filters`}
+      </button>
+
+      <div
+        id="transaction-filters"
+        className={`transaction-filters ${filtersOpen ? 'open' : ''}`}
+      >
         <label className="field">
           <span className="field-label">{t`Category`}</span>
           <SearchSelect

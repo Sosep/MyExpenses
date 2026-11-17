@@ -36,6 +36,17 @@ function groupingLabel(grouping: string): string {
   }
 }
 
+function summaryPercent(spent: number, allocated: number): number {
+  return allocated > 0 ? Math.round((spent / allocated) * 100) : 0
+}
+
+function summaryState(spent: number, allocated: number): string {
+  const percent = summaryPercent(spent, allocated)
+  if (percent > 100) return 'over'
+  if (percent >= 80) return 'warn'
+  return ''
+}
+
 function progressRatio(progress: BudgetProgress): number {
   if (progress.allocatedMinor <= 0) return progress.spentMinor > 0 ? 1 : 0
   return Math.min(progress.spentMinor / progress.allocatedMinor, 1)
@@ -200,16 +211,21 @@ export function Budgets({
                       )} left`}
                 </span>
               </div>
-              <div className="budget-bar">
-                <div
-                  className={`budget-fill ${summary.remaining < 0 ? 'over' : ''}`}
-                  style={{
-                    width: `${Math.min(
-                      summary.allocated > 0 ? (summary.spent / summary.allocated) * 100 : 0,
-                      100,
-                    )}%`,
-                  }}
-                />
+              <div className="budget-summary-bar">
+                <div className="budget-bar">
+                  <div
+                    className={`budget-fill ${summaryState(summary.spent, summary.allocated)}`}
+                    style={{
+                      width: `${Math.min(
+                        summary.allocated > 0 ? (summary.spent / summary.allocated) * 100 : 0,
+                        100,
+                      )}%`,
+                    }}
+                  />
+                </div>
+                <span className="budget-summary-pct">
+                  {summaryPercent(summary.spent, summary.allocated)}%
+                </span>
               </div>
             </div>
           ) : null}
@@ -271,7 +287,7 @@ export function Budgets({
                     aria-label={t`${budget.title} spent`}
                   >
                     <div
-                      className={`budget-fill ${over ? 'over' : ''}`}
+                      className={`budget-fill ${summaryState(progress.spentMinor, progress.allocatedMinor)}`}
                       style={{ width: `${Math.round(ratio * 100)}%` }}
                     />
                   </div>

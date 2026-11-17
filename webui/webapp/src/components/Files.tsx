@@ -81,7 +81,7 @@ export function Files() {
           </div>
         </div>
       ) : (
-        <div className="card table-card">
+        <div className="card table-card files-card">
           <table className="table">
             <thead>
               <tr>

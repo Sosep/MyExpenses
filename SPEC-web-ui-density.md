@@ -26,17 +26,18 @@ anchos y falta jerarquía.
 
 ### Móvil (≤760 px)
 
-- **Topbar de una línea:** `Σ` + nombre de la vista + menú `⋯` (cuenta, idioma, tema,
-  sesión). Sin wordmark partido.
-- **Cuenta y periodo salen del topbar** y viven en el contenido, como chips (“Everyday ▾ ·
-  nov 2026 ▾”).
-- **Resumen:** hero a ancho completo y KPIs en rejilla **2×2** con cifra 14-16 px y sin
-  texto de apoyo; el bloque completo ≤220 px.
+- **Topbar de una línea:** `Σ` + selector de cuenta + menú `⋯` (idioma, tema, sesión). Sin
+  wordmark partido. La cuenta se queda a la vista porque es el filtro que más se usa; el
+  nombre de la vista no se repite en la barra, ya lo dice el H1.
+- **El periodo** no se duplica en la barra: cada pantalla ya lo muestra en su cabecera
+  (Transacciones e Informes con `‹ ›`, Presupuestos con su mes).
+- **Resumen:** hero a ancho completo y KPIs en rejilla **2×2** con cifra 18 px; las cuatro
+  tarjetas ≤200 px y el bloque con el patrimonio ≤300 px.
 - **Transacciones:** el CTA “Nueva transacción” pasa a botón flotante sobre la barra
   inferior; los cuatro filtros se pliegan tras “Filtros (n)” con contador y se abren en una
   hoja; la navegación de mes queda en una fila.
-- **Informes:** los cuatro KPIs se convierten en tira compacta de 3+1; periodo, dimensión y
-  tipo en dos filas como máximo.
+- **Informes:** los cuatro KPIs pasan a 2×2; periodo, dimensión y tipo se reducen a tres
+  filas (cuenta + tres segmentados), que es el mínimo sin convertir un segmentado en selector.
 - **Presupuestos:** el pie de tarjeta es una sola línea (`78% · 14 días · Historial ·
   Editar`) con dos acciones táctiles reales.
 - **Ficheros:** el nombre ocupa dos líneas o se trunca por el centro; la extensión siempre
@@ -103,10 +104,11 @@ con `?metrics=1`. Ningún `100vh`.
 - 390×844: la primera fila de Transacciones empieza en **y ≤ 380** (hoy 478).
 - 390×844: la tarjeta de desglose de Informes empieza en **y ≤ 700** y se ve al menos una
   fila sin desplazar (hoy 863).
-- 390×844: el bloque de KPIs del Resumen ocupa **≤ 220 px** (hoy 448).
+- 390×844: las cuatro tarjetas KPI del Resumen ocupan **≤ 200 px** y el bloque con el
+  patrimonio ≤300 px (hoy 448 en total).
 - 360-1440 px: `scrollWidth === clientWidth` en todas las pantallas.
-- 1440: la tabla de Ficheros no supera ~760 px de ancho útil y los controles de Informes
-  caben en dos filas.
+- 1440: la tabla de Ficheros no supera 760 px de ancho útil; en móvil el nombre del fichero
+  envuelve en vez de perder la extensión.
 - El importe, la categoría y el estado siguen visibles en móvil.
 - No queda ninguna regla con `font-size` de 13, 15 o 17 px; el cuerpo mide 14 px.
 

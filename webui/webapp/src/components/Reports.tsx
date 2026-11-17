@@ -238,7 +238,7 @@ export function Reports({ account, accounts }: ReportsProps) {
                 </div>
                 <div className="kpi-foot">{t`Income minus expenses`}</div>
               </div>
-              <div className="kpi">
+              <div className="kpi sky">
                 <div className="kpi-label">{t`Transactions`}</div>
                 <div className="kpi-value">{totals.count}</div>
                 <div className="kpi-foot">{t`In this month`}</div>

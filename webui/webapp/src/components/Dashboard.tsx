@@ -79,7 +79,11 @@ export function Dashboard({
           >
             {t`Refresh`}
           </button>
-          <button type="button" className="btn primary" onClick={onNewTransaction}>
+          <button
+            type="button"
+            className="btn primary new-transaction"
+            onClick={onNewTransaction}
+          >
             {t`New transaction`}
           </button>
         </div>

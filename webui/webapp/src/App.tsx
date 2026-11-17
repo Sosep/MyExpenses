@@ -219,6 +219,16 @@ export default function App({ initialLocale: initial }: { initialLocale: Locale 
           </div>
         )}
       </Shell>
+      {(view === 'dashboard' || view === 'transactions') && accounts.length > 0 ? (
+        <button
+          type="button"
+          className="fab"
+          aria-label={t`New transaction`}
+          onClick={() => setEditor({ mode: 'create' })}
+        >
+          <span aria-hidden="true">+</span>
+        </button>
+      ) : null}
       {editor ? (
         <TransactionEditor
           mode={editor.mode}

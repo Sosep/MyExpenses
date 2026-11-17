@@ -640,6 +640,10 @@ msgstr "Modified"
 msgid "Monthly"
 msgstr "Monthly"
 
+#: src/components/Shell.tsx
+msgid "More options"
+msgstr "More options"
+
 #: src/components/TransactionEditor.tsx
 msgid "Move money between two accounts."
 msgstr "Move money between two accounts."

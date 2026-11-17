@@ -10,20 +10,29 @@ i18n.activate('es')
 
 const meta: Meta = {
   appVersion: 'test',
-  androidVersion: 'test',
-  fractionDigits: 2,
-  currency: 'EUR',
+  serverTime: '2026-11-17T10:00:00',
+  timeZone: 'Europe/Madrid',
+  locale: 'es',
   homeCurrency: 'EUR',
-} as Meta
+  preferences: { timeEnabled: true, valueDateEnabled: false },
+}
 
 const accounts: Account[] = [
   {
     id: 1,
     label: 'Everyday',
+    type: 'BANK',
     currency: 'EUR',
     fractionDigits: 2,
     currentBalanceMinor: 421080,
-  } as Account,
+    totalMinor: 421080,
+    incomeMinor: 0,
+    expensesMinor: 0,
+    excludeFromTotals: false,
+    sealed: false,
+    color: 0,
+    parentId: null,
+  },
 ]
 
 /**

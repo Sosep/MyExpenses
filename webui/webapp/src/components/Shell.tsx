@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { t } from '@lingui/core/macro'
 import type { Locale } from '../i18n'
@@ -8,6 +9,7 @@ import {
   IconGrid,
   IconList,
   IconLogOut,
+  IconMore,
   IconMoon,
   IconPie,
   IconSettings,
@@ -47,16 +49,17 @@ export function Shell({
   meta,
   children,
 }: ShellProps) {
-  const crumb =
-    view === 'dashboard'
-      ? t`Overview`
-      : view === 'files'
-        ? t`Files`
-        : view === 'budgets'
-          ? t`Budgets`
-          : view === 'reports'
-            ? t`Reports`
-            : t`Transactions`
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!menuOpen) return
+    const onPointer = (event: MouseEvent) => {
+      if (!menuRef.current?.contains(event.target as Node)) setMenuOpen(false)
+    }
+    document.addEventListener('mousedown', onPointer)
+    return () => document.removeEventListener('mousedown', onPointer)
+  }, [menuOpen])
 
   return (
     <div className="app">
@@ -65,7 +68,6 @@ export function Shell({
           <span className="mark">Σ</span>
           <span className="brand-word">My Expenses</span>
         </div>
-        <span className="crumb">{crumb}</span>
         <div className="top-right">
           {view === 'dashboard' || view === 'transactions' || view === 'reports' ? (
             <label className="account-picker">
@@ -83,39 +85,93 @@ export function Shell({
               </select>
             </label>
           ) : null}
-          <label className="account-picker locale-picker">
-            <span className="sr-only">{t`Language`}</span>
-            <select
-              className="account-select"
-              aria-label={t`Language`}
-              value={locale}
-              onChange={(event) => onLocale(event.target.value as Locale)}
+          <div className="top-inline">
+            <label className="account-picker locale-picker">
+              <span className="sr-only">{t`Language`}</span>
+              <select
+                className="account-select"
+                aria-label={t`Language`}
+                value={locale}
+                onChange={(event) => onLocale(event.target.value as Locale)}
+              >
+                {locales.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button
+              type="button"
+              className="icon-btn"
+              onClick={onTheme}
+              title={theme === 'dark' ? t`Switch to bright` : t`Switch to dark`}
+              aria-label={theme === 'dark' ? t`Switch to bright` : t`Switch to dark`}
             >
-              {locales.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button
-            type="button"
-            className="icon-btn"
-            onClick={onTheme}
-            title={theme === 'dark' ? t`Switch to bright` : t`Switch to dark`}
-            aria-label={theme === 'dark' ? t`Switch to bright` : t`Switch to dark`}
-          >
-            {theme === 'dark' ? <IconSun /> : <IconMoon />}
-          </button>
-          <button
-            type="button"
-            className="icon-btn"
-            onClick={onLogout}
-            title={t`Sign out`}
-            aria-label={t`Sign out`}
-          >
-            <IconLogOut />
-          </button>
+              {theme === 'dark' ? <IconSun /> : <IconMoon />}
+            </button>
+            <button
+              type="button"
+              className="icon-btn"
+              onClick={onLogout}
+              title={t`Sign out`}
+              aria-label={t`Sign out`}
+            >
+              <IconLogOut />
+            </button>
+          </div>
+          <div className="more-menu" ref={menuRef}>
+            <button
+              type="button"
+              className="icon-btn"
+              aria-label={t`More options`}
+              aria-expanded={menuOpen}
+              onClick={() => setMenuOpen((open) => !open)}
+            >
+              <IconMore />
+            </button>
+            {menuOpen ? (
+              <div className="menu-panel">
+                <label className="menu-field">
+                  <span>{t`Language`}</span>
+                  <select
+                    className="account-select"
+                    aria-label={t`Language`}
+                    value={locale}
+                    onChange={(event) => onLocale(event.target.value as Locale)}
+                  >
+                    {locales.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <button
+                  type="button"
+                  className="menu-item"
+                  onClick={() => {
+                    setMenuOpen(false)
+                    onTheme()
+                  }}
+                >
+                  {theme === 'dark' ? <IconSun /> : <IconMoon />}
+                  {theme === 'dark' ? t`Switch to bright` : t`Switch to dark`}
+                </button>
+                <button
+                  type="button"
+                  className="menu-item"
+                  onClick={() => {
+                    setMenuOpen(false)
+                    onLogout()
+                  }}
+                >
+                  <IconLogOut />
+                  {t`Sign out`}
+                </button>
+              </div>
+            ) : null}
+          </div>
         </div>
       </header>
       <div className="body">
