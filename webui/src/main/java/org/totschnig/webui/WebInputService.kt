@@ -23,6 +23,7 @@ import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.gson.gson
 import io.ktor.server.application.ApplicationCall
+import io.ktor.server.application.createApplicationPlugin
 import io.ktor.server.application.install
 import io.ktor.server.auth.Authentication
 import io.ktor.server.auth.authenticate
@@ -33,9 +34,15 @@ import io.ktor.server.engine.embeddedServer
 import io.ktor.server.engine.sslConnector
 import io.ktor.server.netty.Netty
 import io.ktor.server.plugins.BadRequestException
+import io.ktor.server.plugins.compression.Compression
+import io.ktor.server.plugins.compression.gzip
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.server.plugins.defaultheaders.DefaultHeaders
+import io.ktor.server.plugins.origin
 import io.ktor.server.plugins.statuspages.StatusPages
+import io.ktor.server.request.path
 import io.ktor.server.request.receive
+import io.ktor.server.response.header
 import io.ktor.server.response.respond
 import io.ktor.server.response.respondBytes
 import io.ktor.server.response.respondRedirect
@@ -117,6 +124,18 @@ import org.totschnig.webui.api.FileDto
 import org.totschnig.webui.api.SessionLoginDto
 
 private const val STOP_CLICK_ACTION = "STOP_CLICK_ACTION"
+
+// The shell is a Vite build. Its index.html boots the theme with an inline
+// script, so scripts keep 'unsafe-inline' until that moves into the bundle;
+// everything else is restricted to the app's own origin.
+private const val APP_CSP =
+    "default-src 'self'; script-src 'self' 'unsafe-inline'; " +
+        "style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; " +
+        "connect-src 'self'; manifest-src 'self'; worker-src 'self'; " +
+        "frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+
+// JSON endpoints never need to load anything.
+private const val API_CSP = "default-src 'none'; frame-ancestors 'none'"
 
 class WebInputService : LifecycleService(), IWebInputService {
 
@@ -288,6 +307,35 @@ class WebInputService : LifecycleService(), IWebInputService {
                             }
                         },
                         module = {
+                            // The bundle is ~388 kB and the browser asks for gzip.
+                            install(Compression) {
+                                gzip { priority = 1.0 }
+                            }
+                            install(DefaultHeaders) {
+                                header("X-Content-Type-Options", "nosniff")
+                                header("Referrer-Policy", "no-referrer")
+                                header("X-Frame-Options", "DENY")
+                                header(
+                                    "Permissions-Policy",
+                                    "camera=(), microphone=(), geolocation=()"
+                                )
+                            }
+                            install(
+                                createApplicationPlugin("SecurityHeaders") {
+                                    onCall { call ->
+                                        // The API never serves resources; the shell needs its
+                                        // own origin for the bundle, fonts, icons and worker.
+                                        call.response.header(
+                                            "Content-Security-Policy",
+                                            if (call.request.path().startsWith("/api/")) {
+                                                API_CSP
+                                            } else {
+                                                APP_CSP
+                                            }
+                                        )
+                                    }
+                                }
+                            )
                             install(ContentNegotiation) {
                                 gson {
                                     registerTypeAdapter(
@@ -303,6 +351,7 @@ class WebInputService : LifecycleService(), IWebInputService {
                             val passWord = prefHandler.getString(PrefKey.WEBUI_PASSWORD, "")
                                 .takeIf { !it.isNullOrBlank() }
                             val sessions = SessionStore()
+                            val loginThrottle = LoginThrottle()
                             passWord?.let {
                                 install(Authentication) {
                                     session(sessions)
@@ -362,14 +411,28 @@ class WebInputService : LifecycleService(), IWebInputService {
                                     )
                                 }
                                 post("/api/v1/session") {
+                                    val client = call.request.origin.remoteHost
+                                    loginThrottle.retryAfterSeconds(client)?.let { wait ->
+                                        call.response.header(
+                                            HttpHeaders.RetryAfter,
+                                            wait.toString()
+                                        )
+                                        throw ApiException(
+                                            HttpStatusCode.TooManyRequests,
+                                            "too_many_attempts",
+                                            "Too many attempts, retry later"
+                                        )
+                                    }
                                     val body = call.receive<SessionLoginDto>()
                                     if (passWord != null && body.password != passWord) {
+                                        loginThrottle.recordFailure(client)
                                         throw ApiException(
                                             HttpStatusCode.Unauthorized,
                                             "unauthorized",
                                             "Wrong password"
                                         )
                                     }
+                                    loginThrottle.clear(client)
                                     val token = sessions.create()
                                     call.response.cookies.append(
                                         Cookie(

@@ -31,6 +31,9 @@ Read this before changing code. Detailed sources:
   `myexpenses_session` cookie (`SameSite=Strict`, sliding 7 days). `/app` is the
   public shell; `/api/v1` and downloads require the cookie when a password is
   set. Basic and the legacy HTML form are gone; `/` redirects to `/app/`.
+  Wrong passwords are throttled (5 per client in 60 s → `429` with
+  `Retry-After`), responses are gzipped, `nosniff`/`Referrer-Policy`/CSP are
+  sent, and amounts are capped at 10^12 minor units.
 - PWA: `manifest.webmanifest`, PNG icons and `sw.js` cache the `/app` shell; the
   API is network-only, so the app still needs the phone for data. The SPA shows
   offline and update banners.

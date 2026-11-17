@@ -73,8 +73,27 @@ usa en la SPA.
 - CSRF: `SameSite=Strict` y misma origen. La SPA usa `credentials: same-origin`
   y no guarda la contraseña ni la cookie en JavaScript.
 - Nunca se registra la contraseña ni el token en logs.
+- Intentos: 5 fallos por cliente en 60 s. El siguiente intento responde `429
+  too_many_attempts` con `Retry-After` en segundos; un acierto reinicia la
+  ventana. No se distingue entre contraseña incorrecta y bloqueo en los logs.
+
+Transporte y cabeceras:
+
+- gzip para respuestas de más de 1 KiB (`text/*`, JSON y JS), así que el bundle
+  de ~388 kB viaja comprimido cuando el cliente lo pide.
+- `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`,
+  `X-Frame-Options: DENY` y `Permissions-Policy` sin cámara, micrófono ni
+  geolocalización.
+- `Content-Security-Policy` propia: en `/api/**`, `default-src 'none'`; en el
+  resto, todo desde el mismo origen (`script-src 'self' 'unsafe-inline'` porque
+  el `index.html` arranca el tema con un script en línea; pasarlo al bundle es
+  trabajo pendiente, ver `SPEC-endurecimiento.md`).
 
 ## 4. Recursos
+
+Límite de importes: `amountMinor` se rechaza con `422 validation_failed`
+(`amountMinor: Out of range`) cuando supera 10^12 unidades menores en valor
+absoluto, en transacciones, transferencias, partes de dividida y presupuestos.
 
 ### 4.1 Meta
 

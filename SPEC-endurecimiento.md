@@ -32,9 +32,13 @@ de contraseña y acotar los importes que acepta la API.
 2. **Cabeceras**: las respuestas de `/app` y `/api/v1` incluyen
    `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`,
    `Permissions-Policy` mínima y una CSP compatible con la SPA actual (sin
-   `unsafe-eval`; `script-src 'self'`, `style-src 'self' 'unsafe-inline'` por los
-   estilos inline del index, `connect-src 'self'`, `img-src 'self' data:`).
-   Si la CSP rompe el arranque, se ajusta con evidencia y se documenta.
+   `unsafe-eval`; `connect-src 'self'`, `img-src 'self' data:`, `frame-ancestors
+   'none'`).
+   Con la SPA tal cual, `script-src` necesita `'unsafe-inline'`: el `index.html`
+   arranca el tema con un script en línea y quitarlo provoca un flash de tema
+   incorrecto. Se mantiene `'unsafe-inline'` y queda como trabajo pendiente
+   mover ese arranque al bundle o servir la CSP con un hash calculado en el
+   build. Los endpoints JSON llevan `default-src 'none'`.
 3. **Intentos de sesión**: máximo 5 fallos por IP en 60 s; a partir de ahí `429`
    con `Retry-After`. Un acierto reinicia el contador. No se registra la
    contraseña en ningún log.

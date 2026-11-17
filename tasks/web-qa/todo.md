@@ -119,17 +119,26 @@ Se ejecuta en orden. Cada módulo se commitea con sus docs y sus assets si toca 
 
 ## Módulo `endurecimiento`
 
-- [ ] **T12 — gzip y cabeceras**
+- [x] **T12 — gzip y cabeceras**
   - Acceptance: el JS se sirve con `Content-Encoding: gzip`; `/app` y `/api/v1`
     llevan `nosniff`, `Referrer-Policy`, `Permissions-Policy` y CSP que no rompe
     la SPA.
   - Verify: `curl -H 'Accept-Encoding: gzip' -D -`; arranque en el móvil sin
     errores de consola.
   - Files: `WebInputService.kt`, `AGENTS.md`
+  - Hecho: `Compression` (gzip), `DefaultHeaders` (nosniff, Referrer-Policy,
+    X-Frame-Options, Permissions-Policy) y CSP por ruta. `script-src` mantiene
+    `'unsafe-inline'` por el arranque de tema en línea del `index.html`,
+    documentado en `SPEC-endurecimiento.md`. Pendiente de verificar en el móvil.
 
-- [ ] **T13 — Intentos de sesión e importes**
+- [x] **T13 — Intentos de sesión e importes**
   - Acceptance: 6º fallo en un minuto → `429` con `Retry-After`; importe de 10^15
     unidades menores → `422` en cada endpoint de escritura.
   - Verify: `ApiRoutesTest` para ambos; `curl` contra el móvil.
   - Files: `WebInputService.kt`, `ApiRoutes.kt`, `AndroidWebApiDataSource.kt`,
     `API.md`
+  - Hecho: `LoginThrottle` (5 fallos/60 s → 429 con `Retry-After`) con
+    `LoginThrottleTest`, y tope de 10^12 unidades menores en transacciones,
+    transferencias, partes y presupuestos. El límite de intentos vive en
+    `WebInputService`, así que `ApiRoutesTest` no lo cubre: verificación en
+    dispositivo pendiente.

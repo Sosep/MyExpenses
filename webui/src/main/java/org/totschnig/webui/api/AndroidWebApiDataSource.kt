@@ -831,6 +831,14 @@ class AndroidWebApiDataSource(
                 mapOf("amountMinor" to "Must not be negative")
             )
         }
+        if (amount > MAX_AMOUNT_MINOR) {
+            throw ApiException(
+                HttpStatusCode.UnprocessableEntity,
+                "validation_failed",
+                "Invalid amountMinor",
+                mapOf("amountMinor" to "Out of range")
+            )
+        }
         val currency = repository.getCurrencyUnitForAccount(accountId)!!.code
         val budget = Budget(
             id = 0,
@@ -1368,8 +1376,19 @@ private fun Long?.requireNonZero(field: String): Long {
             mapOf(field to "Must not be zero")
         )
     }
+    if (value > MAX_AMOUNT_MINOR || value < -MAX_AMOUNT_MINOR) {
+        throw ApiException(
+            HttpStatusCode.UnprocessableEntity,
+            "validation_failed",
+            "Invalid $field",
+            mapOf(field to "Out of range")
+        )
+    }
     return value
 }
+
+/** Largest amount accepted in minor units (10^12, i.e. 10 000 000 000.00). */
+private const val MAX_AMOUNT_MINOR = 1_000_000_000_000L
 
 private fun String?.requireDate(field: String): LocalDate {
     val value = this?.takeIf { it.isNotBlank() } ?: throw ApiException(
