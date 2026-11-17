@@ -79,7 +79,8 @@ npm run mock
 ```
 
 El mock sirve el build y el API en el mismo origen y se puede probar en
-viewport móvil (390×844) para revisar el layout responsive, e implementa `POST/PUT/DELETE`
+viewport móvil (390×844) para revisar el layout responsive; en móvil la barra
+lateral pasa a una barra inferior, e implementa `POST/PUT/DELETE`
 de transacciones **simples** y de **presupuestos** en memoria, y sirve resumen y
 desglose de informes (recalcula saldo y totales del mes). Las transferencias y
 divididas se pueden abrir y editar visualmente, pero su guardado se prueba contra

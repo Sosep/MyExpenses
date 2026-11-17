@@ -130,6 +130,7 @@ export function Shell({
             aria-current={view === 'dashboard' ? 'page' : undefined}
           >
             <IconGrid />
+            <span className="rail-label">{t`Overview`}</span>
           </button>
           <button
             type="button"
@@ -141,17 +142,7 @@ export function Shell({
             aria-current={view === 'transactions' ? 'page' : undefined}
           >
             <IconList />
-          </button>
-          <button
-            type="button"
-            className={`rail-item ${view === 'files' ? 'active' : ''}`}
-            data-view="files"
-            onClick={() => onView('files')}
-            title={t`Files`}
-            aria-label={t`Files`}
-            aria-current={view === 'files' ? 'page' : undefined}
-          >
-            <IconFile />
+            <span className="rail-label">{t`Transactions`}</span>
           </button>
           <button
             type="button"
@@ -163,6 +154,7 @@ export function Shell({
             aria-current={view === 'reports' ? 'page' : undefined}
           >
             <IconChart />
+            <span className="rail-label">{t`Reports`}</span>
           </button>
           <button
             type="button"
@@ -174,6 +166,19 @@ export function Shell({
             aria-current={view === 'budgets' ? 'page' : undefined}
           >
             <IconPie />
+            <span className="rail-label">{t`Budgets`}</span>
+          </button>
+          <button
+            type="button"
+            className={`rail-item ${view === 'files' ? 'active' : ''}`}
+            data-view="files"
+            onClick={() => onView('files')}
+            title={t`Files`}
+            aria-label={t`Files`}
+            aria-current={view === 'files' ? 'page' : undefined}
+          >
+            <IconFile />
+            <span className="rail-label">{t`Files`}</span>
           </button>
           <div className="rail-spacer" />
           <button

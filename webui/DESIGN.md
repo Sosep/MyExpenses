@@ -208,7 +208,9 @@ píxeles como especificación.
 - Topbar: 48 px, `--bg-surface`, borde inferior de 1 px. Marca a la izquierda;
   búsqueda, periodo, tema y avatar a la derecha.
 - Rail: 56 px, `--bg-rail`, iconos de 18 px y pill activa de 36 px. Secciones:
-  Overview, Transactions, Budgets, Reports; Settings abajo.
+  Overview, Transactions, Reports, Budgets, Files; Settings abajo. En móvil se
+convierte en una barra inferior fija con icono y etiqueta, y el contenido reserva
+espacio para no quedar tapado.
 - Contenido: ancho máximo 1440 px; grid de 12 columnas, gap 16 px.
 - Panel lateral de edición: 380-420 px, sticky, con cabecera y pie fijos.
 - Breakpoints: 1280, 1024, 768, 560.

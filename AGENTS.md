@@ -16,7 +16,8 @@ Read this before changing code. Detailed sources:
   `testApplication`.
 - SPA: dashboard, transactions, detail, reports, files, budgets, and the simple,
   transfer and split editors. The split editor uses signed amounts, a parts list
-  and a part panel. It is installable as a PWA.
+  and a part panel. It is installable as a PWA; on narrow screens the side rail
+  becomes a fixed bottom navigation with icon and label.
 - Budgets: list plus current-period progress, create/update/delete and
   per-category allocations for the current period. The summary only aggregates
   budgets that share currency and period. Account and period type are fixed on
