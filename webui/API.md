@@ -1,7 +1,7 @@
 # API web de MyExpenses (borrador de contrato)
 
-Estado: **lectura, escritura simple, transferencias y divididas implementadas**.
-Presupuestos, informes y ficheros siguen como contrato objetivo.
+Estado: **lectura, escritura simple, transferencias, divididas y ficheros
+implementados**. Presupuestos e informes siguen como contrato objetivo.
 Alcance: API JSON consumida por la web app de escritorio. La app Android sigue
 siendo la fuente de verdad; el servidor corre en el móvil (Ktor, dentro del
 módulo `:webui`). Interfaz y sistema visual: [`DESIGN.md`](./DESIGN.md).
@@ -335,11 +335,30 @@ se convierten con los tipos de cambio que ya usa la app.
 
 | Método | Ruta | Descripción |
 |---|---|---|
-| GET | `/files` | Lista de backups/exportaciones (`name`, `size`, `modified`) |
-| GET | `/files/{name}` | Descarga en streaming |
+| GET | `/files` | Lista de backups/exportaciones (`name`, `size`, `modified`, `link`) |
+| GET | `/files/{name}` | Descarga en streaming con `Content-Disposition: attachment` |
 
-Se mantiene el comportamiento actual (`AppDirHelper`). Validar el nombre contra
-travesía de rutas antes de servir.
+Modelo de lectura:
+
+```json
+{
+  "name": "myexpenses-2026-11-17.backup",
+  "size": 482913,
+  "modified": 1763373600000,
+  "link": "/api/v1/files/myexpenses-2026-11-17.backup"
+}
+```
+
+- `modified` es epoch en milisegundos; la SPA lo formatea en local.
+- Se mantiene el comportamiento actual (`AppDirHelper`): solo ficheros no vacíos
+  del directorio de la app, ordenados por fecha descendente.
+- El nombre se valida contra travesía de rutas (`/`, vacío) antes de servir;
+  cualquier otro nombre se busca con `findFile` y, si no existe, `404`.
+- La descarga exige autenticación (Basic hasta la cookie). La SPA no usa un
+  `<a href>`: pide el fichero con `fetch`, recibe un `Blob` y lo guarda con
+  `URL.createObjectURL`, para enviar la cabecera `Authorization`.
+- Implementación: rutas en `WebInputService` porque dependen de `AppDirHelper` y
+  del `ContentResolver`; no pasan por `WebApiDataSource`.
 
 ### 4.8 Plantillas y planes (v2)
 

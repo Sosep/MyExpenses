@@ -197,3 +197,11 @@ data class GroupDto(
     val expensesMinor: Long,
     val transfersMinor: Long
 )
+
+@Keep
+data class FileDto(
+    val name: String,
+    val size: Long,
+    val modified: Long,
+    val link: String
+)

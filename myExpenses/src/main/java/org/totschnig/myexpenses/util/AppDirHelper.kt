@@ -44,7 +44,7 @@ import kotlin.text.format
 import kotlin.to
 import androidx.core.net.toUri
 
-data class FileInfo(val name: String, val size: Long) {
+data class FileInfo(val name: String, val size: Long, val lastModified: Long = 0L) {
     fun format(context: Context) = "$name (${Formatter.formatFileSize(context, size)})"
 }
 
@@ -68,7 +68,7 @@ object AppDirHelper {
                 }
             }
             .sortedByDescending { it.third }
-            .map { FileInfo(it.first, it.second) }
+            .map { FileInfo(it.first, it.second, it.third) }
     }
 
     fun getAppDirWithDefault(context: Context): Result<Pair<DocumentFile, Boolean>> =

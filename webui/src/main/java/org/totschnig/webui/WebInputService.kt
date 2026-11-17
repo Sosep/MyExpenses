@@ -6,6 +6,7 @@ import android.app.PendingIntent.FLAG_ONE_SHOT
 import android.content.Context
 import android.content.Intent
 import android.database.sqlite.SQLiteConstraintException
+import android.net.Uri
 import android.os.IBinder
 import androidx.annotation.PluralsRes
 import androidx.annotation.StringRes
@@ -109,6 +110,7 @@ import org.totschnig.webui.api.ApiError
 import org.totschnig.webui.api.ApiException
 import org.totschnig.webui.api.AndroidWebApiDataSource
 import org.totschnig.webui.api.ApiRoutes
+import org.totschnig.webui.api.FileDto
 import java.io.IOException
 import java.lang.ref.WeakReference
 import java.net.ServerSocket
@@ -429,10 +431,12 @@ class WebInputService : LifecycleService(), IWebInputService {
                                 if (passWord == null) {
                                     serve()
                                     api.register(this)
+                                    fileRoutes()
                                 } else {
                                     authenticate("auth-basic") {
                                         serve()
                                         api.register(this)
+                                        fileRoutes()
                                     }
                                 }
                             }
@@ -689,6 +693,42 @@ class WebInputService : LifecycleService(), IWebInputService {
                 call.respond(
                     contentResolver.openInputStream(file)!!.toByteReadChannel()
                 )
+            }
+        }
+    }
+
+    private fun Route.fileRoutes() {
+        get("/api/v1/files") {
+            val files = AppDirHelper.getAppDirFiles(this@WebInputService).getOrThrow()
+            call.respond(
+                files.map { file ->
+                    FileDto(
+                        name = file.name,
+                        size = file.size,
+                        modified = file.lastModified,
+                        link = "/api/v1/files/${Uri.encode(file.name)}"
+                    )
+                }
+            )
+        }
+        get("/api/v1/files/{name}") {
+            val name = call.parameters["name"] ?: ""
+            if (name.isBlank() || name.contains('/')) {
+                call.respond(HttpStatusCode.NotFound, "File not found")
+                return@get
+            }
+            val appDir = AppDirHelper.getAppDir(this@WebInputService).getOrThrow()
+            val file = appDir.findFile(name)?.uri?.let {
+                AppDirHelper.ensureContentUri(it, this@WebInputService)
+            }
+            if (file == null) {
+                call.respond(HttpStatusCode.NotFound, "File not found")
+            } else {
+                call.response.headers.append(
+                    HttpHeaders.ContentDisposition,
+                    "attachment; filename=\"${name.replace("\"", "")}\""
+                )
+                call.respond(contentResolver.openInputStream(file)!!.toByteReadChannel())
             }
         }
     }
