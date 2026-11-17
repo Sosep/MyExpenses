@@ -1,8 +1,11 @@
-import { defineConfig, loadEnv } from 'vite'
+import { defineConfig } from 'vitest/config'
+import { loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import { lingui } from '@lingui/vite-plugin'
 import tailwindcss from '@tailwindcss/vite'
 
+// Vitest reuses this config, so tests are transformed by the same Lingui and
+// Tailwind plugins as the build. See the `test` block at the bottom.
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '')
   return {
@@ -19,6 +22,13 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true,
         },
       },
+    },
+    test: {
+      environment: 'jsdom',
+      setupFiles: ['./src/test/setup.ts'],
+      include: ['src/**/*.test.{ts,tsx}'],
+      css: false,
+      restoreMocks: true,
     },
   }
 })

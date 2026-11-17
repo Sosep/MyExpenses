@@ -1,0 +1,74 @@
+import { describe, expect, it } from 'vitest'
+import { i18n } from './i18n'
+import {
+  addMonths,
+  formatDate,
+  formatMoney,
+  monthRange,
+  parseAmountMinor,
+  parseIsoDate,
+} from './format'
+
+describe('formatMoney', () => {
+  it('formats minor units with the active locale', () => {
+    i18n.activate('es')
+    const formatted = formatMoney(123456, 'EUR', 2)
+    expect(formatted).toContain(',56')
+    expect(formatted).toContain('€')
+  })
+
+  it('groups thousands in English', () => {
+    i18n.activate('en')
+    expect(formatMoney(123456, 'EUR', 2)).toContain('1,234.56')
+  })
+
+  it('keeps the minus sign of an expense', () => {
+    i18n.activate('es')
+    expect(formatMoney(-1999, 'EUR', 2).startsWith('−')).toBe(true)
+  })
+
+  it('uses the fraction digits of the currency', () => {
+    i18n.activate('en')
+    expect(formatMoney(1000, 'JPY', 0)).toContain('1,000')
+    expect(formatMoney(1000, 'JPY', 0)).not.toContain('.')
+  })
+})
+
+describe('dates', () => {
+  it('parses ISO dates in local time, not UTC', () => {
+    const date = parseIsoDate('2026-11-17')
+    expect(date.getFullYear()).toBe(2026)
+    expect(date.getMonth()).toBe(10)
+    expect(date.getDate()).toBe(17)
+  })
+
+  it('formats a date with the active locale', () => {
+    i18n.activate('es')
+    expect(formatDate('2026-11-17', { day: '2-digit', month: 'short' })).toContain('17')
+  })
+
+  it('computes the last day of a month', () => {
+    expect(monthRange('2026-02')).toEqual({ from: '2026-02-01', to: '2026-02-28' })
+    expect(monthRange('2024-02')).toEqual({ from: '2024-02-01', to: '2024-02-29' })
+  })
+
+  it('moves across years', () => {
+    expect(addMonths('2026-01', -1)).toBe('2025-12')
+    expect(addMonths('2026-12', 1)).toBe('2027-01')
+  })
+})
+
+describe('parseAmountMinor', () => {
+  it('reads decimal input as a string, comma or dot', () => {
+    expect(parseAmountMinor('12,34', 2)).toBe(1234)
+    expect(parseAmountMinor('12.34', 2)).toBe(1234)
+    expect(parseAmountMinor('12', 2)).toBe(1200)
+  })
+
+  it('rejects amounts that are not positive finite numbers', () => {
+    expect(parseAmountMinor('0', 2)).toBeNull()
+    expect(parseAmountMinor('-3', 2)).toBeNull()
+    expect(parseAmountMinor('1e3', 2)).toBeNull()
+    expect(parseAmountMinor('abc', 2)).toBeNull()
+  })
+})
