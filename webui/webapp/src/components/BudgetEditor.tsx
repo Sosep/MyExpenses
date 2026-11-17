@@ -12,6 +12,7 @@ import {
 } from '../api'
 import { amountInputValue, currencySymbol, parseAmountMinor, todayIso } from '../format'
 import { useAsync } from '../hooks'
+import { SearchSelect } from './SearchSelect'
 import { IconX } from './Icons'
 
 interface BudgetEditorProps {
@@ -330,35 +331,29 @@ export function BudgetEditor({
           <div className="form-row">
             <label className="field">
               <span className="field-label">{t`Account`}</span>
-              <select
-                className="input"
-                aria-label={t`Budget account`}
-                value={state.accountId}
+              <SearchSelect
+                ariaLabel={t`Budget account`}
+                value={String(state.accountId)}
                 disabled={mode === 'edit'}
-                onChange={(event) => update('accountId', Number(event.target.value))}
-              >
-                {accounts.map((candidate) => (
-                  <option key={candidate.id} value={candidate.id}>
-                    {candidate.label}
-                  </option>
-                ))}
-              </select>
+                options={accounts.map((candidate) => ({
+                  value: String(candidate.id),
+                  label: candidate.label,
+                }))}
+                onChange={(value) => update('accountId', Number(value))}
+              />
             </label>
             <label className="field">
               <span className="field-label">{t`Period`}</span>
-              <select
-                className="input"
-                aria-label={t`Budget period`}
+              <SearchSelect
+                ariaLabel={t`Budget period`}
                 value={state.grouping}
                 disabled={mode === 'edit'}
-                onChange={(event) => update('grouping', event.target.value)}
-              >
-                {GROUPINGS.map((option) => (
-                  <option key={option} value={option}>
-                    {groupingLabel(option)}
-                  </option>
-                ))}
-              </select>
+                options={GROUPINGS.map((option) => ({
+                  value: option,
+                  label: groupingLabel(option),
+                }))}
+                onChange={(value) => update('grouping', value)}
+              />
             </label>
           </div>
 

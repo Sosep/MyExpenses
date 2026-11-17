@@ -83,8 +83,6 @@ msgid "Account"
 msgstr "Cuenta"
 
 #: src/components/BudgetEditor.tsx
-
-#: src/components/BudgetEditor.tsx
 msgid "Account and period type are fixed after creation. Rollover stays in the Android app."
 msgstr "La cuenta y el tipo de periodo no se pueden cambiar después de crear el presupuesto. El rollover sigue en la app Android."
 
@@ -120,8 +118,6 @@ msgstr "Asignación de {0}"
 #: src/components/BudgetEditor.tsx
 msgid "Allocations and rollover apply to the current period."
 msgstr "Las asignaciones y el rollover se aplican al periodo actual."
-
-#: src/components/BudgetEditor.tsx
 
 #: src/components/BudgetEditor.tsx
 #: src/components/Dashboard.tsx
@@ -608,6 +604,10 @@ msgstr "Sin categoría"
 #: src/components/Files.tsx
 msgid "No files yet"
 msgstr "Todavía no hay ficheros"
+
+#: src/components/SearchSelect.tsx
+msgid "No matches"
+msgstr "Sin resultados"
 
 #. placeholder {0}: formatMonth(year, monthNumber)
 #: src/components/Transactions.tsx

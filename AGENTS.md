@@ -91,6 +91,8 @@ assets.
 - Split amounts are signed and must sum to the parent; the account is fixed when
   editing a split. Transfer amounts are a positive magnitude; the server builds
   both sides.
+- Data-list dropdowns use `SearchSelect` (type to filter) instead of native
+  `<select>`; short enums and the topbar language picker may stay native.
 - All visible copy goes through Lingui `t`/`<Trans>`; after adding text run
   `cd webui/webapp && npm run i18n:extract` and fill the Spanish `msgstr`.
 - Add write UI only after the API endpoint and contract exist.

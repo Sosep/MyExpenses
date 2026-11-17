@@ -510,6 +510,18 @@ function serveAppIndex(response) {
               }, 900)
             }
           }
+          if (q.get('combo') === '1') {
+            setTimeout(function(){ document.querySelector('.kind-choice[data-kind="SIMPLE"]')?.click() }, 800)
+            setTimeout(function(){
+              var combos = document.querySelectorAll('input[role="combobox"]')
+              var payee = combos[1]
+              if (!payee) return
+              var setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set
+              payee.focus()
+              if (setter) setter.call(payee, 'Ren')
+              payee.dispatchEvent(new Event('input', { bubbles: true }))
+            }, 1500)
+          }
           var kind = q.get('kind')
           if (q.get('new') === '1') {
             setTimeout(function(){

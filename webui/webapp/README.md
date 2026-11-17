@@ -91,6 +91,7 @@ el API real del teléfono. Acepta estos parámetros para QA visual:
 | `?view=reports` | Abre Informes |
 | `?view=reports&reportBy=Payee&reportType=Both` | Preselecciona dimensión y tipo en Informes |
 | `?view=reports&reportDrill=1` | Abre el detalle del primer grupo |
+| `?new=1&combo=1` | Abre el alta y escribe `Ren` en el selector de beneficiario |
 | `?view=budgets` | Abre Presupuestos |
 | `?view=budgets&new=1` | Abre el editor de alta de presupuesto |
 | `?view=budgets&edit=1` | Abre el primer presupuesto en el editor |

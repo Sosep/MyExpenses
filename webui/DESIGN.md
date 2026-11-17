@@ -249,6 +249,13 @@ píxeles como especificación.
 
 ### Campos
 
+- Los desplegables con datos (cuenta, beneficiario, categoría, método, periodo)
+  usan un combobox con búsqueda: al enfocar se abre la lista, al escribir se
+  filtra sin distinguir mayúsculas ni acentos, y solo cambia el valor al elegir
+  una opción. `Enter` selecciona, `Esc` cierra y `↑`/`↓` recorren.
+- El valor vacío es una opción más (`None`/`No category`). Sin coincidencias se
+  muestra `No matches` dentro del menú.
+
 - Altura 36; radio 10; borde `--border-subtle`; fondo `--bg-surface` dentro de
   tarjeta y `--bg-sunken` sobre lienzo.
 - Etiqueta 12 px, sentence case, `--text-muted`; ayuda 12 px; error 12 px en

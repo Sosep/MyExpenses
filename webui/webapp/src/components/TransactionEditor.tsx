@@ -40,6 +40,7 @@ import {
   todayIso,
 } from '../format'
 import { useAsync } from '../hooks'
+import { SearchSelect } from './SearchSelect'
 import { IconX } from './Icons'
 
 type DateMode = 'date' | 'dateTime' | 'bookingValue'
@@ -529,18 +530,15 @@ function TransactionForm({
           <div className="form-row">
             <label className="field">
               <span className="field-label">{t`Account`}</span>
-              <select
-                className="input"
-                aria-label={t`Account`}
-                value={state.accountId}
-                onChange={(event) => setAccount(Number(event.target.value))}
-              >
-                {accounts.map((candidate) => (
-                  <option key={candidate.id} value={candidate.id}>
-                    {candidate.label}
-                  </option>
-                ))}
-              </select>
+              <SearchSelect
+                ariaLabel={t`Account`}
+                value={String(state.accountId)}
+                options={accounts.map((candidate) => ({
+                  value: String(candidate.id),
+                  label: candidate.label,
+                }))}
+                onChange={(value) => setAccount(Number(value))}
+              />
             </label>
             <label className="field">
               <span className="field-label">{t`Date`}</span>
@@ -586,61 +584,52 @@ function TransactionForm({
           <div className="form-row">
             <label className="field">
               <span className="field-label">{t`Payee`}</span>
-              <select
-                className="input"
-                aria-label={t`Payee`}
-                value={state.payeeId ?? ''}
-                onChange={(event) =>
-                  update('payeeId', event.target.value ? Number(event.target.value) : null)
-                }
-              >
-                <option value="">{t`None`}</option>
-                {refs.payees.map((payee) => (
-                  <option key={payee.id} value={payee.id}>
-                    {payee.name}
-                  </option>
-                ))}
-              </select>
+              <SearchSelect
+                ariaLabel={t`Payee`}
+                value={state.payeeId === null ? '' : String(state.payeeId)}
+                options={[
+                  { value: '', label: t`None` },
+                  ...refs.payees.map((payee) => ({
+                    value: String(payee.id),
+                    label: payee.name,
+                  })),
+                ]}
+                onChange={(value) => update('payeeId', value ? Number(value) : null)}
+              />
             </label>
             {methods.length > 0 ? (
               <label className="field">
                 <span className="field-label">{t`Method`}</span>
-                <select
-                  className="input"
-                  aria-label={t`Method`}
-                  value={state.methodId ?? ''}
-                  onChange={(event) =>
-                    update('methodId', event.target.value ? Number(event.target.value) : null)
-                  }
-                >
-                  <option value="">{t`None`}</option>
-                  {methods.map((method) => (
-                    <option key={method.id} value={method.id}>
-                      {method.label}
-                    </option>
-                  ))}
-                </select>
+                <SearchSelect
+                  ariaLabel={t`Method`}
+                  value={state.methodId === null ? '' : String(state.methodId)}
+                  options={[
+                    { value: '', label: t`None` },
+                    ...methods.map((method) => ({
+                      value: String(method.id),
+                      label: method.label,
+                    })),
+                  ]}
+                  onChange={(value) => update('methodId', value ? Number(value) : null)}
+                />
               </label>
             ) : null}
           </div>
 
           <label className="field">
             <span className="field-label">{t`Category`}</span>
-            <select
-              className="input"
-              aria-label={t`Category`}
-              value={state.categoryId ?? ''}
-              onChange={(event) =>
-                update('categoryId', event.target.value ? Number(event.target.value) : null)
-              }
-            >
-              <option value="">{t`No category`}</option>
-              {categories.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {paths.get(category.id) ?? category.label}
-                </option>
-              ))}
-            </select>
+            <SearchSelect
+              ariaLabel={t`Category`}
+              value={state.categoryId === null ? '' : String(state.categoryId)}
+              options={[
+                { value: '', label: t`No category` },
+                ...categories.map((category) => ({
+                  value: String(category.id),
+                  label: paths.get(category.id) ?? category.label,
+                })),
+              ]}
+              onChange={(value) => update('categoryId', value ? Number(value) : null)}
+            />
           </label>
 
           {refs.tags.length > 0 ? (
@@ -911,33 +900,29 @@ function TransferForm({
       <div className="form-row">
         <label className="field">
           <span className="field-label">{t`From`}</span>
-          <select
-            className="input"
-            aria-label={t`From account`}
-            value={state.fromAccountId}
-            onChange={(event) => setFromAccount(Number(event.target.value))}
-          >
-            {accounts.map((account) => (
-              <option key={account.id} value={account.id}>
-                {account.label}
-              </option>
-            ))}
-          </select>
+          <SearchSelect
+            ariaLabel={t`From account`}
+            value={String(state.fromAccountId)}
+            options={accounts.map((account) => ({
+              value: String(account.id),
+              label: account.label,
+            }))}
+            onChange={(value) => setFromAccount(Number(value))}
+          />
         </label>
         <label className="field">
           <span className="field-label">{t`To`}</span>
-          <select
-            className={`input ${errors.toAccountId ? 'invalid' : ''}`}
-            aria-label={t`To account`}
-            value={state.toAccountId}
-            onChange={(event) => update('toAccountId', Number(event.target.value))}
-          >
-            {accounts.map((account) => (
-              <option key={account.id} value={account.id}>
-                {account.label}
-              </option>
-            ))}
-          </select>
+          <div className={errors.toAccountId ? 'search-select-invalid' : ''}>
+            <SearchSelect
+              ariaLabel={t`To account`}
+              value={String(state.toAccountId)}
+              options={accounts.map((account) => ({
+                value: String(account.id),
+                label: account.label,
+              }))}
+              onChange={(value) => update('toAccountId', Number(value))}
+            />
+          </div>
           {errors.toAccountId ? <span className="field-error">{errors.toAccountId}</span> : null}
         </label>
       </div>
@@ -984,40 +969,34 @@ function TransferForm({
       <div className="form-row">
         <label className="field">
           <span className="field-label">{t`Payee`}</span>
-          <select
-            className="input"
-            aria-label={t`Payee`}
-            value={state.payeeId ?? ''}
-            onChange={(event) =>
-              update('payeeId', event.target.value ? Number(event.target.value) : null)
-            }
-          >
-            <option value="">{t`None`}</option>
-            {refs.payees.map((payee) => (
-              <option key={payee.id} value={payee.id}>
-                {payee.name}
-              </option>
-            ))}
-          </select>
+          <SearchSelect
+            ariaLabel={t`Payee`}
+            value={state.payeeId === null ? '' : String(state.payeeId)}
+            options={[
+              { value: '', label: t`None` },
+              ...refs.payees.map((payee) => ({
+                value: String(payee.id),
+                label: payee.name,
+              })),
+            ]}
+            onChange={(value) => update('payeeId', value ? Number(value) : null)}
+          />
         </label>
         {methods.length > 0 ? (
           <label className="field">
             <span className="field-label">{t`Method`}</span>
-            <select
-              className="input"
-              aria-label={t`Method`}
-              value={state.methodId ?? ''}
-              onChange={(event) =>
-                update('methodId', event.target.value ? Number(event.target.value) : null)
-              }
-            >
-              <option value="">{t`None`}</option>
-              {methods.map((method) => (
-                <option key={method.id} value={method.id}>
-                  {method.label}
-                </option>
-              ))}
-            </select>
+            <SearchSelect
+              ariaLabel={t`Method`}
+              value={state.methodId === null ? '' : String(state.methodId)}
+              options={[
+                { value: '', label: t`None` },
+                ...methods.map((method) => ({
+                  value: String(method.id),
+                  label: method.label,
+                })),
+              ]}
+              onChange={(value) => update('methodId', value ? Number(value) : null)}
+            />
           </label>
         ) : null}
       </div>
@@ -1350,19 +1329,16 @@ function SplitForm({
             <div className="form-row">
               <label className="field">
                 <span className="field-label">{t`Account`}</span>
-                <select
-                  className="input"
-                  aria-label={t`Account`}
-                  value={state.accountId}
+                <SearchSelect
+                  ariaLabel={t`Account`}
+                  value={String(state.accountId)}
                   disabled={mode === 'edit'}
-                  onChange={(event) => setAccount(Number(event.target.value))}
-                >
-                  {accounts.map((candidate) => (
-                    <option key={candidate.id} value={candidate.id}>
-                      {candidate.label}
-                    </option>
-                  ))}
-                </select>
+                  options={accounts.map((candidate) => ({
+                    value: String(candidate.id),
+                    label: candidate.label,
+                  }))}
+                  onChange={(value) => setAccount(Number(value))}
+                />
               </label>
               <label className="field">
                 <span className="field-label">{t`Date`}</span>
@@ -1420,40 +1396,34 @@ function SplitForm({
             <div className="form-row">
               <label className="field">
                 <span className="field-label">{t`Payee`}</span>
-                <select
-                  className="input"
-                  aria-label={t`Payee`}
-                  value={state.payeeId ?? ''}
-                  onChange={(event) =>
-                    update('payeeId', event.target.value ? Number(event.target.value) : null)
-                  }
-                >
-                  <option value="">{t`None`}</option>
-                  {refs.payees.map((payee) => (
-                    <option key={payee.id} value={payee.id}>
-                      {payee.name}
-                    </option>
-                  ))}
-                </select>
+                <SearchSelect
+                  ariaLabel={t`Payee`}
+                  value={state.payeeId === null ? '' : String(state.payeeId)}
+                  options={[
+                    { value: '', label: t`None` },
+                    ...refs.payees.map((payee) => ({
+                      value: String(payee.id),
+                      label: payee.name,
+                    })),
+                  ]}
+                  onChange={(value) => update('payeeId', value ? Number(value) : null)}
+                />
               </label>
               {methods.length > 0 ? (
                 <label className="field">
                   <span className="field-label">{t`Method`}</span>
-                  <select
-                    className="input"
-                    aria-label={t`Method`}
-                    value={state.methodId ?? ''}
-                    onChange={(event) =>
-                      update('methodId', event.target.value ? Number(event.target.value) : null)
-                    }
-                  >
-                    <option value="">{t`None`}</option>
-                    {methods.map((method) => (
-                      <option key={method.id} value={method.id}>
-                        {method.label}
-                      </option>
-                    ))}
-                  </select>
+                  <SearchSelect
+                    ariaLabel={t`Method`}
+                    value={state.methodId === null ? '' : String(state.methodId)}
+                    options={[
+                      { value: '', label: t`None` },
+                      ...methods.map((method) => ({
+                        value: String(method.id),
+                        label: method.label,
+                      })),
+                    ]}
+                    onChange={(value) => update('methodId', value ? Number(value) : null)}
+                  />
                 </label>
               ) : null}
             </div>
@@ -1544,67 +1514,49 @@ function SplitForm({
             </label>
             <label className="field">
               <span className="field-label">{t`Category`}</span>
-              <select
-                className="input"
-                aria-label={t`Part category`}
-                value={selected.categoryId ?? ''}
-                onChange={(event) =>
-                  updatePart(
-                    'categoryId',
-                    event.target.value ? Number(event.target.value) : null,
-                  )
-                }
-              >
-                <option value="">{t`No category`}</option>
-                {categories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {paths.get(category.id) ?? category.label}
-                  </option>
-                ))}
-              </select>
+              <SearchSelect
+                ariaLabel={t`Part category`}
+                value={selected.categoryId === null ? '' : String(selected.categoryId)}
+                options={[
+                  { value: '', label: t`No category` },
+                  ...categories.map((category) => ({
+                    value: String(category.id),
+                    label: paths.get(category.id) ?? category.label,
+                  })),
+                ]}
+                onChange={(value) => updatePart('categoryId', value ? Number(value) : null)}
+              />
             </label>
             <label className="field">
               <span className="field-label">{t`Payee`}</span>
-              <select
-                className="input"
-                aria-label={t`Part payee`}
-                value={selected.payeeId ?? ''}
-                onChange={(event) =>
-                  updatePart(
-                    'payeeId',
-                    event.target.value ? Number(event.target.value) : null,
-                  )
-                }
-              >
-                <option value="">{t`None`}</option>
-                {refs.payees.map((payee) => (
-                  <option key={payee.id} value={payee.id}>
-                    {payee.name}
-                  </option>
-                ))}
-              </select>
+              <SearchSelect
+                ariaLabel={t`Part payee`}
+                value={selected.payeeId === null ? '' : String(selected.payeeId)}
+                options={[
+                  { value: '', label: t`None` },
+                  ...refs.payees.map((payee) => ({
+                    value: String(payee.id),
+                    label: payee.name,
+                  })),
+                ]}
+                onChange={(value) => updatePart('payeeId', value ? Number(value) : null)}
+              />
             </label>
             {methods.length > 0 ? (
               <label className="field">
                 <span className="field-label">{t`Method`}</span>
-                <select
-                  className="input"
-                  aria-label={t`Part method`}
-                  value={selected.methodId ?? ''}
-                  onChange={(event) =>
-                    updatePart(
-                      'methodId',
-                      event.target.value ? Number(event.target.value) : null,
-                    )
-                  }
-                >
-                  <option value="">{t`None`}</option>
-                  {methods.map((method) => (
-                    <option key={method.id} value={method.id}>
-                      {method.label}
-                    </option>
-                  ))}
-                </select>
+                <SearchSelect
+                  ariaLabel={t`Part method`}
+                  value={selected.methodId === null ? '' : String(selected.methodId)}
+                  options={[
+                    { value: '', label: t`None` },
+                    ...methods.map((method) => ({
+                      value: String(method.id),
+                      label: method.label,
+                    })),
+                  ]}
+                  onChange={(value) => updatePart('methodId', value ? Number(value) : null)}
+                />
               </label>
             ) : null}
             {refs.tags.length > 0 ? (
