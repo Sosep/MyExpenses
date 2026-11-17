@@ -3,7 +3,7 @@ import { t } from '@lingui/core/macro'
 import type { Budget } from '../types'
 import { describeError, getBudgetHistory } from '../api'
 import { useFocusTrap } from '../useFocusTrap'
-import { formatMoney, formatMonthShort } from '../format'
+import { formatMoney, formatMonthShort, formatPercent } from '../format'
 import { useAsync } from '../hooks'
 import { IconX } from './Icons'
 
@@ -77,7 +77,7 @@ export function BudgetHistoryPanel({ budget, onClose }: BudgetHistoryPanelProps)
                   <div className="budget-history-head">
                     <span className="budget-history-label">
                       {label}
-                      <span className="budget-history-pct">{percent}%</span>
+                      <span className="budget-history-pct">{formatPercent(percent, 0)}</span>
                     </span>
                     {over ? <span className="budget-chip over">{t`Over`}</span> : null}
                     <span className={over ? 'over' : 'positive'}>

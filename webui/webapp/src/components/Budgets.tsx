@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { t } from '@lingui/core/macro'
 import type { Account, Budget, BudgetProgress } from '../types'
 import { describeError, getBudgetProgress, getBudgets } from '../api'
-import { addMonths, currentMonth, formatMoney, formatMonthKey } from '../format'
+import { addMonths, currentMonth, formatMoney, formatMonthKey, formatPercent } from '../format'
 import { useAsync } from '../hooks'
 import { BudgetEditor } from './BudgetEditor'
 import { BudgetHistoryPanel } from './BudgetHistoryPanel'
@@ -228,7 +228,7 @@ export function Budgets({
                   />
                 </div>
                 <span className="budget-summary-pct">
-                  {summaryPercent(summary.spent, summary.allocated)}%
+                  {formatPercent(summaryPercent(summary.spent, summary.allocated), 0)}
                 </span>
               </div>
             </div>
@@ -297,7 +297,7 @@ export function Budgets({
                   </div>
 
                   <footer className="budget-card-foot">
-                    <span>{t`${Math.round(ratio * 100)}% used`}</span>
+                    <span>{t`${formatPercent(ratio * 100, 0)} used`}</span>
                     {days !== null ? (
                       <span>
                         {t`${days} days left`}

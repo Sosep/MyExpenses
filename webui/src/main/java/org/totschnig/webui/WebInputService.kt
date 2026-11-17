@@ -60,6 +60,8 @@ import java.net.ServerSocket
 import java.security.Security
 import java.time.LocalDate
 import java.time.LocalTime
+import java.security.MessageDigest
+import java.util.Base64
 import java.util.Locale
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineExceptionHandler
@@ -126,10 +128,11 @@ import org.totschnig.webui.api.SessionLoginDto
 private const val STOP_CLICK_ACTION = "STOP_CLICK_ACTION"
 
 // The shell is a Vite build. Its index.html boots the theme with an inline
-// script, so scripts keep 'unsafe-inline' until that moves into the bundle;
-// everything else is restricted to the app's own origin.
-private const val APP_CSP =
-    "default-src 'self'; script-src 'self' 'unsafe-inline'; " +
+// script, which is allowed by the sha256 hash of its content that we compute
+// from the served file (see [inlineScriptHashes]); styles keep 'unsafe-inline'
+// because the app sets style attributes (chart bar heights).
+private const val APP_CSP_BASE =
+    "default-src 'self'; script-src 'self'; " +
         "style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; " +
         "connect-src 'self'; manifest-src 'self'; worker-src 'self'; " +
         "frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
@@ -248,6 +251,30 @@ class WebInputService : LifecycleService(), IWebInputService {
         it.readBytes()
     }
 
+    /**
+     * SHA-256 (base64) of every inline script in the shell, so the CSP can allow
+     * exactly those and nothing else. The hash is computed from the asset that is
+     * actually served, so it survives a SPA rebuild without a second source of
+     * truth. External scripts have no content and are skipped.
+     */
+    private fun inlineScriptHashes(): List<String> = try {
+        val html = String(readBytesFromAssets("index.html"), Charsets.UTF_8)
+        val withoutExternal = Regex(
+            "<script(?![^>]*\\bsrc=)[^>]*>([\\s\\S]*?)</script>"
+        )
+        withoutExternal.findAll(html)
+            .map { it.groupValues[1] }
+            .filter { it.isNotBlank() }
+            .map {
+                val digest = MessageDigest.getInstance("SHA-256")
+                    .digest(it.toByteArray(Charsets.UTF_8))
+                Base64.getEncoder().encodeToString(digest)
+            }
+            .toList()
+    } catch (_: Exception) {
+        emptyList()
+    }
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
         log("onStartCommand ${intent?.action}")
@@ -320,6 +347,10 @@ class WebInputService : LifecycleService(), IWebInputService {
                                     "camera=(), microphone=(), geolocation=()"
                                 )
                             }
+                            val appCsp = buildString {
+                                append(APP_CSP_BASE)
+                                inlineScriptHashes().forEach { append(" 'sha256-$it'") }
+                            }
                             install(
                                 createApplicationPlugin("SecurityHeaders") {
                                     onCall { call ->
@@ -330,7 +361,7 @@ class WebInputService : LifecycleService(), IWebInputService {
                                             if (call.request.path().startsWith("/api/")) {
                                                 API_CSP
                                             } else {
-                                                APP_CSP
+                                                appCsp
                                             }
                                         )
                                     }

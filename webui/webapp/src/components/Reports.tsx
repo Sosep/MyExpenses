@@ -7,6 +7,7 @@ import {
   currentMonth,
   formatMoney,
   formatMonthKey,
+  formatPercent,
   lastMonths,
   monthRange,
 } from '../format'
@@ -297,7 +298,7 @@ export function Reports({ account, accounts }: ReportsProps) {
                       />
                     </div>
                     <div className="breakdown-meta">
-                      <span>{item.share.toFixed(1)}%</span>
+                      <span>{formatPercent(item.share)}</span>
                       <span>{t`${item.count} transactions`}</span>
                     </div>
                   </div>

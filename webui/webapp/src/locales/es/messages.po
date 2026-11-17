@@ -19,7 +19,7 @@ msgstr "{0} — ingresos {1}, gastos {2}"
 #~ msgstr "{0} presupuestos"
 
 #. placeholder {0}: items.length
-#. placeholder {1}: formatMonth(year, monthNumber)
+#. placeholder {1}: formatMonthKey(month)
 #: src/components/Budgets.tsx
 msgid "{0} budgets · {1}"
 msgstr "{0} presupuestos · {1}"
@@ -55,10 +55,15 @@ msgstr "{0} gastado"
 msgid "{0} transactions"
 msgstr "{0} transacciones"
 
+#. placeholder {0}: formatPercent(ratio * 100, 0)
+#: src/components/Budgets.tsx
+msgid "{0} used"
+msgstr "{0} usado"
+
 #. placeholder {0}: Math.round(ratio * 100)
 #: src/components/Budgets.tsx
-msgid "{0}% used"
-msgstr "{0}% usado"
+#~ msgid "{0}% used"
+#~ msgstr "{0}% usado"
 
 #: src/components/Budgets.tsx
 msgid "{days} days left"
@@ -728,7 +733,7 @@ msgstr "Todavía no hay historial."
 msgid "No matches"
 msgstr "Sin resultados"
 
-#. placeholder {0}: formatMonth(year, monthNumber)
+#. placeholder {0}: formatMonthKey(month)
 #: src/components/Transactions.tsx
 msgid "No transactions in {0}"
 msgstr "No hay transacciones en {0}"

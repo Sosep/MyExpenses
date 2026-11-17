@@ -7,6 +7,7 @@ import {
   formatMonth,
   formatMonthKey,
   formatMonthShort,
+  formatPercent,
   monthRange,
   parseAmountMinor,
   parseIsoDate,
@@ -73,6 +74,23 @@ describe('parseAmountMinor', () => {
     expect(parseAmountMinor('-3', 2)).toBeNull()
     expect(parseAmountMinor('1e3', 2)).toBeNull()
     expect(parseAmountMinor('abc', 2)).toBeNull()
+  })
+})
+
+describe('percentages', () => {
+  it('uses the locale separators', () => {
+    i18n.activate('es')
+    expect(formatPercent(28.5)).toBe('28,5\u00A0%')
+
+    i18n.activate('en')
+    expect(formatPercent(28.5)).toBe('28.5%')
+  })
+
+  it('drops decimals when asked', () => {
+    i18n.activate('es')
+    expect(formatPercent(78, 0)).toBe('78\u00A0%')
+    i18n.activate('en')
+    expect(formatPercent(78, 0)).toBe('78%')
   })
 })
 

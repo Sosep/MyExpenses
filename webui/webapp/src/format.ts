@@ -57,6 +57,18 @@ export function formatMonthShort(year: number, second: number): string {
  * helper that formats the API's `second` (0-11). Convert at this boundary only,
  * so no screen has to remember which convention it is holding.
  */
+/**
+ * Formats a 0-100 share with the active locale's separators, so Spanish reads
+ * "28,5 %" where English reads "28.5%". The API sends shares 0-100.
+ */
+export function formatPercent(value: number, fractionDigits = 1): string {
+  return new Intl.NumberFormat(uiLocale(), {
+    style: 'percent',
+    minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: fractionDigits,
+  }).format(value / 100)
+}
+
 export function formatMonthKey(month: string): string {
   const [year, monthNumber] = month.split('-').map(Number)
   return formatMonth(year, monthNumber - 1)
