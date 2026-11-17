@@ -1931,3 +1931,33 @@ button:disabled {
     white-space: nowrap;
   }
 }
+
+
+/* Transaction filters */
+
+.transaction-filters {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
+  gap: 8px 12px;
+  align-items: end;
+}
+
+.transaction-filters .field {
+  min-width: 0;
+}
+
+.clear-filters {
+  align-self: end;
+}
+
+@media (max-width: 760px) {
+  .transaction-filters {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .clear-filters {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+}

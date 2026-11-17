@@ -146,6 +146,13 @@ export const getGrouped = (
     { signal },
   )
 
+export interface TransactionFilters {
+  categoryId?: number | null
+  payeeId?: number | null
+  tagId?: number | null
+  methodId?: number | null
+}
+
 export const getTransactions = (
   accountId: number,
   from: string,
@@ -153,13 +160,23 @@ export const getTransactions = (
   type: 'both' | 'income' | 'expense',
   limit: number,
   offset: number,
+  filters: TransactionFilters = {},
   signal?: AbortSignal,
-) =>
-  request<Page<Transaction>>(
-    `/transactions?accountId=${accountId}&from=${from}&to=${to}` +
-      `&type=${type}&limit=${limit}&offset=${offset}`,
-    { signal },
-  )
+) => {
+  const params = new URLSearchParams({
+    accountId: String(accountId),
+    from,
+    to,
+    type,
+    limit: String(limit),
+    offset: String(offset),
+  })
+  for (const key of ['categoryId', 'payeeId', 'tagId', 'methodId'] as const) {
+    const value = filters[key]
+    if (value != null) params.set(key, String(value))
+  }
+  return request<Page<Transaction>>(`/transactions?${params.toString()}`, { signal })
+}
 
 export const getTransaction = (id: number, signal?: AbortSignal) =>
   request<Transaction>(`/transactions/${id}`, { signal })

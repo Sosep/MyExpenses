@@ -48,6 +48,8 @@ import org.totschnig.myexpenses.provider.KEY_TRANSACTIONID
 import org.totschnig.myexpenses.provider.KEY_TRANSFER_ACCOUNT
 import org.totschnig.myexpenses.provider.KEY_TYPE
 import org.totschnig.myexpenses.provider.KEY_YEAR
+import org.totschnig.myexpenses.provider.SPLIT_CATID
+import org.totschnig.myexpenses.provider.TABLE_TRANSACTIONS
 import org.totschnig.myexpenses.provider.TABLE_TRANSACTIONS_TAGS
 import org.totschnig.myexpenses.provider.TransactionProvider
 import org.totschnig.myexpenses.provider.TransactionProvider.QUERY_PARAMETER_GROUP_BY
@@ -480,6 +482,10 @@ internal fun Repository.queryTransactionsPage(
     from: LocalDate?,
     to: LocalDate?,
     type: String?,
+    categoryId: Long?,
+    payeeId: Long?,
+    tagId: Long?,
+    methodId: Long?,
     limit: Int,
     offset: Int
 ): Pair<List<Transaction>, Long> {
@@ -487,7 +493,15 @@ internal fun Repository.queryTransactionsPage(
         accountId = accountId,
         extended = true
     ).build()
-    val (selection, selectionArgs) = transactionSelection(from, to, type)
+    val (selection, selectionArgs) = transactionSelection(
+        from,
+        to,
+        type,
+        categoryId,
+        payeeId,
+        tagId,
+        methodId
+    )
     val total = contentResolver.query(
         baseUri,
         arrayOf("count(*)"),
@@ -508,7 +522,11 @@ internal fun Repository.queryTransactionsPage(
 private fun transactionSelection(
     from: LocalDate?,
     to: LocalDate?,
-    type: String?
+    type: String?,
+    categoryId: Long?,
+    payeeId: Long?,
+    tagId: Long?,
+    methodId: Long?
 ): Pair<String, Array<String>?> {
     val clauses = mutableListOf("$KEY_PARENTID IS NULL")
     val args = mutableListOf<String>()
@@ -516,6 +534,32 @@ private fun transactionSelection(
     when (type) {
         "income" -> clauses.add("$KEY_AMOUNT > 0")
         "expense" -> clauses.add("$KEY_AMOUNT < 0")
+    }
+    categoryId?.let {
+        clauses.add(
+            "($KEY_CATID = ? OR ($KEY_CATID = $SPLIT_CATID AND EXISTS (" +
+                "SELECT 1 FROM $TABLE_TRANSACTIONS child " +
+                "WHERE child.$KEY_PARENTID = $VIEW_EXTENDED.$KEY_ROWID " +
+                "AND child.$KEY_CATID = ?)))"
+        )
+        args.add(it.toString())
+        args.add(it.toString())
+    }
+    payeeId?.let {
+        clauses.add("$KEY_PAYEEID = ?")
+        args.add(it.toString())
+    }
+    methodId?.let {
+        clauses.add("$KEY_METHODID = ?")
+        args.add(it.toString())
+    }
+    tagId?.let {
+        clauses.add(
+            "EXISTS (SELECT 1 FROM $TABLE_TRANSACTIONS_TAGS tag_filter " +
+                "WHERE tag_filter.$KEY_TRANSACTIONID = $VIEW_EXTENDED.$KEY_ROWID " +
+                "AND tag_filter.$KEY_TAGID = ?)"
+        )
+        args.add(it.toString())
     }
     return clauses.joinToString(" AND ") to args.takeIf { it.isNotEmpty() }?.toTypedArray()
 }

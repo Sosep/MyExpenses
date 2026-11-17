@@ -99,10 +99,12 @@ usa el modo Vite en caliente.
 | `?login=1` | Borra la cookie del mock y muestra el login |
 | `?locale=es` | Activa español |
 | `?view=transactions` | Transacciones |
+| `?view=transactions&filter=groceries` | Filtra por la categoría Groceries |
 | `?view=reports` | Informes |
 | `?view=reports&reportBy=Payee&reportType=Both` | Preselecciona dimensión y tipo |
 | `?view=reports&reportDrill=1` | Abre el detalle del primer grupo |
 | `?view=budgets` | Presupuestos |
+| `?view=budgets&budgetMonth=-1` | Presupuestos en el mes anterior |
 | `?view=budgets&new=1` | Alta de presupuesto |
 | `?view=budgets&edit=1` | Edita el primer presupuesto |
 | `?view=budgets&edit=1&periodOverride=1` | Prueba el total distinto de este periodo |

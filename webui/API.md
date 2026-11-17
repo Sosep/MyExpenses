@@ -173,7 +173,7 @@ Endpoints:
 
 | Método | Ruta | Descripción |
 |---|---|---|
-| GET | `/transactions?accountId&from&to&type&categoryId&payeeId&tagIds&search&limit&offset` | Lista paginada; `type`: `income`/`expense`/`both` |
+| GET | `/transactions?accountId&from&to&type&categoryId&payeeId&tagId&methodId&limit&offset` | Lista paginada; `type`: `income`/`expense`/`both` |
 | GET | `/transactions/{id}` | Detalle con partes, peer y etiquetas |
 | POST | `/transactions` | Crear simple |
 | PUT | `/transactions/{id}` | Actualizar simple |
@@ -292,6 +292,8 @@ Update: `PUT /split-transactions/{id}` envía el mismo cuerpo. Una parte con `id
 actualiza la existente; las existentes que no se envían se borran; una parte sin
 `id` se inserta. La cuenta del padre no se puede cambiar en este corte (`422`).
 `updateSplitTransaction` gestiona altas, bajas y cambios de forma atómica.
+
+Los filtros `categoryId`, `payeeId`, `tagId` y `methodId` son opcionales y se combinan con AND. `categoryId` incluye una dividida si alguna de sus partes tiene esa categoría; `tagId` coincide con cualquiera de las etiquetas. Solo se listan transacciones completas (padre), no partes sueltas.
 
 ### 4.4 Categorías, beneficiarios, etiquetas, métodos
 

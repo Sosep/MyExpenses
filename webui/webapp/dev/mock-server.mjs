@@ -482,6 +482,11 @@ function serveAppIndex(response) {
           }
           if (q.get('view') === 'budgets') {
             setTimeout(function(){ document.querySelector('button[data-view="budgets"]')?.click() }, 250)
+            if (q.get('budgetMonth') === '-1') {
+              setTimeout(function(){
+                document.querySelector('.month-nav button')?.click()
+              }, 1000)
+            }
             if (q.get('new') === '1') {
               setTimeout(function(){
                 document.querySelector('.page-actions .btn.primary')?.click()
@@ -514,6 +519,19 @@ function serveAppIndex(response) {
           }
           if (q.get('view') === 'transactions') {
             setTimeout(function(){ document.querySelector('button[data-view="transactions"]')?.click() }, 250)
+            if (q.get('filter') === 'groceries') {
+              setTimeout(function(){
+                var input = document.querySelector('.transaction-filters input[role="combobox"]')
+                var setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set
+                if (!input) return
+                input.focus()
+                if (setter) setter.call(input, 'Grocer')
+                input.dispatchEvent(new Event('input', { bubbles: true }))
+              }, 1100)
+              setTimeout(function(){
+                document.querySelector('.search-select-menu .search-select-option')?.click()
+              }, 1500)
+            }
             var panel = q.get('panel')
             if (panel) {
               setTimeout(function(){
@@ -828,8 +846,10 @@ createServer(async (request, response) => {
         }
         for (const allocation of body.allocations ?? []) {
           if (allocation.categoryId !== 0) continue
-          if (allocation.amountMinor === null) delete budgetProgresses[id].periodAllocated
-          else budgetProgresses[id].periodAllocated = allocation.amountMinor
+          const overrides = (budgetProgresses[id].periodAllocated ??= {})
+          const key = `${body.year}-${body.second}`
+          if (allocation.amountMinor === null) delete overrides[key]
+          else overrides[key] = allocation.amountMinor
         }
         for (const rollover of body.rollover ?? []) {
           const row = rows.find((item) => item.categoryId === rollover.categoryId)
@@ -914,6 +934,20 @@ createServer(async (request, response) => {
         response.writeHead(204, { 'Cache-Control': 'no-store' })
         return response.end()
       }
+      const qYear = Number(url.searchParams.get('year')) || year
+      const qSecond = Number(url.searchParams.get('second')) || month
+      const qMonthName = new Intl.DateTimeFormat('en-GB', {
+        month: 'long',
+        year: 'numeric',
+      }).format(new Date(qYear, qSecond - 1, 1))
+      const qStart = `${qYear}-${pad(qSecond)}-01`
+      const qEnd = `${qYear}-${pad(qSecond)}-${pad(new Date(qYear, qSecond, 0).getDate())}`
+      const qTotalDays = new Date(qYear, qSecond, 0).getDate()
+      const qIsCurrent = qYear === year && qSecond === month
+      const qIsPast = qYear < year || (qYear === year && qSecond < month)
+      const qCurrentDay = qIsCurrent ? now.getDate() : qIsPast ? qTotalDays + 1 : 0
+      const override = (values.periodAllocated ?? {})[`${qYear}-${qSecond}`] ?? null
+      const allocated = override ?? values.allocated
       return sendJson(response, 200, {
         budgetId: budget.id,
         accountId: budget.accountId,
@@ -921,17 +955,17 @@ createServer(async (request, response) => {
         currency: budget.currency,
         fractionDigits: budget.fractionDigits,
         grouping: budget.grouping,
-        periodYear: year,
-        periodSecond: month,
-        periodStart,
-        periodEnd,
-        periodDescription: monthName,
-        allocatedMinor: values.periodAllocated ?? values.allocated,
+        periodYear: qYear,
+        periodSecond: qSecond,
+        periodStart: qStart,
+        periodEnd: qEnd,
+        periodDescription: qMonthName,
+        allocatedMinor: allocated,
         spentMinor: values.spent,
-        remainingMinor: (values.periodAllocated ?? values.allocated) - values.spent,
-        totalDays,
-        currentDay: now.getDate(),
-        periodAllocationMinor: values.periodAllocated ?? null,
+        remainingMinor: allocated - values.spent,
+        totalDays: qTotalDays,
+        currentDay: qCurrentDay,
+        periodAllocationMinor: override,
       })
     }
 
@@ -1141,9 +1175,26 @@ createServer(async (request, response) => {
       const type = url.searchParams.get('type') ?? 'both'
       const limit = Number(url.searchParams.get('limit') ?? 50)
       const offset = Number(url.searchParams.get('offset') ?? 0)
+      const categoryId = Number(url.searchParams.get('categoryId')) || null
+      const payeeId = Number(url.searchParams.get('payeeId')) || null
+      const tagId = Number(url.searchParams.get('tagId')) || null
+      const methodId = Number(url.searchParams.get('methodId')) || null
       let items = transactions.filter((item) => item.date >= from && item.date <= to)
       if (type === 'income') items = items.filter((item) => item.amountMinor > 0)
       if (type === 'expense') items = items.filter((item) => item.amountMinor < 0)
+      if (categoryId !== null) {
+        items = items.filter(
+          (item) =>
+            item.category?.id === categoryId ||
+            (item.kind === 'SPLIT' &&
+              splitParts.some((part) => part.category?.id === categoryId)),
+        )
+      }
+      if (payeeId !== null) items = items.filter((item) => item.payee?.id === payeeId)
+      if (tagId !== null) {
+        items = items.filter((item) => (item.tags ?? []).some((tag) => tag.id === tagId))
+      }
+      if (methodId !== null) items = items.filter((item) => item.method?.id === methodId)
       const total = items.length
       items = items.slice(offset, offset + limit).map((item) => ({ ...item, splitParts: null }))
       return sendJson(response, 200, { items, total, limit, offset })

@@ -55,12 +55,20 @@ class ApiRoutes(
                 val from = call.dateParam("from")
                 val to = call.dateParam("to")
                 validateRange(from, to)
+                val categoryId = call.longParamOrNull("categoryId")
+                val payeeId = call.longParamOrNull("payeeId")
+                val tagId = call.longParamOrNull("tagId")
+                val methodId = call.longParamOrNull("methodId")
                 call.respond(
                     dataSource.transactionPage(
                         accountId = accountId,
                         from = from,
                         to = to,
                         type = type,
+                        categoryId = categoryId,
+                        payeeId = payeeId,
+                        tagId = tagId,
+                        methodId = methodId,
                         limit = limit,
                         offset = offset
                     )
@@ -351,6 +359,24 @@ private fun ApplicationCall.requireLong(name: String): Long {
             "invalid_$name",
             "Query parameter '$name' must be a number"
         )
+}
+
+private fun ApplicationCall.longParamOrNull(name: String): Long? {
+    val raw = parameters[name] ?: return null
+    val value = raw.toLongOrNull()
+        ?: throw ApiException(
+            HttpStatusCode.BadRequest,
+            "invalid_$name",
+            "Query parameter '$name' must be a number"
+        )
+    if (value <= 0) {
+        throw ApiException(
+            HttpStatusCode.BadRequest,
+            "invalid_$name",
+            "Query parameter '$name' must be positive"
+        )
+    }
+    return value
 }
 
 private fun ApplicationCall.intParamOrNull(name: String): Int? {

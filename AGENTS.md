@@ -40,6 +40,11 @@ Read this before changing code. Detailed sources:
   a version counter. Geist Sans is bundled through `@fontsource/geist-sans`.
 - Tailwind v4 processes the styles: `app.css` is imported into the `components`
   layer and new UI uses utilities with the DESIGN tokens.
+- Transactions list supports `categoryId`, `payeeId`, `tagId` and `methodId`
+  filters (AND); the SPA exposes them with `SearchSelect` and hides the month
+  KPIs while filtering.
+- Budgets have month navigation; monthly budgets load that month's progress,
+  allocations and period total.
 - Reports: `/reports/summary`, `/reports/breakdown` (category, payee, tag or
   method) and `/reports/transactions` for drill-down. Period presets, `All
   accounts` (same currency only) and server-computed shares. Category breakdown
@@ -132,8 +137,8 @@ npm run mock           # http://localhost:4173/app/
 - The mock state is in memory; restarting it resets the fixtures.
 
 QA switches: `?login=1` (clears the mock cookie), `?locale=es`,
-`?view=transactions`, `?view=reports`, `?view=reports&reportBy=Payee&reportType=Both`,
-`?view=reports&reportDrill=1`, `?view=budgets`, `?view=budgets&new=1`,
+`?view=transactions`, `?view=transactions&filter=groceries`, `?view=reports`, `?view=reports&reportBy=Payee&reportType=Both`,
+`?view=reports&reportDrill=1`, `?view=budgets`, `?view=budgets&budgetMonth=-1`, `?view=budgets&new=1`,
 `?view=budgets&edit=1`, `?view=budgets&edit=1&periodOverride=1`, `?view=files`,
 `?panel=split`, `?panel=transfer`, `?new=1`, `?new=1&kind=transfer`,
 `?new=1&kind=split`, `?new=1&combo=1`, `?edit=simple`, `?edit=split`,

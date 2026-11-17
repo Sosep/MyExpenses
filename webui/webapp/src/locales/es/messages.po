@@ -15,8 +15,14 @@ msgstr "{0} — ingresos {1}, gastos {2}"
 
 #. placeholder {0}: items.length
 #: src/components/Budgets.tsx
-msgid "{0} budgets"
-msgstr "{0} presupuestos"
+#~ msgid "{0} budgets"
+#~ msgstr "{0} presupuestos"
+
+#. placeholder {0}: items.length
+#. placeholder {1}: formatMonth(year, monthNumber)
+#: src/components/Budgets.tsx
+msgid "{0} budgets · {1}"
+msgstr "{0} presupuestos · {1}"
 
 #. placeholder {0}: data.items.length
 #. placeholder {1}: formatMoney( data.totalMinor, account.currency, account.fractionDigits, )
@@ -233,6 +239,10 @@ msgstr "Asignaciones por categoría"
 #: src/components/TransactionEditor.tsx
 msgid "Choose two different accounts."
 msgstr "Elige dos cuentas distintas."
+
+#: src/components/Transactions.tsx
+msgid "Clear filters"
+msgstr "Quitar filtros"
 
 #: src/format.ts
 msgid "Cleared"
@@ -453,6 +463,22 @@ msgstr "Gastos"
 msgid "Files"
 msgstr "Ficheros"
 
+#: src/components/Transactions.tsx
+msgid "Filter by category"
+msgstr "Filtrar por categoría"
+
+#: src/components/Transactions.tsx
+msgid "Filter by method"
+msgstr "Filtrar por método"
+
+#: src/components/Transactions.tsx
+msgid "Filter by payee"
+msgstr "Filtrar por beneficiario"
+
+#: src/components/Transactions.tsx
+msgid "Filter by tag"
+msgstr "Filtrar por etiqueta"
+
 #: src/components/TransactionEditor.tsx
 msgid "From"
 msgstr "Desde"
@@ -544,6 +570,7 @@ msgstr "método"
 #: src/components/Reports.tsx
 #: src/components/TransactionEditor.tsx
 #: src/components/TransactionPanel.tsx
+#: src/components/Transactions.tsx
 msgid "Method"
 msgstr "Método"
 
@@ -593,6 +620,7 @@ msgstr "Nuevo presupuesto"
 msgid "New transaction"
 msgstr "Nueva transacción"
 
+#: src/components/Budgets.tsx
 #: src/components/Reports.tsx
 #: src/components/Transactions.tsx
 msgid "Next month"
@@ -729,6 +757,7 @@ msgstr "beneficiario"
 #: src/components/Reports.tsx
 #: src/components/TransactionEditor.tsx
 #: src/components/TransactionPanel.tsx
+#: src/components/Transactions.tsx
 msgid "Payee"
 msgstr "Beneficiario"
 
@@ -741,6 +770,7 @@ msgstr "Periodo"
 msgid "Period amount"
 msgstr "Importe del periodo"
 
+#: src/components/Budgets.tsx
 #: src/components/Reports.tsx
 #: src/components/Transactions.tsx
 msgid "Previous month"
@@ -897,6 +927,7 @@ msgid "tag"
 msgstr "etiqueta"
 
 #: src/components/Reports.tsx
+#: src/components/Transactions.tsx
 msgid "Tag"
 msgstr "Etiqueta"
 

@@ -389,6 +389,15 @@ Filters: [search] [account] [All|Expenses|Income] [Month]
   recalcula sobre la página visible.
 - Búsqueda y filtros en la URL, compartibles.
 
+### Filtros de transacciones
+
+- Sobre la tabla, cuatro `SearchSelect`: categoría, beneficiario, etiqueta y
+  método. Todos incluyen `All` y se combinan con AND.
+- Al filtrar se oculta el resumen mensual (los KPIs no están filtrados) y el
+  contador de la cabecera muestra las transacciones que cumplen.
+- `Clear filters` aparece solo cuando hay algún filtro.
+- En móvil la rejilla pasa a dos columnas y el botón ocupa la fila completa.
+
 ### Transacción simple (editor)
 
 ```text
@@ -522,6 +531,9 @@ November 2026                     All budgets
 └───────────────────────────┘  └─────────────────────────┘
 ```
 
+- La pantalla tiene navegación `‹ mes ›`; los presupuestos mensuales cargan ese
+  mes (progreso, asignaciones y total específico). Los de otras agrupaciones
+  muestran su periodo actual.
 - El resumen superior solo aparece si todos los presupuestos comparten divisa y
   periodo; si no, se muestra cada tarjeta por separado con una nota.
 - Cada tarjeta lleva su propio periodo (`November 2026`), cuenta, agrupación

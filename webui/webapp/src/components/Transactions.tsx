@@ -1,12 +1,13 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { Account, Transaction } from '../types'
-import { getGrouped, getTransactions } from '../api'
+import { getCategories, getGrouped, getMethods, getPayees, getTags, getTransactions } from '../api'
 import {
   addMonths,
   currentMonth,
   formatDate,
   formatMoney,
   formatMonth,
+  categoryPathMap,
   kindLabel,
   monthRange,
   statusClass,
@@ -15,6 +16,7 @@ import {
 import { t } from '@lingui/core/macro'
 import { useAsync } from '../hooks'
 import { IconChevronLeft, IconChevronRight } from './Icons'
+import { SearchSelect } from './SearchSelect'
 import { TransactionPanel } from './TransactionPanel'
 
 interface TransactionsProps {
@@ -45,6 +47,12 @@ export function Transactions({
 }: TransactionsProps) {
   const [month, setMonth] = useState(currentMonth())
   const [type, setType] = useState<TypeFilter>('all')
+  const [filters, setFilters] = useState<{
+    categoryId: number | null
+    payeeId: number | null
+    tagId: number | null
+    methodId: number | null
+  }>({ categoryId: null, payeeId: null, tagId: null, methodId: null })
   const [extra, setExtra] = useState<Transaction[]>([])
   const [loadingMore, setLoadingMore] = useState(false)
   const [moreError, setMoreError] = useState<string | null>(null)
@@ -52,20 +60,52 @@ export function Transactions({
 
   const range = monthRange(month)
   const apiType = type === 'all' ? 'both' : type
+  const filtersKey = JSON.stringify(filters)
+  const hasFilters = Object.values(filters).some((value) => value !== null)
+  const references = useAsync(async () => {
+    const [categories, payees, tags, methods] = await Promise.all([
+      getCategories(),
+      getPayees(),
+      getTags(),
+      getMethods(),
+    ])
+    return { categories, payees, tags, methods }
+  }, ['transaction-references'])
+  const paths = useMemo(
+    () => categoryPathMap(references.data?.categories ?? []),
+    [references.data?.categories],
+  )
+  const categoryOptions = useMemo(
+    () => [
+      { value: '', label: t`All` },
+      ...(references.data?.categories ?? [])
+        .slice()
+        .sort((left, right) =>
+          (paths.get(left.id) ?? left.label).localeCompare(
+            paths.get(right.id) ?? right.label,
+          ),
+        )
+        .map((category) => ({
+          value: String(category.id),
+          label: paths.get(category.id) ?? category.label,
+        })),
+    ],
+    [references.data?.categories, paths],
+  )
   const summary = useAsync(
     () => getGrouped(account.id, range.from, range.to),
     ['transaction-summary', account.id, range.from, range.to],
   )
   const page = useAsync(
-    () => getTransactions(account.id, range.from, range.to, apiType, 50, 0),
-    ['transaction-page', account.id, range.from, range.to, apiType],
+    () => getTransactions(account.id, range.from, range.to, apiType, 50, 0, filters),
+    ['transaction-page', account.id, range.from, range.to, apiType, filtersKey],
   )
 
   useEffect(() => {
     setExtra([])
     setMoreError(null)
     setSelectedId(null)
-  }, [account.id, month, type])
+  }, [account.id, month, type, filtersKey])
 
   const [year, monthNumber] = month.split('-').map(Number)
   const items = [...(page.data?.items ?? []), ...extra]
@@ -86,6 +126,7 @@ export function Transactions({
         apiType,
         50,
         items.length,
+        filters,
       )
       setExtra((previous) => [...previous, ...next.items])
     } catch (cause) {
@@ -150,6 +191,7 @@ export function Transactions({
             </button>
           ))}
         </div>
+        {!hasFilters ? (
         <div className="summary-strip">
           <div>
             <span>{t`Income`}</span>
@@ -176,6 +218,95 @@ export function Transactions({
             </b>
           </div>
         </div>
+        ) : null}
+      </div>
+
+      <div className="transaction-filters">
+        <label className="field">
+          <span className="field-label">{t`Category`}</span>
+          <SearchSelect
+            ariaLabel={t`Filter by category`}
+            value={filters.categoryId === null ? '' : String(filters.categoryId)}
+            options={categoryOptions}
+            onChange={(value) =>
+              setFilters((previous) => ({
+                ...previous,
+                categoryId: value ? Number(value) : null,
+              }))
+            }
+          />
+        </label>
+        <label className="field">
+          <span className="field-label">{t`Payee`}</span>
+          <SearchSelect
+            ariaLabel={t`Filter by payee`}
+            value={filters.payeeId === null ? '' : String(filters.payeeId)}
+            options={[
+              { value: '', label: t`All` },
+              ...(references.data?.payees ?? []).map((payee) => ({
+                value: String(payee.id),
+                label: payee.name,
+              })),
+            ]}
+            onChange={(value) =>
+              setFilters((previous) => ({
+                ...previous,
+                payeeId: value ? Number(value) : null,
+              }))
+            }
+          />
+        </label>
+        <label className="field">
+          <span className="field-label">{t`Tag`}</span>
+          <SearchSelect
+            ariaLabel={t`Filter by tag`}
+            value={filters.tagId === null ? '' : String(filters.tagId)}
+            options={[
+              { value: '', label: t`All` },
+              ...(references.data?.tags ?? []).map((tag) => ({
+                value: String(tag.id),
+                label: tag.label,
+              })),
+            ]}
+            onChange={(value) =>
+              setFilters((previous) => ({
+                ...previous,
+                tagId: value ? Number(value) : null,
+              }))
+            }
+          />
+        </label>
+        <label className="field">
+          <span className="field-label">{t`Method`}</span>
+          <SearchSelect
+            ariaLabel={t`Filter by method`}
+            value={filters.methodId === null ? '' : String(filters.methodId)}
+            options={[
+              { value: '', label: t`All` },
+              ...(references.data?.methods ?? []).map((method) => ({
+                value: String(method.id),
+                label: method.label,
+              })),
+            ]}
+            onChange={(value) =>
+              setFilters((previous) => ({
+                ...previous,
+                methodId: value ? Number(value) : null,
+              }))
+            }
+          />
+        </label>
+        {hasFilters ? (
+          <button
+            type="button"
+            className="btn ghost clear-filters"
+            onClick={() =>
+              setFilters({ categoryId: null, payeeId: null, tagId: null, methodId: null })
+            }
+          >
+            {t`Clear filters`}
+          </button>
+        ) : null}
       </div>
 
       {page.error ? (

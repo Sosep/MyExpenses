@@ -387,6 +387,20 @@ class ApiRoutesTest {
         assertEquals("/api/v1/budgets/2", response.headers[HttpHeaders.Location])
         assertTrue(response.bodyAsText().contains("(copy)"))
     }
+
+    @Test
+    fun `transaction filters are passed to the data source`() = testApplication {
+        val fake = FakeDataSource()
+        installRoutes(fake)
+        val response = client.get(
+            "/api/v1/transactions?accountId=1&categoryId=2&payeeId=3&tagId=1&methodId=4"
+        )
+        assertEquals(HttpStatusCode.OK, response.status)
+        assertEquals(2L, fake.lastFilters["categoryId"])
+        assertEquals(3L, fake.lastFilters["payeeId"])
+        assertEquals(1L, fake.lastFilters["tagId"])
+        assertEquals(4L, fake.lastFilters["methodId"])
+    }
 }
 
 private fun ApplicationTestBuilder.installRoutes(dataSource: WebApiDataSource) {
@@ -420,6 +434,7 @@ private class FakeDataSource : WebApiDataSource {
     var createdSplit: SplitWriteDto? = null
     var savedBudget: BudgetWriteDto? = null
     var savedAllocations: BudgetAllocationsWriteDto? = null
+    var lastFilters: Map<String, Long?> = emptyMap()
     private val sample = sampleTransaction()
 
     override fun meta() = MetaDto(
@@ -462,14 +477,26 @@ private class FakeDataSource : WebApiDataSource {
         from: LocalDate?,
         to: LocalDate?,
         type: String?,
+        categoryId: Long?,
+        payeeId: Long?,
+        tagId: Long?,
+        methodId: Long?,
         limit: Int,
         offset: Int
-    ) = PageDto(
-        items = listOf(sample),
-        total = 1,
-        limit = limit,
-        offset = offset
-    )
+    ): PageDto<TransactionDto> {
+        lastFilters = mapOf(
+            "categoryId" to categoryId,
+            "payeeId" to payeeId,
+            "tagId" to tagId,
+            "methodId" to methodId
+        )
+        return PageDto(
+            items = listOf(sample),
+            total = 1,
+            limit = limit,
+            offset = offset
+        )
+    }
 
     override fun transaction(id: Long) = sample.takeIf { id == 1L }
 

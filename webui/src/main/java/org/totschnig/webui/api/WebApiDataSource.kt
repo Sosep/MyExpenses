@@ -19,6 +19,10 @@ interface WebApiDataSource {
         from: LocalDate?,
         to: LocalDate?,
         type: String?,
+        categoryId: Long?,
+        payeeId: Long?,
+        tagId: Long?,
+        methodId: Long?,
         limit: Int,
         offset: Int
     ): PageDto<TransactionDto>

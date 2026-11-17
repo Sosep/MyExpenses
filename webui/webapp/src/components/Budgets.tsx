@@ -2,9 +2,10 @@ import { useMemo, useState } from 'react'
 import { t } from '@lingui/core/macro'
 import type { Account, Budget, BudgetProgress } from '../types'
 import { getBudgetProgress, getBudgets } from '../api'
-import { formatMoney } from '../format'
+import { addMonths, currentMonth, formatMoney, formatMonth } from '../format'
 import { useAsync } from '../hooks'
 import { BudgetEditor } from './BudgetEditor'
+import { IconChevronLeft, IconChevronRight } from './Icons'
 
 interface BudgetEntry {
   budget: Budget
@@ -52,15 +53,21 @@ export function Budgets({
   const [editor, setEditor] = useState<
     { mode: 'create' } | { mode: 'edit'; entry: BudgetEntry } | null
   >(null)
+  const [month, setMonth] = useState(currentMonth())
+  const [year, monthNumber] = month.split('-').map(Number)
   const entries = useAsync<BudgetEntry[]>(async () => {
     const budgets = await getBudgets()
     const progress = await Promise.all(
-      budgets.map((budget) => getBudgetProgress(budget.id)),
+      budgets.map((budget) =>
+        budget.grouping === 'MONTH'
+          ? getBudgetProgress(budget.id, year, monthNumber)
+          : getBudgetProgress(budget.id),
+      ),
     )
     return budgets
       .map((budget, index) => ({ budget, progress: progress[index] }))
       .filter((entry) => Boolean(entry.progress))
-  }, ['budgets'])
+  }, ['budgets', month])
 
   const items = entries.data ?? []
   const loading = entries.loading && !entries.data
@@ -102,10 +109,29 @@ export function Budgets({
           <p>
             {items.length === 0
               ? t`Spending limits per account and period`
-              : t`${items.length} budgets`}
+              : t`${items.length} budgets · ${formatMonth(year, monthNumber)}`}
           </p>
         </div>
         <div className="page-actions">
+          <div className="month-nav">
+            <button
+              type="button"
+              className="icon-btn"
+              onClick={() => setMonth(addMonths(month, -1))}
+              aria-label={t`Previous month`}
+            >
+              <IconChevronLeft />
+            </button>
+            <span>{formatMonth(year, monthNumber)}</span>
+            <button
+              type="button"
+              className="icon-btn"
+              onClick={() => setMonth(addMonths(month, 1))}
+              aria-label={t`Next month`}
+            >
+              <IconChevronRight />
+            </button>
+          </div>
           <button
             type="button"
             className="btn ghost"
