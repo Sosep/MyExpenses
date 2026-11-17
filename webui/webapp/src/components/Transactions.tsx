@@ -179,7 +179,7 @@ export function Transactions({ account }: TransactionsProps) {
         </div>
       ) : null}
 
-      <section className="card">
+      <section className="card table-card">
         <table className="table">
           <thead>
             <tr>
