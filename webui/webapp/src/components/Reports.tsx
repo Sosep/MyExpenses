@@ -6,7 +6,7 @@ import {
   addMonths,
   currentMonth,
   formatMoney,
-  formatMonth,
+  formatMonthKey,
   lastMonths,
   monthRange,
 } from '../format'
@@ -36,8 +36,7 @@ function byLabel(by: By): string {
 function rangeLabel(mode: RangeMode, month: string): string {
   if (mode === 'last3') return t`Last 3 months`
   if (mode === 'year') return t`This year`
-  const [year, monthNumber] = month.split('-').map(Number)
-  return formatMonth(year, monthNumber)
+  return formatMonthKey(month)
 }
 
 function typeLabel(type: Type): string {
@@ -68,7 +67,7 @@ export function Reports({ account, accounts }: ReportsProps) {
   const [allAccounts, setAllAccounts] = useState(false)
   const [selected, setSelected] = useState<BreakdownItem | null>(null)
   const reportAccountId = allAccounts ? 0 : account.id
-  const [year, monthNumber] = month.split('-').map(Number)
+  const year = Number(month.slice(0, 4))
   const range =
     rangeMode === 'month'
       ? monthRange(month)
@@ -110,7 +109,7 @@ export function Reports({ account, accounts }: ReportsProps) {
               >
                 <IconChevronLeft />
               </button>
-              <span>{formatMonth(year, monthNumber)}</span>
+              <span>{formatMonthKey(month)}</span>
               <button
                 type="button"
                 className="icon-btn"

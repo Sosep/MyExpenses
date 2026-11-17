@@ -95,6 +95,12 @@ usa el modo Vite en caliente.
   contraseña vale.
 - La cookie es la misma `myexpenses_session` que usa el servidor real.
 
+### Índice de mes
+
+Como la API real, el mock devuelve `second` con **base 0** en `reports/grouped`,
+`budgets/{id}` y su historial: noviembre es `10`. La SPA guarda el mes que
+muestra como `YYYY-MM` (1–12) y lo convierte solo al llamar a la API.
+
 ### QA rápido
 
 | Parámetro | Efecto |

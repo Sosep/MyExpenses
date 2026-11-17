@@ -4,6 +4,9 @@ import {
   addMonths,
   formatDate,
   formatMoney,
+  formatMonth,
+  formatMonthKey,
+  formatMonthShort,
   monthRange,
   parseAmountMinor,
   parseIsoDate,
@@ -70,5 +73,22 @@ describe('parseAmountMinor', () => {
     expect(parseAmountMinor('-3', 2)).toBeNull()
     expect(parseAmountMinor('1e3', 2)).toBeNull()
     expect(parseAmountMinor('abc', 2)).toBeNull()
+  })
+})
+
+describe('month index', () => {
+  it('formats the API month index (0-11) as the month it names', () => {
+    i18n.activate('es')
+    expect(formatMonth(2026, 10)).toContain('noviembre')
+    expect(formatMonth(2026, 0)).toContain('enero')
+
+    i18n.activate('en')
+    expect(formatMonthShort(2026, 10).toLowerCase()).toContain('nov')
+  })
+
+  it('formats the UI month key as the same month the API calls it', () => {
+    i18n.activate('es')
+    expect(formatMonthKey('2026-11')).toBe(formatMonth(2026, 10))
+    expect(formatMonthKey('2026-01')).toBe(formatMonth(2026, 0))
   })
 })

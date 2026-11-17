@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { fillSeries } from './series'
 import type { Group } from './types'
 
+// The API counts months 0-11: November is 10. Fixtures must use the same
+// convention, otherwise the series never matches the server response.
 const group = (year: number, second: number, incomeMinor = 1000): Group => ({
   year,
   second,
@@ -11,13 +13,13 @@ const group = (year: number, second: number, incomeMinor = 1000): Group => ({
 })
 
 describe('fillSeries', () => {
-  it('keeps the data for every month, not only for the padded ones', () => {
+  it('matches the API month index (0-11) month by month', () => {
     const groups = [
-      group(2025, 12, 2800),
-      group(2026, 1, 2900),
-      group(2026, 2, 3000),
-      group(2026, 10, 3100),
-      group(2026, 11, 3200),
+      group(2025, 11, 2800),
+      group(2026, 0, 2900),
+      group(2026, 1, 3000),
+      group(2026, 9, 3100),
+      group(2026, 10, 3200),
     ]
     const series = fillSeries(groups, '2025-12', 12)
 
@@ -27,13 +29,13 @@ describe('fillSeries', () => {
     ])
   })
 
-  it('starts at the requested month and walks forward', () => {
+  it('walks forward with 0-11 second values', () => {
     const series = fillSeries([], '2026-11', 3)
 
-    expect(series.map((item) => `${item.year}-${item.second}`)).toEqual([
-      '2026-11',
-      '2026-12',
-      '2027-1',
+    expect(series.map((item) => [item.year, item.second])).toEqual([
+      [2026, 10],
+      [2026, 11],
+      [2027, 0],
     ])
   })
 

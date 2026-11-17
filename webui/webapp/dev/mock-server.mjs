@@ -417,10 +417,14 @@ const splitParts = [
   },
 ]
 
-const currentExpenses = transactions
+// Same set the summary uses: a transfer's leg is not income or expense, it is
+// `transfersMinor`. Counting it here made the chart's current month disagree
+// with /reports/summary by the transfer amount.
+const bookable = transactions.filter((item) => !item.transferPeerId)
+const currentExpenses = bookable
   .filter((item) => item.amountMinor < 0)
   .reduce((total, item) => total + item.amountMinor, 0)
-const currentIncome = transactions
+const currentIncome = bookable
   .filter((item) => item.amountMinor > 0)
   .reduce((total, item) => total + item.amountMinor, 0)
 
@@ -431,7 +435,7 @@ for (let index = 11; index >= 0; index -= 1) {
   const date = new Date(year, month - 1 - index, 1)
   groups.push({
     year: date.getFullYear(),
-    second: date.getMonth() + 1,
+    second: date.getMonth(),
     incomeMinor: index === 0 ? currentIncome : incomes[11 - index],
     expensesMinor: index === 0 ? currentExpenses : expenses[11 - index],
     transfersMinor: 0,
@@ -837,7 +841,7 @@ createServer(async (request, response) => {
             : Math.round(allocated * (0.55 + ((offset * 7) % 35) / 100))
         points.push({
           periodYear: date.getFullYear(),
-          periodSecond: date.getMonth() + 1,
+          periodSecond: date.getMonth(),
           periodDescription: new Intl.DateTimeFormat('en-GB', {
             month: 'long',
             year: 'numeric',
@@ -966,16 +970,19 @@ createServer(async (request, response) => {
         return response.end()
       }
       const qYear = Number(url.searchParams.get('year')) || year
-      const qSecond = Number(url.searchParams.get('second')) || month
+      // The API numbers months 0-11; `month` above is the UI's 1-12 value.
+      const rawSecond = url.searchParams.get('second')
+      const qSecond = rawSecond === null ? month - 1 : Number(rawSecond)
+      const qMonthNumber = qSecond + 1
       const qMonthName = new Intl.DateTimeFormat('en-GB', {
         month: 'long',
         year: 'numeric',
-      }).format(new Date(qYear, qSecond - 1, 1))
-      const qStart = `${qYear}-${pad(qSecond)}-01`
-      const qEnd = `${qYear}-${pad(qSecond)}-${pad(new Date(qYear, qSecond, 0).getDate())}`
-      const qTotalDays = new Date(qYear, qSecond, 0).getDate()
-      const qIsCurrent = qYear === year && qSecond === month
-      const qIsPast = qYear < year || (qYear === year && qSecond < month)
+      }).format(new Date(qYear, qSecond, 1))
+      const qStart = `${qYear}-${pad(qMonthNumber)}-01`
+      const qEnd = `${qYear}-${pad(qMonthNumber)}-${pad(new Date(qYear, qMonthNumber, 0).getDate())}`
+      const qTotalDays = new Date(qYear, qMonthNumber, 0).getDate()
+      const qIsCurrent = qYear === year && qSecond === month - 1
+      const qIsPast = qYear < year || (qYear === year && qSecond < month - 1)
       const qCurrentDay = qIsCurrent ? now.getDate() : qIsPast ? qTotalDays + 1 : 0
       const override = (values.periodAllocated ?? {})[`${qYear}-${qSecond}`] ?? null
       const allocated = override ?? values.allocated
@@ -1197,7 +1204,8 @@ createServer(async (request, response) => {
       const toMonth = Number(to.slice(5, 7))
       const filtered = groups.filter((group) => {
         const value = group.year * 12 + group.second
-        return value >= fromYear * 12 + fromMonth && value <= toYear * 12 + toMonth
+        // Range bounds come from ISO dates (1-12); the group index is 0-11.
+        return value >= fromYear * 12 + fromMonth - 1 && value <= toYear * 12 + toMonth - 1
       })
       return sendJson(response, 200, filtered)
     }

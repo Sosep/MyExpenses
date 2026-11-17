@@ -348,7 +348,7 @@ separado; el editor de transferencias no usa `payee` para elegir la cuenta.
   "fractionDigits": 2,
   "grouping": "MONTH",
   "periodYear": 2026,
-  "periodSecond": 11,
+  "periodSecond": 10,
   "periodStart": "2026-11-01",
   "periodEnd": "2026-11-30",
   "periodDescription": "November 2026",
@@ -364,8 +364,11 @@ separado; el editor de transferencias no usa `payee` para elegir la cuenta.
   y puede ser negativo (sobregiro).
 - El servidor reutiliza `loadBudgetProgress` y `sumLoaderForBudget`; el cliente no
   suma transacciones.
-- `year` y `second` van juntos; si falta uno, `400 invalid_period`. `second` sigue
-  la agrupación (día del año, semana, mes o año).
+- `year` y `second` van juntos; si falta uno, `400 invalid_period`. `second` es el
+  **índice del periodo con base 0 dentro de la agrupación**: `MONTH` 0–11 (enero = 0,
+  noviembre = 10), `WEEK` 0–6, `DAY` 0–365, `YEAR` 0–11 (mes) y `NONE` 0. El cliente
+  convierte el mes que muestra (`YYYY-MM`, 1–12) a este índice al llamar; el servidor
+  no lo desplaza.
 - `GET /budgets/{id}` devuelve el progreso, no la configuración; la configuración
   viene en la lista. Un id desconocido es `404 budget_not_found`.
 - Los presupuestos de cuentas y divisas distintas se devuelven en la misma lista;
@@ -418,7 +421,7 @@ Lista por categoría con `allocatedMinor` y `spentMinor` del periodo. Sin
 ```json
 {
   "year": 2026,
-  "second": 11,
+  "second": 10,
   "allocations": [
     { "categoryId": 2, "amountMinor": 35000 },
     { "categoryId": 0, "amountMinor": 45000, "oneTime": true }
@@ -469,6 +472,10 @@ duplicación de presupuestos. Se siguen gestionando en la app Android.
 `grouping` usa el mismo enum que la app, así los números coinciden con el móvil.
 La serie sale de `IAccount.groupingQuery`; el resumen y el reparto usan
 `TRANSACTIONS_EXTENDED` con agregación en `ApiQueries.kt`.
+
+Cada grupo de `/reports/grouped` lleva `year` y `second` con la misma base 0 que
+los presupuestos: `MONTH` 0–11, así que **noviembre es `10`**. El cliente compara
+sus cursors `YYYY-MM` con ese índice, no con el mes 1–12.
 
 `ReportSummaryDto`:
 

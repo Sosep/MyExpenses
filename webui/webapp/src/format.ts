@@ -42,14 +42,24 @@ export function formatDate(
 
 export function formatMonth(year: number, second: number): string {
   return new Intl.DateTimeFormat(uiLocale(), { month: 'long', year: 'numeric' }).format(
-    new Date(year, second - 1, 1),
+    new Date(year, second, 1),
   )
 }
 
 export function formatMonthShort(year: number, second: number): string {
   return new Intl.DateTimeFormat(uiLocale(), { month: 'short' }).format(
-    new Date(year, second - 1, 1),
+    new Date(year, second, 1),
   )
+}
+
+/**
+ * Formats a `YYYY-MM` cursor (the UI's own month state, 1-12) with the same
+ * helper that formats the API's `second` (0-11). Convert at this boundary only,
+ * so no screen has to remember which convention it is holding.
+ */
+export function formatMonthKey(month: string): string {
+  const [year, monthNumber] = month.split('-').map(Number)
+  return formatMonth(year, monthNumber - 1)
 }
 
 export function currentMonth(): string {

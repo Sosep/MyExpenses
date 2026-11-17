@@ -6,7 +6,7 @@ import {
   currentMonth,
   formatDate,
   formatMoney,
-  formatMonth,
+  formatMonthKey,
   categoryPathMap,
   kindLabel,
   monthRange,
@@ -131,7 +131,6 @@ export function Transactions({
     setSelectedId(null)
   }, [account.id, month, type, filtersKey])
 
-  const [year, monthNumber] = month.split('-').map(Number)
   const items = [...(page.data?.items ?? []), ...extra]
   const total = page.data?.total ?? 0
   const current = summary.data?.[0]
@@ -179,7 +178,7 @@ export function Transactions({
             >
               <IconChevronLeft />
             </button>
-            <span>{formatMonth(year, monthNumber)}</span>
+            <span>{formatMonthKey(month)}</span>
             <button
               type="button"
               className="icon-btn"
@@ -462,7 +461,7 @@ export function Transactions({
                     <h3>
                       {hasFilters
                         ? t`No transactions match these filters`
-                        : t`No transactions in ${formatMonth(year, monthNumber)}`}
+                        : t`No transactions in ${formatMonthKey(month)}`}
                     </h3>
                     <p>
                       {hasFilters

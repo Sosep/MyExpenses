@@ -3,9 +3,10 @@ import { addMonths } from './format'
 
 /**
  * Pads a month-by-month series so the chart always draws the same number of
- * columns. Months are matched by year and number: the API sends `second` as a
- * plain number (1-12) while the cursor is zero padded ("2026-01"), so comparing
- * strings would drop every month from January to September.
+ * columns. The API numbers months 0-11 (`second`: November is 10) while the UI
+ * keeps `YYYY-MM` cursors (1-12), so the cursor is converted to a 0-based index
+ * before matching. Comparing the two conventions directly drops every month,
+ * which is why the dashboard used to show zeros with real data.
  */
 export function fillSeries(groups: Group[], fromMonth: string, count: number): Group[] {
   const key = (year: number, second: number) => year * 12 + second
@@ -13,7 +14,8 @@ export function fillSeries(groups: Group[], fromMonth: string, count: number): G
   const result: Group[] = []
   let cursor = fromMonth
   for (let index = 0; index < count; index += 1) {
-    const [year, second] = cursor.split('-').map(Number)
+    const [year, monthNumber] = cursor.split('-').map(Number)
+    const second = monthNumber - 1
     result.push(
       indexed.get(key(year, second)) ?? {
         year,

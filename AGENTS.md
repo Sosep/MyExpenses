@@ -51,7 +51,9 @@ Read this before changing code. Detailed sources:
 - Reports: `/reports/summary`, `/reports/breakdown` (category, payee, tag or
   method) and `/reports/transactions` for drill-down. Period presets, `All
   accounts` converted to the home currency and server-computed shares. Category breakdown
-  uses split parts; the rest count whole transactions.
+  uses split parts; the rest count whole transactions. Month indexes are 0-based
+  (`second`: November = 10) from the provider to the API; the SPA keeps `YYYY-MM`
+  and converts at the call boundary.
 
 ## Build and verify
 

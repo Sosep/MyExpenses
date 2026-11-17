@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { t } from '@lingui/core/macro'
 import type { Account, Budget, BudgetProgress } from '../types'
 import { describeError, getBudgetProgress, getBudgets } from '../api'
-import { addMonths, currentMonth, formatMoney, formatMonth } from '../format'
+import { addMonths, currentMonth, formatMoney, formatMonthKey } from '../format'
 import { useAsync } from '../hooks'
 import { BudgetEditor } from './BudgetEditor'
 import { BudgetHistoryPanel } from './BudgetHistoryPanel'
@@ -75,7 +75,7 @@ export function Budgets({
     const progress = await Promise.all(
       budgets.map((budget) =>
         budget.grouping === 'MONTH'
-          ? getBudgetProgress(budget.id, year, monthNumber)
+          ? getBudgetProgress(budget.id, year, monthNumber - 1)
           : getBudgetProgress(budget.id),
       ),
     )
@@ -124,7 +124,7 @@ export function Budgets({
           <p>
             {items.length === 0
               ? t`Spending limits per account and period`
-              : t`${items.length} budgets · ${formatMonth(year, monthNumber)}`}
+              : t`${items.length} budgets · ${formatMonthKey(month)}`}
           </p>
         </div>
         <div className="page-actions">
@@ -137,7 +137,7 @@ export function Budgets({
             >
               <IconChevronLeft />
             </button>
-            <span>{formatMonth(year, monthNumber)}</span>
+            <span>{formatMonthKey(month)}</span>
             <button
               type="button"
               className="icon-btn"

@@ -5,7 +5,7 @@ import {
   currentMonth,
   formatDate,
   formatMoney,
-  formatMonth,
+  formatMonthKey,
   kindLabel,
   lastMonths,
   monthRange,
@@ -52,7 +52,7 @@ export function Dashboard({
   const income = current?.incomeMinor ?? 0
   const expenses = current?.expensesMinor ?? 0
   const saved = income + expenses
-  const [year, second] = currentMonth().split('-').map(Number)
+  const month = currentMonth()
   const loading = groups.loading || recent.loading
   const error = groups.error ?? recent.error
 
@@ -62,7 +62,7 @@ export function Dashboard({
         <div>
           <h1>{t`Overview`}</h1>
           <p>
-            {formatMonth(year, second)} · {account.label}
+            {formatMonthKey(month)} · {account.label}
           </p>
         </div>
         <div className="page-actions">
@@ -173,7 +173,7 @@ export function Dashboard({
         <div className="card-head">
           <div>
             <h2>{t`Recent transactions`}</h2>
-            <p>{formatMonth(year, second)}</p>
+            <p>{formatMonthKey(month)}</p>
           </div>
           <button type="button" className="link" onClick={onOpenTransactions}>
             {t`View all`}
