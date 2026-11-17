@@ -1,6 +1,6 @@
 # MyExpenses web app
 
-SPA de escritorio servida por el servidor Ktor del móvil en `/app`.
+SPA servida por el servidor Ktor del móvil en `/app`, usable en escritorio y móvil.
 React + TypeScript + Vite, con los tokens de [`../DESIGN.md`](../DESIGN.md).
 
 ## Estado
@@ -8,7 +8,7 @@ React + TypeScript + Vite, con los tokens de [`../DESIGN.md`](../DESIGN.md).
 Corte actual: lectura y escritura simple, transferencias, divididas, ficheros,
 presupuestos e informes.
 
-- Login con la contraseña del Web UI (HTTP Basic).
+- Login con la contraseña del Web UI; el servidor la cambia por una cookie de sesión `HttpOnly`.
 - Dashboard: patrimonio de la cuenta, ingresos/gastos/ahorro del mes,
   tendencia de 12 meses y últimas transacciones.
 - Transacciones: navegación por mes, filtro ingreso/gasto, paginación,
@@ -67,54 +67,95 @@ La autenticación es la misma contraseña que en la app. El servidor la cambia p
 una cookie de sesión `HttpOnly`; no se guarda en `sessionStorage`. Si no hay
 contraseña configurada, deja el campo vacío.
 
-## Probar sin el móvil
+## Probar sin el móvil (mock)
 
-El repo incluye un servidor de desarrollo con datos de ejemplo y 60 transacciones
-para probar scroll y paginación:
+El repo incluye un servidor Node con datos de ejemplo (60 transacciones, cuentas,
+categorías, presupuestos, informes y ficheros) para trabajar sin el teléfono.
+
+### Arranque
 
 ```bash
-npm run build
-npm run mock
-# abre http://localhost:4173/app/
+cd webui/webapp
+npm install
+npm run build     # genera webui/src/main/assets/webapp
+npm run mock      # http://localhost:4173/app/
 ```
 
-El mock sirve el build y el API en el mismo origen y se puede probar en
-viewport móvil (390×844) para revisar el layout responsive; en móvil la barra
-lateral pasa a una barra inferior, e implementa `POST/PUT/DELETE`
-de transacciones **simples** y de **presupuestos** en memoria, y sirve resumen y
-desglose de informes (recalcula saldo y totales del mes). Las transferencias y
-divididas se pueden abrir y editar visualmente, pero su guardado se prueba contra
-el API real del teléfono. Acepta estos parámetros para QA visual:
+`MOCK_PORT=4174 npm run mock` cambia el puerto. El mock sirve el **build** y el
+API en el mismo origen; si cambias código, vuelve a ejecutar `npm run build` o
+usa el modo Vite en caliente.
+
+### Login
+
+- Sin `?login=1` el mock inyecta una cookie de sesión y entra directamente.
+- `?login=1` borra esa cookie y muestra la pantalla de login; cualquier
+  contraseña vale.
+- La cookie es la misma `myexpenses_session` que usa el servidor real.
+
+### QA rápido
 
 | Parámetro | Efecto |
 |---|---|
-| `?login=1` | Borra la cookie del mock y muestra la pantalla de login |
-| `?view=transactions` | Abre Transacciones |
-| `?view=reports` | Abre Informes |
-| `?view=reports&reportBy=Payee&reportType=Both` | Preselecciona dimensión y tipo en Informes |
+| `?login=1` | Borra la cookie del mock y muestra el login |
+| `?locale=es` | Activa español |
+| `?view=transactions` | Transacciones |
+| `?view=reports` | Informes |
+| `?view=reports&reportBy=Payee&reportType=Both` | Preselecciona dimensión y tipo |
 | `?view=reports&reportDrill=1` | Abre el detalle del primer grupo |
-| `?new=1&combo=1` | Abre el alta y escribe `Ren` en el selector de beneficiario |
-| `?view=budgets` | Abre Presupuestos |
-| `?view=budgets&new=1` | Abre el editor de alta de presupuesto |
-| `?view=budgets&edit=1` | Abre el primer presupuesto en el editor |
-| `?view=files` | Abre Ficheros |
-| `?panel=split` / `?panel=transfer` | Abre el detalle de la dividida / transferencia |
-| `?new=1` | Abre el selector de tipo de alta |
-| `?new=1&kind=transfer` / `&kind=split` | Abre el editor de transferencia / dividida |
-| `?edit=simple` | Abre un gasto simple en el editor |
-| `?edit=split` / `?edit=transfer` | Abre la dividida / transferencia en su editor |
-| `?new=1&save=1` | Crea una transacción simple de prueba contra el mock |
-| `?theme=dark` | Activa el tema oscuro |
-| `?metrics=1` | Añade un badge con `scrollHeight`/`clientHeight` y filas |
+| `?view=budgets` | Presupuestos |
+| `?view=budgets&new=1` | Alta de presupuesto |
+| `?view=budgets&edit=1` | Edita el primer presupuesto |
+| `?view=budgets&edit=1&periodOverride=1` | Prueba el total distinto de este periodo |
+| `?view=files` | Ficheros |
+| `?panel=split` / `?panel=transfer` | Detalle de dividida / transferencia |
+| `?new=1` | Selector de tipo de alta |
+| `?new=1&kind=transfer` / `&kind=split` | Editor de transferencia / dividida |
+| `?new=1&combo=1` | Abre el alta y filtra beneficiarios escribiendo `Ren` |
+| `?edit=simple` / `?edit=split` / `?edit=transfer` | Abre esa transacción en su editor |
+| `?new=1&save=1` | Crea una transacción simple de prueba |
+| `?theme=dark` | Tema oscuro |
+| `?metrics=1` | Badge con `scrollHeight`/`clientHeight` y filas |
 
-Para trabajar con Vite en caliente y el mock como API:
+### Viewport móvil
+
+Abre las DevTools del navegador y elige un dispositivo de **390×844** (o
+cualquier ancho ≤760 px). La barra lateral pasa a una barra inferior fija con
+icono y etiqueta. Es el mismo mock y los mismos assets, solo cambia el viewport.
+Sirve para comprobar:
+
+- navegación inferior y espacio reservado al final de la página;
+- tablas que ocultan columnas (`hide-sm`) y botones compactos;
+- editores a ancho completo y dividida apilada;
+- controles de informes y presupuestos que deben hacer wrap.
+
+### Qué escribe el mock
+
+- **Sí**: transacciones simples (`POST/PUT/DELETE`), presupuestos, asignaciones,
+  rollover, total por periodo, duplicación, informes y descarga de ficheros.
+- **No**: guardar transferencias ni divididas; se abren y editan visualmente,
+  pero el guardado se prueba contra el API real del teléfono.
+- Todo vive en memoria: reiniciar el mock vuelve a los datos de ejemplo.
+- El código está en `dev/mock-server.mjs`; los fixtures están al principio del
+  archivo.
+
+### Vite en caliente con el mock como API
 
 ```bash
 node dev/mock-server.mjs
 VITE_API_TARGET=http://localhost:4173 npm run dev
 ```
 
-En ese modo la SPA la sirve Vite y los parámetros de QA del mock no aplican.
+La SPA la sirve Vite en `http://localhost:5173/app/`; los parámetros de QA del
+mock no aplican porque el `index.html` lo sirve Vite.
+
+### Contra el móvil real
+
+```bash
+VITE_API_TARGET=http://IP_DEL_MOVIL:9000 npm run dev
+```
+
+Abre `http://localhost:5173/app/`; Vite hace proxy de `/api`. La contraseña es
+la del Web UI y la sesión es una cookie.
 
 ## Build
 
@@ -126,24 +167,19 @@ El resultado se escribe en `webui/src/main/assets/webapp/` y se sirve desde
 Ktor en `/app`. El build se commitea para que el APK lo incluya sin depender
 de Node en CI; si se cambia la app, hay que volver a ejecutar el build.
 
-## Notas de esta iteración
+## Notas de implementación
 
-- Los assets se sirven desde `AssetManager` mediante una ruta propia de Ktor;
-  no se usa `staticResources`, que lee del classpath y no de `assets/`.
-- La navegación es por estado (Overview / Transactions), sin router. Los
-  deep links se añadirán cuando se estabilice la navegación.
-- El saldo acumulado por fila todavía no está en el API de lectura; la tabla
-  muestra el saldo actual de la cuenta en la cabecera. Se añadirá con el
-  endpoint de ledger.
-- Los textos están en inglés y todavía no pasan por Lingui; la extracción a
-  `.po` se hace cuando las pantallas estén cerradas.
-- El importe del formulario se parsea como cadena decimal a unidades menores; el
-  API nunca recibe un `Float`.
-- Tras una escritura se refrescan las cuentas, el resumen y la lista con una
-  `dataVersion`; no se suman transacciones en cliente.
-- El editor de divididas usa importes firmados y exige que la suma de partes
-  cuadre con el total; el API lo revalida. La cuenta no se puede mover al editar.
-- Esta iteración usa CSS con los tokens, sin Tailwind todavía; TanStack Query y
-  el router llegarán con las pantallas de escritura.
-- Geist no está empaquetado aún: la pila cae a `system-ui`. Se añadirá el woff2
-  al cerrar la biblioteca de componentes.
+- Los assets se sirven desde `AssetManager` con una ruta propia de Ktor; no se
+  usa `staticResources`, que lee del classpath.
+- La navegación es por estado, sin router. Los deep links llegan más adelante.
+- El saldo acumulado por fila aún no está en el API de lectura; la tabla muestra
+  el saldo actual de la cuenta en la cabecera.
+- El importe se parsea como cadena decimal a unidades menores; el API nunca
+  recibe un `Float`.
+- TanStack Query cachea y, tras cada escritura, invalida; no se suman
+  transacciones en cliente.
+- La dividida usa importes firmados y exige que las partes sumen el total; la
+  cuenta no se puede mover al editar.
+- Tailwind v4 procesa toda la CSS (`app.css` en la capa `components`); la UI
+  nueva usa utilidades con los tokens de `DESIGN.md`.
+- Geist Sans va empaquetada con `@fontsource/geist-sans`.
