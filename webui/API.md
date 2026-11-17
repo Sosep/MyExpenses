@@ -389,10 +389,15 @@ Tras revisar de nuevo el código:
 
 ## 8. Pruebas
 
-- Mapeadores puros (cursor/DTO) con fixtures: sin Android.
-- Endpoints con base real en tests instrumentados: lectura, creación simple,
-  transferencia, split, errores de validación.
-- Contrato JSON: fixtures versionados que la web app usa en tests (MSW/Vitest).
-- Casos obligatorios: suma de split incorrecta, cuenta inexistente, transferencia
-  a la misma cuenta, edición de transferencia como simple, borrado de split,
-  importes negativos/positivos, divisa con dígitos personalizados.
+- **Rutas en JVM**: `webui/src/test/java/org/totschnig/webui/api/ApiRoutesTest.kt`
+  con un `WebApiDataSource` fake y Ktor `testApplication`. Cubren routing,
+  validación, `201/204/404/409`, JSON y body malformado. Comando:
+  `docker compose run --rm android-build :webui:testDebugUnitTest`.
+- **Capa Android**: `AndroidWebApiDataSource` y el `ContentProvider` se validan
+  en el móvil o con tests instrumentados; los mapeadores puros pueden probarse
+  sin Android.
+- **Contrato JSON**: la SPA usa el mock server para QA visual; los fixtures
+  pueden compartirse cuando se añada Vitest.
+- **Pendientes para el siguiente corte**: suma de split incorrecta,
+  transferencia a la misma cuenta, borrado de split, edición de transferencia
+  como simple, importes con dígitos personalizados.

@@ -10,6 +10,8 @@ Read this before changing code. Detailed sources:
 ## Current state
 
 - `/api/v1`: read endpoints and simple create/update/delete.
+- API routes covered on the JVM by `ApiRoutesTest` with a fake `WebApiDataSource`
+  and Ktor `testApplication`.
 - SPA: dashboard, transactions, detail and the simple transaction editor.
 - Transfers and split transactions: read-only; their write endpoints and editors
   are the next slice.
@@ -21,7 +23,9 @@ The host has no JDK or Android SDK. Run Android tasks in Docker:
 - Compile the web UI feature: `docker compose run --rm android-build :webui:compileDebugKotlin`
 - Kotlin lint: `docker compose run --rm android-build :webui:ktlintCheck`
 - Unit tests: `docker compose run --rm android-build :webui:testDebugUnitTest`
-  (app tests follow the `extern` flavor, e.g. `:myExpenses:testExternDebugUnitTest`)
+  (app tests follow the `extern` flavor, e.g. `:myExpenses:testExternDebugUnitTest`).
+  API routes run on the JVM through `WebApiDataSource` + `testApplication`; the
+  Android implementation and the provider stay device-level.
 - Signed universal APK: `BUILD_VARIANT=release docker compose run --rm android-build`
   Output: `myExpenses/build/outputs/apk_from_bundle/externRelease/*universal-signed.apk`
 
@@ -88,14 +92,14 @@ A change is not done until, in the same commit:
   patterns and tokens.
 - `webui/webapp/README.md` matches build steps and QA switches.
 - This file's **Current state** and **Open work** reflect the new slice.
+- If routing or validation changed, extend `ApiRoutesTest`; the test command is
+  in Build and verify.
 
 Update the docs while the change is fresh; do not defer them to a later commit.
 
 ## Open work
 
-- JVM API harness: extract `WebApiDataSource` and cover routing, errors and JSON
-  with Ktor `testApplication`; optionally Robolectric against
-  `TransactionProvider`.
 - Transfer and split write endpoints and editors (the split editor and part
-  panel are already designed in `DESIGN.md`).
+  panel are already designed in `DESIGN.md`); use `ApiRoutesTest` for the new
+  routes and the sum/peer rules.
 - Then budgets, reports, files, Lingui `.po`, cookie session and bundled Geist.

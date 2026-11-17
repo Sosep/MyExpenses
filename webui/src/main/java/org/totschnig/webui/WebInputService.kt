@@ -107,6 +107,7 @@ import org.totschnig.myexpenses.util.io.getActiveIpAddress
 import org.totschnig.myexpenses.util.licence.LicenceHandler
 import org.totschnig.webui.api.ApiError
 import org.totschnig.webui.api.ApiException
+import org.totschnig.webui.api.AndroidWebApiDataSource
 import org.totschnig.webui.api.ApiRoutes
 import java.io.IOException
 import java.lang.ref.WeakReference
@@ -416,12 +417,14 @@ class WebInputService : LifecycleService(), IWebInputService {
                                         0
                                     ).versionName ?: ""
                                 val api = ApiRoutes(
-                                    repository = repository,
-                                    prefHandler = prefHandler,
-                                    currencyContext = currencyContext,
-                                    payeeMap = payeeMapFlow,
-                                    tagMap = tagMapFlow,
-                                    appVersion = appVersion
+                                    AndroidWebApiDataSource(
+                                        repository = repository,
+                                        prefHandler = prefHandler,
+                                        currencyContext = currencyContext,
+                                        payeeMap = payeeMapFlow,
+                                        tagMap = tagMapFlow,
+                                        appVersion = appVersion
+                                    )
                                 )
                                 if (passWord == null) {
                                     serve()
