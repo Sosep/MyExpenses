@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { t } from '@lingui/core/macro'
 import type { Account, Budget, BudgetProgress, BudgetWrite } from '../types'
 import {
@@ -12,6 +12,7 @@ import {
   updateBudgetAllocations,
 } from '../api'
 import { amountInputValue, currencySymbol, parseAmountMinor, todayIso } from '../format'
+import { useFocusTrap } from '../useFocusTrap'
 import { useAsync } from '../hooks'
 import { SearchSelect } from './SearchSelect'
 import { IconX } from './Icons'
@@ -100,6 +101,8 @@ export function BudgetEditor({
   onClose,
   onSaved,
 }: BudgetEditorProps) {
+  const panelRef = useRef<HTMLElement>(null)
+  useFocusTrap(panelRef)
   const [initial] = useState(() =>
     initialState(budget, progress, accounts, defaultAccountId),
   )
@@ -317,6 +320,7 @@ export function BudgetEditor({
     <>
       <div className="overlay" onClick={requestClose} />
       <aside
+        ref={panelRef}
         className="panel editor-panel"
         role="dialog"
         aria-modal="true"

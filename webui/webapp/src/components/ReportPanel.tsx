@@ -1,6 +1,8 @@
+import { useRef } from 'react'
 import { t } from '@lingui/core/macro'
 import type { BreakdownItem, Transaction } from '../types'
-import { getReportTransactions, describeError } from '../api'
+import { describeError, getReportTransactions } from '../api'
+import { useFocusTrap } from '../useFocusTrap'
 import { formatDate, formatMoney } from '../format'
 import { useAsync } from '../hooks'
 import { IconX } from './Icons'
@@ -33,6 +35,8 @@ export function ReportPanel({
   item,
   onClose,
 }: ReportPanelProps) {
+  const panelRef = useRef<HTMLElement>(null)
+  useFocusTrap(panelRef)
   const page = useAsync(
     () => getReportTransactions(accountId, by, item.id, type, from, to),
     ['report-transactions', accountId, by, item.id, type, from, to],
@@ -42,7 +46,13 @@ export function ReportPanel({
   return (
     <>
       <div className="overlay" onClick={onClose} />
-      <aside className="panel" role="dialog" aria-modal="true" aria-label={item.label}>
+      <aside
+        ref={panelRef}
+        className="panel"
+        role="dialog"
+        aria-modal="true"
+        aria-label={item.label}
+      >
         <div className="panel-head">
           <div>
             <div className="panel-kicker">{t`Drill-down`}</div>

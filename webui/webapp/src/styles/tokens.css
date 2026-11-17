@@ -53,9 +53,13 @@
 
   /* Efectos */
   --dots: rgba(13, 18, 32, 0.09);
-  --focus-ring: rgba(47, 107, 255, 0.38);
+  --focus-ring: #2f6bff;
   --shadow-card: 0 1px 2px rgba(13, 18, 32, 0.04),
     0 8px 24px rgba(13, 18, 32, 0.03);
+
+  /* Alturas de control: 36 con ratón, 44 con el dedo (ver DESIGN.md §11) */
+  --control-h: 36px;
+  --field-h: 40px;
 
   /* Radios */
   --radius-card: 12px;
@@ -111,7 +115,15 @@
 
   /* Efectos */
   --dots: rgba(255, 255, 255, 0.07);
-  --focus-ring: rgba(110, 160, 255, 0.45);
+  --focus-ring: #8cb6ff;
   --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.03) inset,
     0 12px 32px rgba(0, 0, 0, 0.35);
+}
+
+/* Touch devices get finger-sized controls; a mouse keeps the compact ones. */
+@media (pointer: coarse) {
+  :root {
+    --control-h: 44px;
+    --field-h: 44px;
+  }
 }

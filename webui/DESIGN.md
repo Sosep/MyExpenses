@@ -225,7 +225,8 @@ espacio para no quedar tapado.
 
 - Por defecto: filas de tabla **44 px**, padding de tarjeta 16.
 - Compacta (si se añade): filas de **36 px**, padding 12. Se guarda por usuario.
-- Alturas de control: 32 px (compacto), 36 px (normal), 40 px (táctil).
+- Alturas de control: `--control-h` 36 px con ratón y 44 px con el dedo (`pointer: coarse`);
+  `--field-h` 40 px y 44 px. Las definen los tokens, no cada componente.
 
 ---
 
@@ -245,7 +246,8 @@ espacio para no quedar tapado.
 - Sentence case: "Save", "New transaction", "Add part". Nunca "Submit".
 - Deshabilitado: opacidad .5 y sin sombra; el motivo se explica al lado, no solo
   con el botón gris.
-- Foco: anillo de 2 px `--focus-ring` con offset 2.
+- Foco: anillo de 2 px `--focus-ring` (color sólido, ≥3:1 sobre las cuatro superficies)
+  con offset 2.
 - Un solo primary por vista. Los botones de peligro no se ponen al lado del
   primary sin separación visual.
 
@@ -644,8 +646,10 @@ expenses-november-2026.csv         18 KB   16 Nov 2026, 18:40 [↓ Download]
 - Contraste mínimo AA: 4.5:1 en texto normal, 3:1 en texto grande y elementos
   gráficos esenciales.
 - El color no es la única señal: signo, etiqueta, icono y texto acompañan.
-- Foco de 2 px `--focus-ring`, offset 2; visible en ambos temas.
-- Objetivos táctiles de 40×40 px como mínimo, aunque el uso sea de escritorio.
+- Foco de 2 px `--focus-ring` sólido, offset 2; visible en ambos temas y con ≥3:1 en cada
+  superficie. En filas y tarjetas clicables se añade una marca además del fondo.
+- Objetivos táctiles de 44×44 px como mínimo con puntero grueso (36 px con ratón), aunque el
+  uso sea de escritorio.
 - HTML semántico: `button`, `label`, `table`, `th scope`, `aria-live` para toasts.
 - Diálogos y paneles con foco atrapado y retorno al disparador.
 - `prefers-reduced-motion`: sin animaciones de entrada; transiciones ≤150 ms.

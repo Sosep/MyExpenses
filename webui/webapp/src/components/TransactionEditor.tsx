@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { t } from '@lingui/core/macro'
 import type { ReactNode } from 'react'
 import type {
@@ -29,6 +29,7 @@ import {
   updateTransaction,
   updateTransfer,
 } from '../api'
+import { useFocusTrap } from '../useFocusTrap'
 import {
   amountInputValue,
   categoryPathMap,
@@ -147,10 +148,19 @@ function EditorFrame({
   onClose: () => void
   children: ReactNode
 }) {
+  const panelRef = useRef<HTMLElement>(null)
+  useFocusTrap(panelRef)
+
   return (
     <>
       <div className="overlay" onClick={onClose} />
-      <aside className="panel editor-panel" role="dialog" aria-modal="true" aria-label={title}>
+      <aside
+        ref={panelRef}
+        className="panel editor-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+      >
         <div className="panel-head">
           <div>
             <div className="panel-kicker">{kicker}</div>
@@ -323,6 +333,8 @@ function TransactionForm({
   onClose,
   onSaved,
 }: FormProps) {
+  const panelRef = useRef<HTMLElement>(null)
+  useFocusTrap(panelRef)
   const [state, setState] = useState<FormState>(initial)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [submitError, setSubmitError] = useState<string | null>(null)
@@ -466,6 +478,7 @@ function TransactionForm({
     <>
       <div className="overlay" onClick={requestClose} />
       <aside
+        ref={panelRef}
         className="panel editor-panel"
         role="dialog"
         aria-modal="true"
@@ -1633,10 +1646,14 @@ function FormPanel({
   children: ReactNode
   wide?: boolean
 }) {
+  const panelRef = useRef<HTMLElement>(null)
+  useFocusTrap(panelRef)
+
   return (
     <>
       <div className="overlay" onClick={onClose} />
       <aside
+        ref={panelRef}
         className={`panel editor-panel ${wide ? 'wide' : ''}`}
         role="dialog"
         aria-modal="true"

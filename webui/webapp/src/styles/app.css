@@ -115,7 +115,7 @@ button:disabled {
 }
 
 .account-select {
-  height: 32px;
+  height: var(--control-h);
   border: 1px solid var(--border-subtle);
   border-radius: 10px;
   background: var(--bg-canvas);
@@ -131,8 +131,8 @@ button:disabled {
 }
 
 .icon-btn {
-  width: 32px;
-  height: 32px;
+  width: var(--control-h);
+  height: var(--control-h);
   border-radius: 10px;
   border: 1px solid var(--border-subtle);
   background: var(--bg-surface);
@@ -255,7 +255,7 @@ button:disabled {
 }
 
 .btn {
-  height: 36px;
+  height: var(--control-h);
   border-radius: 10px;
   border: 1px solid var(--border-subtle);
   background: var(--bg-surface);
@@ -555,7 +555,7 @@ button:disabled {
   font-size: 11px;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-weight: 500;
   padding: 10px 16px;
   background: var(--bg-sunken);
@@ -611,17 +611,25 @@ button:disabled {
 
 .table tr.clickable:focus-visible td {
   background: var(--tint-sky);
+  box-shadow: inset 0 2px 0 var(--accent), inset 0 -2px 0 var(--accent);
 }
 
 .tag {
   display: inline-block;
   font-size: 11px;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   background: var(--bg-sunken);
+  border: 1px solid transparent;
   border-radius: 4px;
   padding: 1px 5px;
   margin-right: 4px;
   white-space: nowrap;
+}
+
+/* On the dark theme the chip shares its colour with the row, so the edge does
+   the work that the tint does in the bright theme. */
+[data-theme='dark'] .tag {
+  border-color: var(--border-subtle);
 }
 
 .status-dot {
@@ -984,7 +992,7 @@ button:disabled {
 }
 
 .input {
-  height: 40px;
+  height: var(--field-h);
   border: 1px solid var(--border-subtle);
   border-radius: 10px;
   background: var(--bg-canvas);
@@ -1001,7 +1009,7 @@ button:disabled {
 
 .login-submit {
   width: 100%;
-  height: 40px;
+  height: var(--field-h);
 }
 
 .error-text {
@@ -1230,6 +1238,20 @@ button:disabled {
 
   .account-select {
     max-width: 112px;
+  }
+}
+
+@media (pointer: coarse) {
+  .segmented button {
+    min-height: calc(var(--control-h) - 4px);
+  }
+
+  .search-select-option {
+    padding: 11px 12px;
+  }
+
+  .tag {
+    padding: 5px 8px;
   }
 }
 
@@ -1786,6 +1808,22 @@ button:disabled {
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 4px 12px;
   align-items: baseline;
+}
+
+.breakdown-row.clickable {
+  cursor: pointer;
+  padding: 6px 8px;
+  margin: 0 -8px;
+  border-radius: var(--radius-small);
+}
+
+.breakdown-row.clickable:hover {
+  background: var(--bg-canvas);
+}
+
+.breakdown-row.clickable:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
 }
 
 .breakdown-main {

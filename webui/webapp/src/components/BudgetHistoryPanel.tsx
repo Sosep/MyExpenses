@@ -1,6 +1,8 @@
+import { useRef } from 'react'
 import { t } from '@lingui/core/macro'
 import type { Budget } from '../types'
 import { describeError, getBudgetHistory } from '../api'
+import { useFocusTrap } from '../useFocusTrap'
 import { formatMoney, formatMonthShort } from '../format'
 import { useAsync } from '../hooks'
 import { IconX } from './Icons'
@@ -11,6 +13,8 @@ interface BudgetHistoryPanelProps {
 }
 
 export function BudgetHistoryPanel({ budget, onClose }: BudgetHistoryPanelProps) {
+  const panelRef = useRef<HTMLElement>(null)
+  useFocusTrap(panelRef)
   const history = useAsync(
     () => getBudgetHistory(budget.id, 12),
     ['budget-history', budget.id],
@@ -25,6 +29,7 @@ export function BudgetHistoryPanel({ budget, onClose }: BudgetHistoryPanelProps)
     <>
       <div className="overlay" onClick={onClose} />
       <aside
+        ref={panelRef}
         className="panel"
         role="dialog"
         aria-modal="true"

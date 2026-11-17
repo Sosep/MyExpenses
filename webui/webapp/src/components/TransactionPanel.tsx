@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { Account } from '../types'
 import { deleteTransaction, describeError, getTransaction } from '../api'
+import { useFocusTrap } from '../useFocusTrap'
 import { formatDate, formatMoney, kindLabel, statusLabel } from '../format'
 import { t } from '@lingui/core/macro'
 import { useAsync } from '../hooks'
@@ -31,6 +32,8 @@ export function TransactionPanel({
   onEdit,
   onDeleted,
 }: PanelProps) {
+  const panelRef = useRef<HTMLElement>(null)
+  useFocusTrap(panelRef)
   const detail = useAsync(() => getTransaction(id), ['transaction', id])
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -72,7 +75,13 @@ export function TransactionPanel({
   return (
     <>
       <div className="overlay" onClick={onClose} />
-      <aside className="panel" role="dialog" aria-modal="true" aria-label={t`Transaction details`}>
+      <aside
+      ref={panelRef}
+      className="panel"
+      role="dialog"
+      aria-modal="true"
+      aria-label={t`Transaction details`}
+    >
         <div className="panel-head">
           <div>
             <div className="panel-kicker">
