@@ -38,8 +38,9 @@ Read this before changing code. Detailed sources:
   has an English/Spanish switch. Dates and money follow the active locale.
 - Server data uses TanStack Query; writes invalidate the cache instead of bumping
   a version counter. Geist Sans is bundled through `@fontsource/geist-sans`.
-- Tailwind v4 processes the styles: `app.css` is imported into the `components`
-  layer and new UI uses utilities with the DESIGN tokens.
+- Tailwind v4 processes all component styles: `app.css` lives in the `components`
+  layer and its semantic classes are authored with `@apply` over the DESIGN
+  tokens. Only resets, keyframes and a few exact keywords remain plain CSS.
 - Transactions list supports `categoryId`, `payeeId`, `tagId` and `methodId`
   filters (AND); the SPA exposes them with `SearchSelect`, keeps them in the URL
   and as removable chips, hides the month KPIs while filtering and collapses

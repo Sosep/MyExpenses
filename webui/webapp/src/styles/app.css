@@ -55,229 +55,122 @@ button:disabled {
 }
 
 .app {
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-  background: var(--bg-canvas);
+  @apply flex h-screen flex-col bg-canvas;
 }
 
 .topbar {
-  height: 48px;
-  flex: none;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 0 20px;
-  background: var(--bg-surface);
-  border-bottom: 1px solid var(--border-subtle);
-  position: sticky;
-  top: 0;
-  z-index: 20;
+  @apply sticky top-0 z-20 flex h-12 flex-none items-center gap-2.5 border-b border-line bg-surface px-5 py-0;
 }
 
 .brand {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 600;
-  font-size: 14px;
-  letter-spacing: -0.01em;
+  @apply flex items-center gap-2 text-[14px] font-semibold tracking-[-0.01em];
 }
 
 .mark {
-  width: 26px;
-  height: 26px;
-  border-radius: 7px;
-  background: linear-gradient(135deg, var(--accent), var(--accent-2));
-  color: #fff;
-  display: grid;
-  place-items: center;
-  font-size: 14px;
-  font-weight: 700;
-  flex: none;
+  @apply grid h-[26px] w-[26px] flex-none place-items-center rounded-[7px] bg-[linear-gradient(135deg,var(--accent),var(--accent-2))] text-[14px] font-bold text-white;
 }
 
 .top-right {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  @apply ml-auto flex items-center gap-2;
 }
 
 .top-inline {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  @apply flex items-center gap-2;
 }
 
 /* The menu only exists on narrow screens: there the language, theme and session
    controls do not fit next to the account picker. */
 .more-menu {
-  display: none;
-  position: relative;
+  @apply relative hidden;
 }
 
 .menu-panel {
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
-  z-index: 60;
-  min-width: 220px;
-  padding: 6px;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
-  border-radius: 10px;
-  box-shadow: var(--shadow-card);
+  @apply absolute right-0 top-[calc(100%+6px)] z-[60] min-w-[220px] rounded-[10px] border border-line bg-surface p-1.5 shadow-[var(--shadow-card)];
 }
 
 .menu-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  height: var(--control-h);
-  padding: 0 10px;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--text-primary);
-  font-size: 14px;
-  text-align: left;
+  @apply flex h-[var(--control-h)] w-full items-center gap-2.5 rounded-lg border-0 bg-transparent px-2.5 py-0 text-left text-[14px] text-ink;
 }
 
 .menu-item:hover {
-  background: var(--bg-canvas);
+  @apply bg-canvas;
 }
 
 .menu-item:focus-visible {
-  outline: 2px solid var(--focus-ring);
-  outline-offset: 1px;
+  @apply outline-2 outline-offset-1 outline-focus;
 }
 
 .menu-field {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 4px 10px 8px;
-  font-size: 12px;
-  color: var(--text-muted);
+  @apply flex items-center justify-between gap-2.5 px-2.5 pb-2 pt-1 text-[12px] text-muted;
 }
 
 .account-picker {
-  display: flex;
-  align-items: center;
+  @apply flex items-center;
 }
 
 .account-select {
-  height: var(--control-h);
-  border: 1px solid var(--border-subtle);
-  border-radius: 10px;
-  background: var(--bg-canvas);
-  color: var(--text-primary);
-  padding: 0 8px;
-  font-size: 12px;
-  max-width: 220px;
+  @apply h-[var(--control-h)] max-w-[220px] rounded-[10px] border border-line bg-canvas px-2 py-0 text-[12px] text-ink;
 }
 
 .account-select:focus-visible {
-  outline: 2px solid var(--focus-ring);
-  outline-offset: 1px;
+  @apply outline-2 outline-offset-1 outline-focus;
 }
 
 .icon-btn {
-  width: var(--control-h);
-  height: var(--control-h);
-  border-radius: 10px;
-  border: 1px solid var(--border-subtle);
-  background: var(--bg-surface);
-  color: var(--text-muted);
-  display: grid;
-  place-items: center;
-  flex: none;
+  @apply grid h-[var(--control-h)] w-[var(--control-h)] flex-none place-items-center rounded-[10px] border border-line bg-surface text-muted;
 }
 
 .icon-btn:hover {
-  color: var(--text-primary);
-  border-color: var(--border-strong);
+  @apply border-line-strong text-ink;
 }
 
 .icon-btn:focus-visible {
-  outline: 2px solid var(--focus-ring);
-  outline-offset: 1px;
+  @apply outline-2 outline-offset-1 outline-focus;
 }
 
 .body {
-  flex: 1;
-  min-height: 0;
-  display: flex;
+  @apply flex min-h-0 flex-1;
 }
 
 .rail {
-  width: 56px;
-  flex: none;
-  background: var(--bg-rail);
-  border-right: 1px solid var(--border-subtle);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  padding: 12px 0;
+  @apply flex w-14 flex-none flex-col items-center gap-1 border-r border-line bg-rail px-0 py-3;
 }
 
 .rail-item {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  border: 1px solid transparent;
-  background: transparent;
-  color: var(--text-muted);
-  display: grid;
-  place-items: center;
+  @apply grid h-9 w-9 place-items-center rounded-[10px] border border-transparent bg-transparent text-muted;
 }
 
 .rail-item:hover:not(:disabled) {
-  color: var(--text-primary);
-  background: var(--bg-surface);
+  @apply bg-surface text-ink;
 }
 
 .rail-item.active {
-  background: var(--bg-surface);
-  color: var(--accent);
-  border-color: var(--border-subtle);
-  box-shadow: var(--shadow-card);
+  @apply border-line bg-surface text-accent shadow-[var(--shadow-card)];
 }
 
 .rail-item:disabled {
-  opacity: 0.45;
+  @apply opacity-45;
 }
 
 .rail-item:focus-visible {
-  outline: 2px solid var(--focus-ring);
-  outline-offset: 1px;
+  @apply outline-2 outline-offset-1 outline-focus;
 }
 
 .rail-spacer {
-  flex: 1;
+  @apply flex-1;
 }
 
 .rail-label {
-  display: none;
+  @apply hidden;
 }
 
 .main > * {
-  flex-shrink: 0;
+  @apply shrink-0;
 }
 
 .main {
-  flex: 1;
-  min-width: 0;
-  min-height: 0;
-  padding: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  overflow-y: auto;
+  @apply flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-y-auto p-6;
+  /* The dot grid is a gradient pair; @apply has no utility for it. */
   background-image: radial-gradient(circle at 1px 1px, var(--dots) 1px, transparent 0);
   background-size: 16px 16px;
 }
@@ -323,23 +216,15 @@ button:disabled {
 }
 
 .btn:focus-visible {
-  outline: 2px solid var(--focus-ring);
-  outline-offset: 1px;
+  @apply outline-2 outline-offset-1 outline-focus;
 }
 
 .link {
-  border: 0;
-  background: transparent;
-  color: var(--accent-ink);
-  font-size: 12px;
-  font-weight: 500;
-  padding: 0;
+  @apply border-0 bg-transparent p-0 text-[12px] font-medium text-accent-ink;
 }
 
 .link:focus-visible {
-  outline: 2px solid var(--focus-ring);
-  outline-offset: 2px;
-  border-radius: 4px;
+  @apply rounded-[4px] outline-2 outline-offset-2 outline-focus;
 }
 
 .kpis {
@@ -415,114 +300,83 @@ button:disabled {
 }
 
 .chart-wrap {
-  padding: 8px 16px 16px;
+  @apply px-4 pb-4 pt-2;
 }
 
 .chart {
-  display: flex;
-  align-items: stretch;
-  gap: 6px;
-  height: 180px;
+  @apply flex h-[180px] items-stretch gap-1.5;
 }
 
 .chart-col {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
+  @apply flex min-w-0 flex-1 flex-col;
 }
 
 .chart-half {
-  flex: 1;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
+  @apply flex flex-1 items-end justify-center;
 }
 
 .chart-half.bottom {
-  align-items: flex-start;
+  @apply items-start;
 }
 
 .chart-half .bar {
-  width: 10px;
-  max-width: 60%;
-  border-radius: 3px 3px 0 0;
-  background: var(--positive);
-  opacity: 0.85;
+  @apply w-2.5 max-w-[60%] rounded-t-[3px] bg-positive opacity-85;
 }
 
 .chart-half.bottom .bar {
-  border-radius: 0 0 3px 3px;
-  background: var(--negative);
+  @apply rounded-t-none rounded-b-[3px] bg-negative;
 }
 
 .chart-zero {
-  height: 1px;
-  background: var(--border-subtle);
+  @apply h-px bg-line;
 }
 
 .chart-label {
-  text-align: center;
-  font-size: 11px;
-  color: var(--text-muted);
-  margin-top: 6px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  @apply mt-1.5 overflow-hidden text-ellipsis whitespace-nowrap text-center text-[11px] text-muted;
 }
 
 .chart-legend {
-  display: flex;
-  gap: 14px;
-  margin-top: 10px;
-  font-size: 11px;
-  color: var(--text-muted);
+  @apply mt-2.5 flex gap-3.5 text-[11px] text-muted;
 }
 
 .chart-legend span {
-  display: flex;
-  align-items: center;
-  gap: 5px;
+  @apply flex items-center gap-[5px];
 }
 
 .dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 999px;
-  display: inline-block;
+  @apply inline-block h-1.5 w-1.5 rounded-[999px];
 }
 
 .dot-positive {
-  background: var(--positive);
+  @apply bg-positive;
 }
 
 .dot-negative {
-  background: var(--negative);
+  @apply bg-negative;
 }
 
 .chart-skeleton {
-  height: 180px;
-  width: 100%;
+  @apply h-[180px] w-full;
 }
 
 .table-card {
-  overflow: visible;
+  @apply overflow-visible;
 }
 
 .table-card .table thead th:first-child {
-  border-top-left-radius: 12px;
+  @apply rounded-tl-[12px];
 }
 
 .table-card .table thead th:last-child {
-  border-top-right-radius: 12px;
+  @apply rounded-tr-[12px];
 }
 
 .table-card .table tbody tr:last-child td:first-child {
-  border-bottom-left-radius: 12px;
+  @apply rounded-bl-[12px];
 }
 
 .table-card .table tbody tr:last-child td:last-child {
-  border-bottom-right-radius: 12px;
+  @apply rounded-br-[12px];
 }
 
 .table {
@@ -566,12 +420,11 @@ button:disabled {
 }
 
 .table tr.clickable:focus-visible {
-  outline: none;
+  @apply outline-none;
 }
 
 .table tr.clickable:focus-visible td {
-  background: var(--tint-sky);
-  box-shadow: inset 0 2px 0 var(--accent), inset 0 -2px 0 var(--accent);
+  @apply bg-sky shadow-[inset_0_2px_0_var(--accent),inset_0_-2px_0_var(--accent)];
 }
 
 .tag {
@@ -581,44 +434,39 @@ button:disabled {
 /* On the dark theme the chip shares its colour with the row, so the edge does
    the work that the tint does in the bright theme. */
 [data-theme='dark'] .tag {
-  border-color: var(--border-subtle);
+  @apply border-line;
 }
 
 .status-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 999px;
-  display: inline-block;
-  margin-right: 6px;
-  vertical-align: 1px;
+  @apply mr-1.5 inline-block h-1.5 w-1.5 rounded-[999px] align-[1px];
 }
 
 .status-reconciled {
-  background: var(--positive);
+  @apply bg-positive;
 }
 
 .status-cleared {
-  background: var(--accent);
+  @apply bg-accent;
 }
 
 .status-unreconciled {
-  background: var(--text-muted);
+  @apply bg-muted;
 }
 
 .status-void {
-  background: var(--negative);
+  @apply bg-negative;
 }
 
 .amount-pos {
-  color: var(--positive);
+  @apply text-positive;
 }
 
 .amount-neg {
-  color: var(--negative);
+  @apply text-negative;
 }
 
 .amount-neutral {
-  color: var(--text-primary);
+  @apply text-ink;
 }
 
 .filter-bar {
@@ -638,8 +486,7 @@ button:disabled {
 }
 
 .segmented button:focus-visible {
-  outline: 2px solid var(--focus-ring);
-  outline-offset: 1px;
+  @apply outline-2 outline-offset-1 outline-focus;
 }
 
 .summary-strip {
@@ -699,40 +546,23 @@ button:disabled {
 }
 
 .panel-body {
-  flex: 1 1 auto;
-  min-height: 0;
-  padding: 20px;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
+  @apply flex min-h-0 flex-auto flex-col gap-[18px] overflow-y-auto p-5;
 }
 
 .panel-amount {
-  font-size: 32px;
-  line-height: 1.1;
-  letter-spacing: -0.03em;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
+  @apply text-[32px] font-semibold leading-[1.1] tracking-[-0.03em] tabular-nums;
 }
 
 .panel-date {
-  color: var(--text-muted);
-  font-size: 14px;
-  margin-top: 4px;
+  @apply mt-1 text-[14px] text-muted;
 }
 
 .detail-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px 16px;
+  @apply grid grid-cols-[1fr_1fr] gap-x-4 gap-y-3;
 }
 
 .field {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
+  @apply flex min-w-0 flex-col gap-0.5;
 }
 
 .field-label {
@@ -744,100 +574,62 @@ button:disabled {
 }
 
 .callout {
-  padding: 10px 12px;
-  border-radius: 10px;
-  background: var(--tint-sky);
-  color: var(--text-secondary);
-  font-size: 14px;
+  @apply rounded-[10px] bg-sky px-3 py-2.5 text-[14px] text-secondary;
 }
 
 .section-title {
-  margin: 0 0 8px;
-  font-size: 14px;
-  font-weight: 600;
+  @apply mb-2 mt-0 text-[14px] font-semibold;
 }
 
 .parts-table {
-  width: 100%;
-  border-collapse: collapse;
+  @apply w-full border-collapse;
 }
 
 .parts-table th {
-  text-align: left;
-  font-size: 11px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  font-weight: 500;
-  padding: 6px 0;
-  border-bottom: 1px solid var(--border-subtle);
+  @apply border-b border-line px-0 py-1.5 text-left text-[11px] font-medium uppercase tracking-[0.04em] text-muted;
 }
 
 .parts-table td {
-  padding: 8px 0;
-  border-bottom: 1px solid var(--border-subtle);
-  font-size: 14px;
-  vertical-align: top;
+  @apply border-b border-line px-0 py-2 align-top text-[14px];
 }
 
 .parts-table .num {
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
+  @apply whitespace-nowrap text-right tabular-nums;
 }
 
 .parts-total {
-  display: flex;
-  justify-content: space-between;
-  padding-top: 8px;
-  font-size: 14px;
-  font-variant-numeric: tabular-nums;
+  @apply flex justify-between pt-2 text-[14px] tabular-nums;
 }
 
 .hint {
-  margin: 0;
-  color: var(--text-muted);
-  font-size: 12px;
+  @apply m-0 text-[12px] text-muted;
 }
 
 .panel-loading {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+  @apply flex flex-col gap-3;
 }
 
 .boot {
-  min-height: 100vh;
-  background: var(--bg-canvas);
+  @apply min-h-screen bg-canvas;
+  /* Same dot grid as .main. */
   background-image: radial-gradient(circle at 1px 1px, var(--dots) 1px, transparent 0);
   background-size: 16px 16px;
 }
 
 
 .boot {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  color: var(--text-muted);
-  font-size: 14px;
+  @apply flex flex-col items-center justify-center gap-3 text-[14px] text-muted;
 }
 
 .boot .mark {
-  width: 34px;
-  height: 34px;
-  border-radius: 9px;
-  font-size: 16px;
+  @apply h-[34px] w-[34px] rounded-[9px] text-[16px];
 }
 
 
 
 
 .login-card p {
-  margin: 4px 0 0;
-  color: var(--text-muted);
-  font-size: 14px;
+  @apply m-0 mt-1 text-[14px] text-muted;
 }
 
 
@@ -846,91 +638,66 @@ button:disabled {
 }
 
 .input:focus {
-  outline: 2px solid var(--focus-ring);
-  outline-offset: 1px;
-  border-color: var(--accent);
+  @apply border-accent outline-2 outline-offset-1 outline-focus;
 }
 
 
 .error-text {
-  margin: 0;
-  color: var(--negative);
-  font-size: 14px;
+  @apply m-0 text-[14px] text-negative;
 }
 
 .empty {
-  padding: 28px 16px;
-  text-align: center;
-  color: var(--text-muted);
+  @apply px-4 py-7 text-center text-muted;
 }
 
 .empty h3 {
-  margin: 0 0 4px;
-  color: var(--text-primary);
-  font-size: 14px;
+  @apply mb-1 mt-0 text-[14px] text-ink;
 }
 
 .empty p {
-  margin: 0;
-  font-size: 12px;
+  @apply m-0 text-[12px];
 }
 
 .empty-page {
-  flex: 1;
-  display: grid;
-  place-items: center;
+  @apply grid flex-1 place-items-center;
 }
 
 .empty-card {
-  padding: 28px;
-  text-align: center;
-  max-width: 420px;
+  @apply max-w-[420px] p-7 text-center;
 }
 
 .empty-card h2 {
-  margin: 0 0 6px;
-  font-size: 18px;
+  @apply mb-1.5 mt-0 text-[18px];
 }
 
 .empty-card p {
-  margin: 0;
-  color: var(--text-muted);
-  font-size: 14px;
+  @apply m-0 text-[14px] text-muted;
 }
 
 .banner {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 14px;
-  border-radius: 10px;
-  background: var(--tint-rose);
-  color: var(--negative);
-  font-size: 14px;
+  @apply flex items-center gap-3 rounded-[10px] bg-rose px-3.5 py-2.5 text-[14px] text-negative;
 }
 
 .banner span {
-  flex: 1;
+  @apply flex-1;
 }
 
 .banner-action {
-  color: var(--negative);
+  @apply text-negative;
 }
 
 .skeleton {
-  background: var(--bg-sunken);
-  border-radius: 6px;
+  @apply rounded-[6px] bg-sunken;
+  /* Keyframes cannot come from @apply. */
   animation: pulse 1.2s ease-in-out infinite;
 }
 
 .skeleton-row {
-  height: 16px;
-  width: 100%;
+  @apply h-4 w-full;
 }
 
 .skeleton-title {
-  height: 28px;
-  width: 50%;
+  @apply h-7 w-1/2;
 }
 
 @keyframes pulse {
@@ -945,111 +712,87 @@ button:disabled {
 
 @media (max-width: 1100px) {
   .kpis {
-    grid-template-columns: 1fr 1fr;
+    @apply grid-cols-[1fr_1fr];
   }
 
   .hero {
-    grid-column: 1 / -1;
-    min-height: 0;
+    @apply col-span-full min-h-0;
   }
 
   .hero-value {
-    font-size: 34px;
+    @apply text-[34px];
   }
 }
 
 @media (max-width: 760px) {
   .rail {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    width: 100%;
+    @apply fixed bottom-0 left-0 right-0 z-40 w-full flex-row justify-around gap-0.5 border-r-0 border-t border-line bg-rail;
+    /* env() safe-area insets have no @apply equivalent. */
     height: calc(56px + env(safe-area-inset-bottom));
-    flex-direction: row;
-    justify-content: space-around;
-    gap: 2px;
     padding: 4px 6px env(safe-area-inset-bottom);
-    border-right: 0;
-    border-top: 1px solid var(--border-subtle);
-    background: var(--bg-rail);
-    z-index: 40;
   }
 
   .rail-item {
-    width: auto;
-    min-width: 54px;
-    height: 46px;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    padding: 4px 6px;
+    @apply flex h-[46px] w-auto min-w-[54px] flex-col gap-0.5 px-1.5 py-1;
   }
 
   .rail-label {
-    display: block;
-    font-size: 11px;
-    line-height: 1.1;
-    white-space: nowrap;
+    @apply block whitespace-nowrap text-[11px] leading-[1.1];
   }
 
   .rail-spacer,
   .rail > .rail-item:last-child {
-    display: none;
+    @apply hidden;
   }
 
   .main {
-    padding: 16px;
+    @apply p-4;
+    /* Room for the fixed bottom rail, plus the home-indicator inset. */
     padding-bottom: calc(76px + env(safe-area-inset-bottom));
   }
 
   .topbar {
-    padding: 0 12px;
+    @apply px-3;
   }
 
   .account-select {
-    max-width: 140px;
+    @apply max-w-[140px];
   }
 
   .topbar {
-    gap: 8px;
+    @apply gap-2;
   }
 
   .hide-sm {
-    display: none;
+    @apply hidden;
   }
 
   .filter-bar {
-    gap: 10px;
+    @apply gap-2.5;
   }
 
   .summary-strip {
-    margin-left: 0;
-    width: 100%;
+    @apply ml-0 w-full;
   }
 
   .summary-strip > div {
-    flex: 1;
-    min-width: 0;
-    padding: 6px 8px;
+    @apply min-w-0 flex-1 px-2 py-1.5;
   }
 
   .page-head {
-    flex-direction: column;
-    align-items: flex-start;
+    @apply flex-col items-start;
   }
 
   .page-actions {
-    width: 100%;
-    justify-content: space-between;
+    @apply w-full justify-between;
   }
 
   .panel {
-    width: 100%;
+    @apply w-full;
   }
 
   .detail-grid {
-    grid-template-columns: 1fr;
+    @apply grid-cols-[1fr];
   }
 }
 
@@ -1057,29 +800,29 @@ button:disabled {
    past the viewport, so only the mark stays and the pickers shrink. */
 @media (max-width: 480px) {
   .brand {
-    gap: 0;
+    @apply gap-0;
   }
 
   .brand-word {
-    display: none;
+    @apply hidden;
   }
 
   .account-select {
-    max-width: 112px;
+    @apply max-w-[112px];
   }
 }
 
 @media (pointer: coarse) {
   .segmented button {
-    min-height: calc(var(--control-h) - 4px);
+    @apply min-h-[calc(var(--control-h)-4px)];
   }
 
   .search-select-option {
-    padding: 11px 12px;
+    @apply px-3 py-[11px];
   }
 
   .tag {
-    padding: 5px 8px;
+    @apply px-2 py-[5px];
   }
 }
 
@@ -1093,120 +836,83 @@ button:disabled {
 /* Transaction editor and write actions */
 
 .page-actions {
-  flex-wrap: wrap;
+  @apply flex-wrap;
 }
 
 .panel-body {
-  flex: 1;
-  min-height: 0;
+  @apply min-h-0 flex-1;
 }
 
 .panel-footer {
-  flex: none;
-  padding: 12px 20px;
-  border-top: 1px solid var(--border-subtle);
-  background: var(--bg-surface);
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  @apply flex flex-none flex-col gap-2 border-t border-line bg-surface px-5 py-3;
 }
 
 .panel-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  @apply flex items-center gap-2;
 }
 
 .panel-actions .hint {
-  margin-right: auto;
+  @apply mr-auto;
 }
 
 .btn.ghost.danger {
-  color: var(--negative);
+  @apply text-negative;
 }
 
 .btn.destructive {
-  background: var(--negative);
-  color: var(--bg-canvas);
-  border-color: transparent;
+  @apply border-transparent bg-negative text-canvas;
 }
 
 .btn.destructive:hover:not(:disabled) {
-  filter: brightness(0.95);
+  @apply brightness-95;
 }
 
 .confirm-box p {
-  margin: 0 0 10px;
-  font-size: 14px;
-  color: var(--text-secondary);
+  @apply mb-2.5 mt-0 text-[14px] text-secondary;
 }
 
 .confirm-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
+  @apply flex justify-end gap-2;
 }
 
 .editor-panel {
-  width: min(460px, 100%);
+  @apply w-[min(460px,100%)];
 }
 
 .editor-body {
-  gap: 14px;
+  @apply gap-3.5;
 }
 
 .editor-actions {
-  flex: none;
-  padding: 12px 20px;
-  border-top: 1px solid var(--border-subtle);
-  background: var(--bg-surface);
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
+  @apply flex flex-none justify-end gap-2 border-t border-line bg-surface px-5 py-3;
 }
 
 .amount-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+  @apply flex items-center gap-2.5;
 }
 
 .amount-row .sign-toggle {
-  flex: none;
+  @apply flex-none;
 }
 
 .amount-row .sign-toggle button {
-  padding: 0 8px;
+  @apply px-2 py-0;
 }
 
 .amount-field {
-  flex: 1;
-  min-width: 0;
-  position: relative;
-  display: flex;
-  align-items: center;
+  @apply relative flex min-w-0 flex-1 items-center;
 }
 
 .amount-input {
-  height: 44px;
-  font-size: 22px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  padding-right: 46px;
+  @apply h-11 pr-[46px] text-[22px] font-semibold tabular-nums;
 }
 
 .amount-currency {
-  position: absolute;
-  right: 12px;
-  color: var(--text-muted);
-  font-size: 14px;
-  pointer-events: none;
+  @apply pointer-events-none absolute right-3 text-[14px] text-muted;
 }
 
 .form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  @apply grid grid-cols-[1fr_1fr] gap-2.5;
 }
 
 .field-error {
@@ -1214,7 +920,7 @@ button:disabled {
 }
 
 .input.invalid {
-  border-color: var(--negative);
+  @apply border-negative;
 }
 
 .textarea {
@@ -1222,211 +928,143 @@ button:disabled {
 }
 
 .tag-picker {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+  @apply flex flex-wrap gap-1.5;
 }
 
 .tag-toggle {
-  border: 1px solid var(--border-subtle);
-  background: var(--bg-canvas);
-  color: var(--text-muted);
-  border-radius: 999px;
-  padding: 3px 8px;
-  font-size: 12px;
+  @apply rounded-[999px] border border-line bg-canvas px-2 py-[3px] text-[12px] text-muted;
 }
 
 .tag-toggle.active {
-  background: var(--tint-sky);
-  border-color: var(--accent);
-  color: var(--accent-ink);
+  @apply border-accent bg-sky text-accent-ink;
 }
 
 .skeleton-input {
-  height: 40px;
-  width: 100%;
+  @apply h-10 w-full;
 }
 
 .toast {
-  position: fixed;
-  right: 20px;
-  bottom: 20px;
-  z-index: 100;
-  background: var(--text-primary);
-  color: var(--bg-canvas);
-  padding: 10px 14px;
-  border-radius: 10px;
-  font-size: 14px;
-  box-shadow: var(--shadow-card);
+  @apply fixed bottom-5 right-5 z-[100] rounded-[10px] bg-ink px-3.5 py-2.5 text-[14px] text-canvas shadow-[var(--shadow-card)];
 }
 
 @media (max-width: 760px) {
   .form-row {
-    grid-template-columns: 1fr;
+    @apply grid-cols-[1fr];
   }
 
   .editor-panel {
-    width: 100%;
+    @apply w-full;
   }
 }
 
 /* Transfer and split editors */
 
 .kind-choices {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  @apply flex flex-col gap-2;
 }
 
 .kind-choice {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
-  text-align: left;
-  padding: 12px 14px;
-  border: 1px solid var(--border-subtle);
-  border-radius: 10px;
-  background: var(--bg-canvas);
-  color: var(--text-primary);
+  @apply flex flex-col items-start gap-0.5 rounded-[10px] border border-line bg-canvas px-3.5 py-3 text-left text-ink;
 }
 
 .kind-choice strong {
-  font-size: 14px;
+  @apply text-[14px];
 }
 
 .kind-choice span {
-  font-size: 12px;
-  color: var(--text-muted);
+  @apply text-[12px] text-muted;
 }
 
 .kind-choice:hover {
-  border-color: var(--border-strong);
-  background: var(--bg-surface);
+  @apply border-line-strong bg-surface;
 }
 
 .editor-panel.wide {
-  width: min(760px, 100%);
+  @apply w-[min(760px,100%)];
 }
 
 .split-grid {
-  display: grid;
-  grid-template-columns: 1.15fr 0.85fr;
-  gap: 16px;
+  @apply grid grid-cols-[1.15fr_0.85fr] gap-4;
+  /* `items-start` compiles to flex-start; grid wants the exact `start` keyword. */
   align-items: start;
 }
 
 .split-left,
 .split-right {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  min-width: 0;
+  @apply flex min-w-0 flex-col gap-4;
 }
 
 .split-section {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding-bottom: 14px;
-  border-bottom: 1px solid var(--border-subtle);
+  @apply flex flex-col gap-2.5 border-b border-line pb-3.5;
 }
 
 .split-section:last-child {
-  border-bottom: 0;
-  padding-bottom: 0;
+  @apply border-b-0 pb-0;
 }
 
 .split-section h3 {
-  margin: 0;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-muted);
-  font-weight: 500;
+  @apply m-0 text-[11px] font-medium uppercase tracking-[0.04em] text-muted;
 }
 
 .split-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  @apply flex items-center gap-2;
 }
 
 .split-header .field-error {
-  margin-left: auto;
+  @apply ml-auto;
 }
 
 .part-list {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  @apply flex flex-col gap-1;
 }
 
 .part-row {
-  display: grid;
-  grid-template-columns: 1fr auto auto;
-  gap: 8px;
-  align-items: center;
-  text-align: left;
-  padding: 7px 9px;
-  border: 1px solid var(--border-subtle);
-  border-radius: 8px;
-  background: var(--bg-canvas);
-  color: var(--text-primary);
-  font-size: 12px;
+  @apply grid grid-cols-[1fr_auto_auto] items-center gap-2 rounded-lg border border-line bg-canvas px-[9px] py-[7px] text-left text-[12px] text-ink;
 }
 
 .part-row.active {
-  background: var(--tint-sky);
-  border-color: var(--accent);
+  @apply border-accent bg-sky;
 }
 
 .part-cat {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  @apply overflow-hidden text-ellipsis whitespace-nowrap;
 }
 
 .part-payee {
-  color: var(--text-muted);
-  font-size: 11px;
+  @apply text-[11px] text-muted;
 }
 
 .part-amt {
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
+  @apply whitespace-nowrap tabular-nums;
 }
 
 .add-part {
-  align-self: flex-start;
+  @apply self-start;
 }
 
 .split-balance {
-  margin-right: auto;
-  font-size: 12px;
-  font-weight: 500;
+  @apply mr-auto text-[12px] font-medium;
 }
 
 .split-balance.balanced {
-  color: var(--positive);
+  @apply text-positive;
 }
 
 .split-balance.unbalanced {
-  color: var(--text-muted);
+  @apply text-muted;
 }
 
 .remove-part {
-  margin-top: 4px;
-  align-self: flex-start;
+  @apply mt-1 self-start;
 }
 
 @media (max-width: 900px) {
   .split-grid {
-    grid-template-columns: 1fr;
+    @apply grid-cols-[1fr];
   }
 
   .editor-panel.wide {
-    width: 100%;
+    @apply w-full;
   }
 }
 
@@ -1436,364 +1074,228 @@ button:disabled {
 /* Budgets */
 
 .budget-summary {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 14px 16px;
-  margin-bottom: 16px;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
-  border-radius: 12px;
+  @apply mb-4 flex flex-col gap-2 rounded-[12px] border border-line bg-surface px-4 py-3.5;
 }
 
 .budget-summary-head {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  font-size: 12px;
-  color: var(--text-muted);
+  @apply flex justify-between gap-2 text-[12px] text-muted;
 }
 
 .budget-summary-figures {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-  font-size: 14px;
+  @apply flex flex-wrap gap-4 text-[14px];
 }
 
 .budget-summary-figures strong {
-  font-variant-numeric: tabular-nums;
+  @apply tabular-nums;
 }
 
 .budget-summary-figures .over,
 .budget-card .over {
-  color: var(--negative);
+  @apply text-negative;
 }
 
 .budget-summary-figures .positive,
 .budget-card .positive {
-  color: var(--positive);
+  @apply text-positive;
 }
 
 .budget-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 16px;
+  @apply grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] gap-4;
 }
 
 .budget-card {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 16px;
+  @apply flex flex-col gap-2.5 p-4;
 }
 
 .budget-card-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 8px;
+  @apply flex items-start justify-between gap-2;
 }
 
 .budget-card-head h2 {
-  margin: 0;
-  font-size: 16px;
+  @apply m-0 text-[16px];
 }
 
 .budget-card-head p {
-  margin: 2px 0 0;
-  font-size: 12px;
-  color: var(--text-muted);
+  @apply m-0 mt-0.5 text-[12px] text-muted;
 }
 
 .budget-chip {
-  padding: 2px 7px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 600;
-  background: var(--tint-rose);
-  color: var(--negative);
+  @apply rounded-[999px] bg-rose px-[7px] py-0.5 text-[11px] font-semibold text-negative;
 }
 
 .budget-period {
-  font-size: 12px;
-  color: var(--text-muted);
+  @apply text-[12px] text-muted;
 }
 
 .budget-figures {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 8px;
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
+  @apply flex flex-wrap justify-between gap-2 text-[12px] tabular-nums;
 }
 
 .budget-bar {
-  height: 6px;
-  border-radius: 999px;
-  background: var(--bg-canvas);
-  border: 1px solid var(--border-subtle);
-  overflow: hidden;
+  @apply h-1.5 overflow-hidden rounded-[999px] border border-line bg-canvas;
 }
 
 .budget-fill {
-  height: 100%;
-  border-radius: inherit;
-  background: var(--accent);
+  @apply h-full rounded-[inherit] bg-accent;
 }
 
 .budget-fill.over {
-  background: var(--negative);
+  @apply bg-negative;
 }
 
+/* tokens.css has --warning but @theme maps no --color-warning, so the token is
+   read through an arbitrary value. */
 .budget-fill.warn {
-  background: var(--warning);
+  @apply bg-[var(--warning)];
 }
 
 .budget-summary-bar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+  @apply flex items-center gap-2.5;
 }
 
 .budget-summary-bar .budget-bar {
-  flex: 1;
+  @apply flex-1;
 }
 
 .budget-summary-pct {
-  font-size: 11px;
-  color: var(--text-secondary);
-  font-variant-numeric: tabular-nums;
+  @apply text-[11px] text-secondary tabular-nums;
 }
 
 .budget-card-foot {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 11px;
-
   /* The meta stays on one line; the two actions go to the right edge. */
-  white-space: nowrap;
-
-  color: var(--text-muted);
+  @apply flex items-center gap-2 whitespace-nowrap text-[11px] text-muted;
 }
 
 .budget-description {
-  margin: 0;
-  font-size: 12px;
-  color: var(--text-muted);
+  @apply m-0 text-[12px] text-muted;
 }
 
 .budget-note {
-  margin: 16px 0 0;
-  font-size: 12px;
-  color: var(--text-muted);
-}
-
-.budget-card-foot {
-  align-items: center;
+  @apply m-0 mt-4 text-[12px] text-muted;
 }
 
 .budget-edit {
-  margin-left: auto;
+  @apply ml-auto;
 }
 
 .check-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  color: var(--text-primary);
+  @apply flex items-center gap-2 text-[14px] text-ink;
 }
 
 .check-row input {
-  width: 15px;
-  height: 15px;
-  accent-color: var(--accent);
+  @apply h-[15px] w-[15px] accent-[var(--accent)];
 }
 
 .editor-actions .danger {
-  margin-right: auto;
+  @apply mr-auto;
 }
 
 /* Reports */
 
 .report-controls {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-bottom: 16px;
+  @apply mb-4 flex flex-wrap gap-3;
 }
 
 .report-card {
-  margin-top: 16px;
-  padding: 16px;
+  @apply mt-4 p-4;
 }
 
 .breakdown {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  margin-top: 14px;
+  @apply mt-3.5 flex flex-col gap-3.5;
 }
 
 .breakdown-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 4px 12px;
-  align-items: baseline;
+  @apply grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-3 gap-y-1;
 }
 
 .breakdown-row.clickable {
-  cursor: pointer;
-  padding: 6px 8px;
-  margin: 0 -8px;
-  border-radius: var(--radius-small);
+  @apply -mx-2 cursor-pointer rounded-[var(--radius-small)] px-2 py-1.5;
 }
 
 .breakdown-row.clickable:hover {
-  background: var(--bg-canvas);
+  @apply bg-canvas;
 }
 
 .breakdown-row.clickable:focus-visible {
-  outline: 2px solid var(--focus-ring);
-  outline-offset: 1px;
+  @apply outline-2 outline-offset-1 outline-focus;
 }
 
+/* `display: contents` has no Tailwind utility, and the row grid depends on it. */
 .breakdown-main {
   display: contents;
 }
 
 .breakdown-label {
-  font-size: 14px;
-  font-weight: 500;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  @apply overflow-hidden text-ellipsis whitespace-nowrap text-[14px] font-medium;
 }
 
 .breakdown-amount {
-  font-size: 14px;
-  font-variant-numeric: tabular-nums;
-  text-align: right;
-  white-space: nowrap;
+  @apply whitespace-nowrap text-right text-[14px] tabular-nums;
 }
 
 .breakdown-bar {
-  grid-column: 1 / -1;
-  height: 6px;
-  border-radius: 999px;
-  background: var(--bg-canvas);
-  border: 1px solid var(--border-subtle);
-  overflow: hidden;
+  @apply col-span-full h-1.5 overflow-hidden rounded-[999px] border border-line bg-canvas;
 }
 
 .breakdown-fill {
-  height: 100%;
-  border-radius: inherit;
-  background: var(--accent);
+  @apply h-full rounded-[inherit] bg-accent;
 }
 
 .breakdown-fill.expense {
-  background: var(--negative);
+  @apply bg-negative;
 }
 
 .breakdown-fill.income {
-  background: var(--positive);
+  @apply bg-positive;
 }
 
 .breakdown-meta {
-  grid-column: 1 / -1;
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  font-size: 11px;
-  color: var(--text-muted);
+  @apply col-span-full flex justify-between gap-2 text-[11px] text-muted;
 }
 
 .locale-picker .account-select {
-  min-width: 92px;
+  @apply min-w-[92px];
 }
 
 /* PWA status */
 
 .pwa-banner {
-  position: fixed;
-  left: 50%;
-  bottom: 18px;
-  transform: translateX(-50%);
-  z-index: 80;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  max-width: min(560px, calc(100vw - 32px));
-  padding: 10px 14px;
-  border: 1px solid var(--border-subtle);
-  border-radius: 10px;
-  background: var(--bg-surface);
-  color: var(--text-primary);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
-  font-size: 12px;
+  @apply fixed bottom-[18px] left-1/2 z-[80] flex max-w-[min(560px,calc(100vw-32px))] -translate-x-1/2 items-center gap-3 rounded-[10px] border border-line bg-surface px-3.5 py-2.5 text-[12px] text-ink shadow-[0_8px_24px_rgba(0,0,0,0.18)];
 }
 
 /* SearchSelect */
 
 .search-select {
-  position: relative;
-  min-width: 0;
+  @apply relative min-w-0;
 }
 
 .search-select > .input {
-  width: 100%;
+  @apply w-full;
 }
 
 .search-select-menu {
-  z-index: 200;
-  max-height: 260px;
-  overflow-y: auto;
-  padding: 4px;
-  border: 1px solid var(--border-subtle);
-  border-radius: 10px;
-  background: var(--bg-surface);
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
+  @apply z-[200] max-h-[260px] overflow-y-auto rounded-[10px] border border-line bg-surface p-1 shadow-[0_12px_28px_rgba(0,0,0,0.18)];
 }
 
 .search-select-option {
-  display: block;
-  width: 100%;
-  padding: 7px 9px;
-  border: 0;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--text-primary);
-  font-size: 12px;
-  text-align: left;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  @apply block w-full overflow-hidden text-ellipsis whitespace-nowrap rounded-[6px] border-0 bg-transparent px-[9px] py-[7px] text-left text-[12px] text-ink;
 }
 
 .search-select-option.active,
 .search-select-option:hover {
-  background: var(--tint-sky);
+  @apply bg-sky;
 }
 
 .search-select-option[aria-selected='true'] {
-  font-weight: 600;
+  @apply font-semibold;
 }
 
 .search-select-option mark {
-  padding: 0 1px;
-  border-radius: 2px;
-  background: var(--tint-sky);
-  color: inherit;
+  @apply rounded-[2px] bg-sky px-px py-0 text-inherit;
 }
 
 .search-select-empty {
-  padding: 8px 9px;
-  color: var(--text-muted);
-  font-size: 12px;
+  @apply px-[9px] py-2 text-[12px] text-muted;
 }
 
 
@@ -1804,72 +1306,56 @@ button:disabled {
 /* Transaction filters */
 
 .transaction-filters {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
-  gap: 8px 12px;
+  @apply grid grid-cols-[repeat(4,minmax(0,1fr))_auto] gap-x-3 gap-y-2;
+  /* `items-end` maps to flex-end; the grid rows want the exact `end` keyword. */
   align-items: end;
 }
 
 .filters-toggle {
-  display: none;
+  @apply hidden;
 }
 
 .filter-chips {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  margin: 0 0 10px;
+  @apply m-0 mb-2.5 flex flex-wrap items-center gap-1.5;
 }
 
 .filter-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 28px;
-  padding: 0 10px;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-pill);
-  background: var(--bg-surface);
-  color: var(--text-primary);
-  font-size: 12px;
+  @apply inline-flex min-h-7 items-center gap-1.5 rounded-[var(--radius-pill)] border border-line bg-surface px-2.5 py-0 text-[12px] text-ink;
 }
 
 .filter-chip:hover {
-  border-color: var(--border-strong);
+  @apply border-line-strong;
 }
 
 .filter-chip:focus-visible {
-  outline: 2px solid var(--focus-ring);
-  outline-offset: 1px;
+  @apply outline-2 outline-offset-1 outline-focus;
 }
 
 .transaction-filters .field {
-  min-width: 0;
+  @apply min-w-0;
 }
 
 .transaction-filters.open {
-  display: grid;
+  @apply grid;
 }
 
 .clear-filters {
+  /* `self-end` compiles to flex-end; grid wants the exact `end` keyword. */
   align-self: end;
 }
 
 @media (max-width: 760px) {
   .filters-toggle {
-    display: inline-flex;
-    margin-bottom: 10px;
+    @apply mb-2.5 inline-flex;
   }
 
   .transaction-filters {
-    display: none;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
+    @apply hidden grid-cols-[1fr_1fr] gap-2;
   }
 
   .clear-filters {
-    grid-column: 1 / -1;
+    @apply col-span-full;
+    /* `justify-self-start` compiles to flex-start; grid wants the exact `start`. */
     justify-self: start;
   }
 }
@@ -1878,76 +1364,62 @@ button:disabled {
 /* Budget history */
 
 .budget-history-btn {
-  margin-left: auto;
+  @apply ml-auto;
 }
 
 .budget-history {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
+  @apply flex flex-col gap-3.5;
 }
 
 .budget-history-head {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  font-size: 12px;
-  margin-bottom: 4px;
+  @apply mb-1 flex justify-between gap-2.5 text-[12px];
 }
 
 .budget-history-head .over {
-  color: var(--negative);
+  @apply text-negative;
 }
 
 .budget-history-head .positive {
-  color: var(--positive);
+  @apply text-positive;
 }
 
 .budget-history-track {
-  height: 8px;
-  border-radius: 999px;
-  background: var(--bg-canvas);
-  border: 1px solid var(--border-subtle);
-  overflow: hidden;
+  @apply h-2 overflow-hidden rounded-[999px] border border-line bg-canvas;
 }
 
 .budget-history-fill {
-  height: 100%;
-  border-radius: inherit;
-  background: var(--accent);
+  @apply h-full rounded-[inherit] bg-accent;
 }
 
+/* Same arbitrary token as .budget-fill.warn: no --color-warning alias exists. */
 .budget-history-fill.warn {
-  background: var(--warning);
+  @apply bg-[var(--warning)];
 }
 
 .budget-history-fill.over,
 .budget-history-fill.over.warn {
-  background: var(--negative);
+  @apply bg-negative;
 }
 
 .budget-history-label {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 6px;
+  @apply inline-flex items-baseline gap-1.5;
 }
 
 .budget-history-pct {
-  color: var(--text-muted);
-  font-variant-numeric: tabular-nums;
+  @apply tabular-nums text-muted;
 }
 
 .budget-history-fill.over {
-  background: var(--negative);
+  @apply bg-negative;
 }
 
 @media (max-width: 760px) {
   .top-inline {
-    display: none;
+    @apply hidden;
   }
 
   .more-menu {
-    display: block;
+    @apply block;
   }
 }
 
@@ -1955,50 +1427,36 @@ button:disabled {
    fold; the hero keeps the full width. */
 @media (max-width: 560px) {
   .hero {
-    min-height: 88px;
+    @apply min-h-[88px];
   }
 
   .kpi {
-    padding: 10px 12px;
-    min-height: 84px;
+    @apply min-h-[84px] px-3 py-2.5;
   }
 
   .kpi-value {
-    font-size: 18px;
+    @apply text-[18px];
   }
 }
 
 /* The floating action replaces the header button on phones. */
 .fab {
-  display: none;
+  @apply hidden;
 }
 
 @media (max-width: 760px) {
   .fab {
-    position: fixed;
-    right: 16px;
+    @apply fixed right-4 z-[45] grid h-14 w-14 place-items-center rounded-[50%] border-0 bg-ink text-[26px] leading-none text-canvas shadow-[0_8px_20px_rgba(13,18,32,0.28)];
+    /* Sits above the bottom rail, plus the home-indicator inset. */
     bottom: calc(72px + env(safe-area-inset-bottom));
-    z-index: 45;
-    display: grid;
-    place-items: center;
-    width: 56px;
-    height: 56px;
-    border: 0;
-    border-radius: 50%;
-    background: var(--text-primary);
-    color: var(--bg-canvas);
-    font-size: 26px;
-    line-height: 1;
-    box-shadow: 0 8px 20px rgba(13, 18, 32, 0.28);
   }
 
   .fab:focus-visible {
-    outline: 2px solid var(--focus-ring);
-    outline-offset: 3px;
+    @apply outline-2 outline-offset-[3px] outline-focus;
   }
 
   .new-transaction {
-    display: none;
+    @apply hidden;
   }
 }
 
@@ -2006,17 +1464,16 @@ button:disabled {
    instead of four, and the four KPIs sit in two columns. */
 @media (max-width: 560px) {
   .report-controls {
-    gap: 8px;
+    @apply gap-2;
   }
 
   .segmented button {
-    padding: 0 8px;
-    font-size: 11px;
+    @apply px-2 text-[11px];
   }
 }
 
 .budget-card-foot .budget-history-btn {
-  margin-left: auto;
+  @apply ml-auto;
 }
 
 /* Files: the name carries the date and the extension, so it wraps instead of

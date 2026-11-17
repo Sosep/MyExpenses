@@ -159,5 +159,5 @@ commitee. Ningún módulo toca Kotlin, `API.md` ni el keystore.
 - [x] **Layout compartido**: `page-head`, `kpis`, `hero`, `filter-bar`, `summary-strip`, `month-nav`, `overlay`, `panel` y `load-more`.
 - [x] **Login**: contenedor, tarjeta, marca, formulario y botón con utilidades; paridad exacta (380×367 a 1440).
 - [x] **Ficheros**: tarjeta de 760 px, acción compacta y nombre envuelto en móvil con utilidades; paridad exacta.
-- [ ] Resto de pantallas: Dashboard/Transacciones/Informes/Presupuestos/Editores, sustituyendo clases sueltas por utilidades manteniendo las primitivas.
+- [x] Resto de pantallas: Shell, Dashboard/chart, Transacciones/filtros, Informes, Presupuestos, editores, paneles y PWA migrados a `@apply`; paridad computada en 20 rutas × desktop/móvil, claro/oscuro.
 - Verificación por pantalla: 1440×900 y 390×844, claro/oscuro, `npm test`, `npm run build` e `i18n:compile --strict`.
