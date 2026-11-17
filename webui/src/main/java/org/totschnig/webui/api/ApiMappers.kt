@@ -34,6 +34,7 @@ internal fun Transaction.toApiDto(
     referenceNumber = referenceNumber,
     crStatus = crStatus.name,
     transferPeerId = transferPeerId,
+    transferAccountId = transferAccountId,
     splitParts = splitParts?.map { it.data.toSplitPartDto(payeeMap, tagMap) }
 )
 
@@ -49,7 +50,8 @@ internal fun Transaction.toSplitPartDto(
     comment = comment.orEmpty(),
     method = methodId?.takeIf { it > 0 }?.let { EntityRef(it, methodLabel.orEmpty()) },
     referenceNumber = referenceNumber,
-    transferPeerId = transferPeerId
+    transferPeerId = transferPeerId,
+    transferAccountId = transferAccountId
 )
 
 private fun Transaction.categoryRef(): CategoryRef? {

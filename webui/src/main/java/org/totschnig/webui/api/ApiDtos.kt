@@ -106,6 +106,7 @@ data class TransactionDto(
     val referenceNumber: String?,
     val crStatus: String,
     val transferPeerId: Long?,
+    val transferAccountId: Long? = null,
     val splitParts: List<SplitPartDto>? = null
 )
 
@@ -119,7 +120,8 @@ data class SplitPartDto(
     val comment: String,
     val method: EntityRef?,
     val referenceNumber: String?,
-    val transferPeerId: Long?
+    val transferPeerId: Long?,
+    val transferAccountId: Long? = null
 )
 
 @Keep
@@ -131,6 +133,48 @@ data class TransactionWriteDto(
     val valueDate: String? = null,
     val payeeId: Long? = null,
     val categoryId: Long? = null,
+    val tagIds: List<Long>? = null,
+    val comment: String? = null,
+    val methodId: Long? = null,
+    val referenceNumber: String? = null
+)
+
+@Keep
+data class TransferWriteDto(
+    val fromAccountId: Long? = null,
+    val toAccountId: Long? = null,
+    val amountMinor: Long? = null,
+    val date: String? = null,
+    val time: String? = null,
+    val valueDate: String? = null,
+    val payeeId: Long? = null,
+    val comment: String? = null,
+    val methodId: Long? = null,
+    val referenceNumber: String? = null,
+    val tagIds: List<Long>? = null
+)
+
+@Keep
+data class SplitWriteDto(
+    val accountId: Long? = null,
+    val amountMinor: Long? = null,
+    val date: String? = null,
+    val time: String? = null,
+    val valueDate: String? = null,
+    val payeeId: Long? = null,
+    val comment: String? = null,
+    val methodId: Long? = null,
+    val referenceNumber: String? = null,
+    val tagIds: List<Long>? = null,
+    val parts: List<SplitPartWriteDto>? = null
+)
+
+@Keep
+data class SplitPartWriteDto(
+    val id: Long? = null,
+    val amountMinor: Long? = null,
+    val categoryId: Long? = null,
+    val payeeId: Long? = null,
     val tagIds: List<Long>? = null,
     val comment: String? = null,
     val methodId: Long? = null,

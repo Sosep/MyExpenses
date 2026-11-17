@@ -119,6 +119,73 @@ class ApiRoutesTest {
         assertEquals(HttpStatusCode.BadRequest, response.status)
         assertTrue(response.bodyAsText().contains("invalid_body"))
     }
+
+    @Test
+    fun `create transfer returns 201 and location`() = testApplication {
+        val fake = FakeDataSource()
+        installRoutes(fake)
+        val response = client.post("/api/v1/transfers") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """{"fromAccountId":1,"toAccountId":2,"amountMinor":5000,"date":"2026-11-17"}"""
+            )
+        }
+        assertEquals(HttpStatusCode.Created, response.status)
+        assertEquals("/api/v1/transactions/2", response.headers[HttpHeaders.Location])
+        assertEquals(2L, fake.createdTransfer?.toAccountId)
+    }
+
+    @Test
+    fun `transfer to the same account is a 422`() = testApplication {
+        installRoutes(FakeDataSource())
+        val response = client.post("/api/v1/transfers") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """{"fromAccountId":1,"toAccountId":1,"amountMinor":5000,"date":"2026-11-17"}"""
+            )
+        }
+        assertEquals(HttpStatusCode.UnprocessableEntity, response.status)
+        assertTrue(response.bodyAsText().contains("invalid_transfer"))
+    }
+
+    @Test
+    fun `create split returns 201`() = testApplication {
+        val fake = FakeDataSource()
+        installRoutes(fake)
+        val response = client.post("/api/v1/split-transactions") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """{"accountId":1,"amountMinor":-10000,"date":"2026-11-17","parts":[{"amountMinor":-10000,"categoryId":2}]}"""
+            )
+        }
+        assertEquals(HttpStatusCode.Created, response.status)
+        assertEquals(1, fake.createdSplit?.parts?.size ?: 0)
+    }
+
+    @Test
+    fun `split with wrong sum is a 422`() = testApplication {
+        installRoutes(FakeDataSource())
+        val response = client.post("/api/v1/split-transactions") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """{"accountId":1,"amountMinor":-10000,"date":"2026-11-17","parts":[{"amountMinor":-9000,"categoryId":2}]}"""
+            )
+        }
+        assertEquals(HttpStatusCode.UnprocessableEntity, response.status)
+        assertTrue(response.bodyAsText().contains("validation_failed"))
+    }
+
+    @Test
+    fun `update transfer of another kind is a 409`() = testApplication {
+        installRoutes(FakeDataSource())
+        val response = client.put("/api/v1/transfers/2") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """{"fromAccountId":1,"toAccountId":2,"amountMinor":5000,"date":"2026-11-17"}"""
+            )
+        }
+        assertEquals(HttpStatusCode.Conflict, response.status)
+    }
 }
 
 private fun ApplicationTestBuilder.installRoutes(dataSource: WebApiDataSource) {
@@ -148,6 +215,8 @@ private fun ApplicationTestBuilder.installRoutes(dataSource: WebApiDataSource) {
 
 private class FakeDataSource : WebApiDataSource {
     var created: TransactionWriteDto? = null
+    var createdTransfer: TransferWriteDto? = null
+    var createdSplit: SplitWriteDto? = null
     private val sample = sampleTransaction()
 
     override fun meta() = MetaDto(
@@ -224,6 +293,55 @@ private class FakeDataSource : WebApiDataSource {
         return sample
     }
 
+    override fun createTransfer(body: TransferWriteDto): TransactionDto {
+        if (body.fromAccountId == body.toAccountId) {
+            throw ApiException(
+                HttpStatusCode.UnprocessableEntity,
+                "invalid_transfer",
+                "The two accounts must differ"
+            )
+        }
+        createdTransfer = body
+        return sampleTransfer()
+    }
+
+    override fun updateTransfer(id: Long, body: TransferWriteDto): TransactionDto {
+        if (id == 2L) {
+            throw ApiException(
+                HttpStatusCode.Conflict,
+                "unsupported_kind",
+                "Not a transfer"
+            )
+        }
+        createdTransfer = body
+        return sampleTransfer()
+    }
+
+    override fun createSplit(body: SplitWriteDto): TransactionDto {
+        val sum = body.parts?.sumOf { it.amountMinor ?: 0L } ?: 0L
+        if (body.parts.isNullOrEmpty() || (body.amountMinor ?: 0L) != sum) {
+            throw ApiException(
+                HttpStatusCode.UnprocessableEntity,
+                "validation_failed",
+                "Sum of parts must equal the parent amount",
+                mapOf("parts" to "Sum must equal amountMinor")
+            )
+        }
+        createdSplit = body
+        return sampleSplit()
+    }
+
+    override fun updateSplit(id: Long, body: SplitWriteDto): TransactionDto {
+        if (id == 2L) {
+            throw ApiException(
+                HttpStatusCode.Conflict,
+                "unsupported_kind",
+                "Not a split transaction"
+            )
+        }
+        return sampleSplit()
+    }
+
     override fun deleteTransaction(id: Long) = id == 1L
 }
 
@@ -246,4 +364,61 @@ private fun sampleTransaction() = TransactionDto(
     crStatus = "UNRECONCILED",
     transferPeerId = null,
     splitParts = null
+)
+
+private fun sampleTransfer() = TransactionDto(
+    id = 2,
+    kind = "TRANSFER",
+    accountId = 1,
+    amountMinor = -5000,
+    currency = "EUR",
+    fractionDigits = 2,
+    date = "2026-11-17",
+    time = null,
+    valueDate = "2026-11-17",
+    payee = null,
+    category = null,
+    tags = emptyList(),
+    comment = "Transfer",
+    method = null,
+    referenceNumber = null,
+    crStatus = "UNRECONCILED",
+    transferPeerId = 3,
+    transferAccountId = 2,
+    splitParts = null
+)
+
+private fun sampleSplit() = TransactionDto(
+    id = 3,
+    kind = "SPLIT",
+    accountId = 1,
+    amountMinor = -10000,
+    currency = "EUR",
+    fractionDigits = 2,
+    date = "2026-11-17",
+    time = null,
+    valueDate = "2026-11-17",
+    payee = EntityRef(1, "Mercadona"),
+    category = null,
+    tags = emptyList(),
+    comment = "",
+    method = null,
+    referenceNumber = null,
+    crStatus = "UNRECONCILED",
+    transferPeerId = null,
+    transferAccountId = null,
+    splitParts = listOf(
+        SplitPartDto(
+            id = 31,
+            amountMinor = -10000,
+            payee = null,
+            category = CategoryRef(2, "Groceries", "Food > Groceries"),
+            tags = emptyList(),
+            comment = "",
+            method = null,
+            referenceNumber = null,
+            transferPeerId = null,
+            transferAccountId = null
+        )
+    )
 )

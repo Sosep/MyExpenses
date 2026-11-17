@@ -9,8 +9,10 @@ import java.time.LocalTime
 import java.time.ZoneId
 import java.time.format.DateTimeParseException
 import java.util.Locale
+import kotlin.math.abs
 import kotlinx.coroutines.flow.StateFlow
 import org.totschnig.myexpenses.db2.Repository
+import org.totschnig.myexpenses.db2.RepositoryTransaction
 import org.totschnig.myexpenses.db2.createTransaction
 import org.totschnig.myexpenses.db2.entities.Transaction
 import org.totschnig.myexpenses.db2.getCurrencyUnitForAccount
@@ -23,6 +25,7 @@ import org.totschnig.myexpenses.model.generateUuid
 import org.totschnig.myexpenses.preference.PrefHandler
 import org.totschnig.myexpenses.preference.PrefKey
 import org.totschnig.myexpenses.provider.KEY_ROWID
+import org.totschnig.myexpenses.provider.SPLIT_CATID
 import org.totschnig.myexpenses.provider.TransactionProvider.CATEGORIES_URI
 import org.totschnig.myexpenses.provider.TransactionProvider.METHODS_URI
 import org.totschnig.myexpenses.provider.TransactionProvider.PAYEES_URI
@@ -127,6 +130,383 @@ class AndroidWebApiDataSource(
 
     override fun deleteTransaction(id: Long): Boolean =
         repository.deleteTransaction(id)
+
+    override fun createTransfer(body: TransferWriteDto): TransactionDto {
+        val from = body.fromAccountId.requirePositive("fromAccountId")
+        val to = body.toAccountId.requirePositive("toAccountId")
+        requireDifferentAccounts(from, to)
+        val amount = abs(body.amountMinor.requireNonZero("amountMinor"))
+        val date = body.date.requireDate("date")
+        val time = body.time
+            ?.takeIf { it.isNotBlank() }
+            ?.let { parseTime(it, "time") }
+        val valueDate = body.valueDate
+            ?.takeIf { it.isNotBlank() }
+            ?.let { parseDate(it, "valueDate") }
+            ?: date
+        validateAccount(from)
+        validateAccount(to)
+        val payeeId = body.payeeId.normalizeId()
+        validateOptional("payeeId", "payee", payeeId, PAYEES_URI)
+        val methodId = body.methodId.normalizeId()
+        validateOptional("methodId", "method", methodId, METHODS_URI)
+        val tagIds = body.tagIds.orEmpty().filter { it > 0 }.distinct()
+        validateTags(tagIds)
+        val dateEpoch = dateTimeEpoch(date, time, null)
+        val valueDateEpoch = valueDate.toEpoch()
+        val uuid = generateUuid()
+        val categoryId = prefHandler.defaultTransferCategory
+        val source = Transaction(
+            id = 0,
+            comment = body.comment.orEmpty(),
+            date = dateEpoch,
+            valueDate = valueDateEpoch,
+            amount = -amount,
+            categoryId = categoryId,
+            accountId = from,
+            transferAccountId = to,
+            payeeId = payeeId,
+            methodId = methodId,
+            crStatus = CrStatus.UNRECONCILED,
+            referenceNumber = body.referenceNumber?.takeIf { it.isNotBlank() },
+            uuid = uuid,
+            tagList = tagIds
+        )
+        val destination = source.copy(
+            accountId = to,
+            transferAccountId = from,
+            amount = amount
+        )
+        val created = repository.createTransaction(
+            RepositoryTransaction(source, transferPeer = destination)
+        )
+        return loadTransactionDto(created.data.id)
+    }
+
+    override fun updateTransfer(id: Long, body: TransferWriteDto): TransactionDto {
+        val existing = loadExistingTransfer(id)
+        val source = if (existing.data.amount < 0) existing.data else existing.transferPeer!!
+        val destination = if (source.id ==
+            existing.data.id
+        ) {
+            existing.transferPeer!!
+        } else {
+            existing.data
+        }
+        val from = body.fromAccountId.requirePositive("fromAccountId")
+        val to = body.toAccountId.requirePositive("toAccountId")
+        requireDifferentAccounts(from, to)
+        val amount = abs(body.amountMinor.requireNonZero("amountMinor"))
+        val date = body.date.requireDate("date")
+        val time = body.time
+            ?.takeIf { it.isNotBlank() }
+            ?.let { parseTime(it, "time") }
+        validateAccount(from)
+        validateAccount(to)
+        val payeeId = body.payeeId.normalizeId()
+        validateOptional("payeeId", "payee", payeeId, PAYEES_URI)
+        val methodId = body.methodId.normalizeId()
+        validateOptional("methodId", "method", methodId, METHODS_URI)
+        val requestedTags = body.tagIds
+            ?.filter { it > 0 }
+            ?.distinct()
+        if (requestedTags != null) validateTags(requestedTags)
+        val dateEpoch = dateTimeEpoch(date, time, source.date)
+        val valueDateEpoch = body.valueDate
+            ?.takeIf { it.isNotBlank() }
+            ?.let { parseDate(it, "valueDate").toEpoch() }
+            ?: source.valueDate
+        val categoryId = prefHandler.defaultTransferCategory
+        val updatedSource = source.copy(
+            accountId = from,
+            transferAccountId = to,
+            amount = -amount,
+            categoryId = categoryId,
+            date = dateEpoch,
+            valueDate = valueDateEpoch,
+            payeeId = payeeId,
+            methodId = methodId,
+            comment = body.comment.orEmpty(),
+            referenceNumber = body.referenceNumber?.takeIf { it.isNotBlank() },
+            tagList = requestedTags ?: source.tagList
+        )
+        val updatedDestination = destination.copy(
+            accountId = to,
+            transferAccountId = from,
+            amount = amount,
+            categoryId = categoryId,
+            date = dateEpoch,
+            valueDate = valueDateEpoch,
+            payeeId = payeeId,
+            methodId = methodId,
+            comment = body.comment.orEmpty(),
+            referenceNumber = body.referenceNumber?.takeIf { it.isNotBlank() },
+            tagList = requestedTags ?: destination.tagList
+        )
+        repository.updateTransaction(
+            RepositoryTransaction(updatedSource, transferPeer = updatedDestination)
+        )
+        return loadTransactionDto(updatedSource.id)
+    }
+
+    override fun createSplit(body: SplitWriteDto): TransactionDto {
+        val accountId = body.accountId.requirePositive("accountId")
+        val amount = body.amountMinor.requireNonZero("amountMinor")
+        val date = body.date.requireDate("date")
+        val time = body.time
+            ?.takeIf { it.isNotBlank() }
+            ?.let { parseTime(it, "time") }
+        val valueDate = body.valueDate
+            ?.takeIf { it.isNotBlank() }
+            ?.let { parseDate(it, "valueDate") }
+            ?: date
+        validateAccount(accountId)
+        val parentPayeeId = body.payeeId.normalizeId()
+        validateOptional("payeeId", "payee", parentPayeeId, PAYEES_URI)
+        val parentMethodId = body.methodId.normalizeId()
+        validateOptional("methodId", "method", parentMethodId, METHODS_URI)
+        val parentTags = body.tagIds.orEmpty().filter { it > 0 }.distinct()
+        validateTags(parentTags)
+        val parts = body.parts.orEmpty()
+        if (parts.isEmpty()) {
+            throw ApiException(
+                HttpStatusCode.UnprocessableEntity,
+                "validation_failed",
+                "A split needs at least one part",
+                mapOf("parts" to "Required")
+            )
+        }
+        val dateEpoch = dateTimeEpoch(date, time, null)
+        val valueDateEpoch = valueDate.toEpoch()
+        val uuid = generateUuid()
+        var sum = 0L
+        val partTransactions = parts.mapIndexed { index, part ->
+            val partAmount = part.amountMinor.requireNonZero("parts[$index].amountMinor")
+            sum += partAmount
+            val categoryId = part.categoryId.normalizeId()
+            validateOptional("parts[$index].categoryId", "category", categoryId, CATEGORIES_URI)
+            val payeeId = part.payeeId.normalizeId()
+            validateOptional("parts[$index].payeeId", "payee", payeeId, PAYEES_URI)
+            val methodId = part.methodId.normalizeId()
+            validateOptional("parts[$index].methodId", "method", methodId, METHODS_URI)
+            val partTags = part.tagIds.orEmpty().filter { it > 0 }.distinct()
+            validateTags(partTags)
+            Transaction(
+                id = 0,
+                comment = part.comment.orEmpty(),
+                date = dateEpoch,
+                valueDate = valueDateEpoch,
+                amount = partAmount,
+                categoryId = categoryId,
+                accountId = accountId,
+                payeeId = payeeId,
+                methodId = methodId,
+                crStatus = CrStatus.UNRECONCILED,
+                referenceNumber = part.referenceNumber?.takeIf { it.isNotBlank() },
+                uuid = uuid,
+                tagList = partTags
+            )
+        }
+        if (sum != amount) {
+            throw ApiException(
+                HttpStatusCode.UnprocessableEntity,
+                "validation_failed",
+                "Sum of parts must equal the parent amount",
+                mapOf("parts" to "Sum must equal amountMinor")
+            )
+        }
+        val parent = Transaction(
+            id = 0,
+            comment = body.comment.orEmpty(),
+            date = dateEpoch,
+            valueDate = valueDateEpoch,
+            amount = amount,
+            categoryId = SPLIT_CATID,
+            accountId = accountId,
+            payeeId = parentPayeeId,
+            methodId = parentMethodId,
+            crStatus = CrStatus.UNRECONCILED,
+            referenceNumber = body.referenceNumber?.takeIf { it.isNotBlank() },
+            uuid = uuid,
+            tagList = parentTags
+        )
+        val created = repository.createTransaction(
+            RepositoryTransaction(
+                parent,
+                splitParts = partTransactions.map { RepositoryTransaction(it) }
+            )
+        )
+        return loadTransactionDto(created.data.id)
+    }
+
+    override fun updateSplit(id: Long, body: SplitWriteDto): TransactionDto {
+        val existing = loadExistingSplit(id)
+        val accountId = body.accountId.requirePositive("accountId")
+        if (accountId != existing.data.accountId) {
+            throw ApiException(
+                HttpStatusCode.UnprocessableEntity,
+                "unsupported_move",
+                "Moving a split to another account is not supported",
+                mapOf("accountId" to "Must match the current account")
+            )
+        }
+        val amount = body.amountMinor.requireNonZero("amountMinor")
+        val date = body.date.requireDate("date")
+        val time = body.time
+            ?.takeIf { it.isNotBlank() }
+            ?.let { parseTime(it, "time") }
+        val dateEpoch = dateTimeEpoch(date, time, existing.data.date)
+        val valueDateEpoch = body.valueDate
+            ?.takeIf { it.isNotBlank() }
+            ?.let { parseDate(it, "valueDate").toEpoch() }
+            ?: existing.data.valueDate
+        val parentPayeeId = body.payeeId.normalizeId()
+        validateOptional("payeeId", "payee", parentPayeeId, PAYEES_URI)
+        val parentMethodId = body.methodId.normalizeId()
+        validateOptional("methodId", "method", parentMethodId, METHODS_URI)
+        val parentTags = body.tagIds
+            ?.filter { it > 0 }
+            ?.distinct()
+            ?: existing.data.tagList
+        validateTags(parentTags)
+        val existingParts = existing.splitParts.orEmpty().associateBy { it.id }
+        val parts = body.parts.orEmpty()
+        if (parts.isEmpty()) {
+            throw ApiException(
+                HttpStatusCode.UnprocessableEntity,
+                "validation_failed",
+                "A split needs at least one part",
+                mapOf("parts" to "Required")
+            )
+        }
+        var sum = 0L
+        val partTransactions = parts.mapIndexed { index, part ->
+            val partId = part.id?.takeIf { it > 0 } ?: 0L
+            if (partId != 0L && existingParts[partId] == null) {
+                throw ApiException(
+                    HttpStatusCode.UnprocessableEntity,
+                    "invalid_part",
+                    "Part $partId does not belong to this split",
+                    mapOf("parts" to "Unknown part id")
+                )
+            }
+            val partAmount = part.amountMinor.requireNonZero("parts[$index].amountMinor")
+            sum += partAmount
+            val categoryId = part.categoryId.normalizeId()
+            validateOptional("parts[$index].categoryId", "category", categoryId, CATEGORIES_URI)
+            val payeeId = part.payeeId.normalizeId()
+            validateOptional("parts[$index].payeeId", "payee", payeeId, PAYEES_URI)
+            val methodId = part.methodId.normalizeId()
+            validateOptional("parts[$index].methodId", "method", methodId, METHODS_URI)
+            val partTags = part.tagIds
+                ?.filter { it > 0 }
+                ?.distinct()
+                ?: existingParts[partId]?.data?.tagList.orEmpty()
+            validateTags(partTags)
+            Transaction(
+                id = partId,
+                comment = part.comment.orEmpty(),
+                date = dateEpoch,
+                valueDate = valueDateEpoch,
+                amount = partAmount,
+                categoryId = categoryId,
+                accountId = accountId,
+                payeeId = payeeId,
+                methodId = methodId,
+                crStatus = existing.data.crStatus,
+                referenceNumber = part.referenceNumber?.takeIf { it.isNotBlank() },
+                uuid = existing.data.uuid,
+                parentId = existing.data.id,
+                tagList = partTags
+            )
+        }
+        if (sum != amount) {
+            throw ApiException(
+                HttpStatusCode.UnprocessableEntity,
+                "validation_failed",
+                "Sum of parts must equal the parent amount",
+                mapOf("parts" to "Sum must equal amountMinor")
+            )
+        }
+        val parent = existing.data.copy(
+            amount = amount,
+            date = dateEpoch,
+            valueDate = valueDateEpoch,
+            categoryId = SPLIT_CATID,
+            payeeId = parentPayeeId,
+            methodId = parentMethodId,
+            comment = body.comment.orEmpty(),
+            referenceNumber = body.referenceNumber?.takeIf { it.isNotBlank() },
+            tagList = parentTags
+        )
+        repository.updateTransaction(
+            RepositoryTransaction(
+                parent,
+                splitParts = partTransactions.map { RepositoryTransaction(it) }
+            )
+        )
+        return loadTransactionDto(parent.id)
+    }
+
+    private fun loadExistingTransfer(id: Long): RepositoryTransaction {
+        val existing = try {
+            repository.loadTransaction(id, withTransfer = true, withTags = true)
+        } catch (_: IllegalArgumentException) {
+            throw ApiException(
+                HttpStatusCode.NotFound,
+                "transaction_not_found",
+                "Transaction not found"
+            )
+        }
+        if (existing.transferPeer == null) {
+            throw ApiException(
+                HttpStatusCode.Conflict,
+                "unsupported_kind",
+                "Not a transfer"
+            )
+        }
+        return existing
+    }
+
+    private fun loadExistingSplit(id: Long): RepositoryTransaction {
+        val existing = try {
+            repository.loadTransaction(id, withTransfer = true, withTags = true)
+        } catch (_: IllegalArgumentException) {
+            throw ApiException(
+                HttpStatusCode.NotFound,
+                "transaction_not_found",
+                "Transaction not found"
+            )
+        }
+        if (!existing.data.isSplit) {
+            throw ApiException(
+                HttpStatusCode.Conflict,
+                "unsupported_kind",
+                "Not a split transaction"
+            )
+        }
+        return existing
+    }
+
+    private fun dateTimeEpoch(date: LocalDate, time: LocalTime?, existing: Long?): Long =
+        if (time != null) {
+            LocalDateTime.of(date, time).toEpoch()
+        } else {
+            existing?.let {
+                LocalDateTime.of(date, epoch2ZonedDateTime(it).toLocalTime()).toEpoch()
+            } ?: date.toEpoch()
+        }
+
+    private fun requireDifferentAccounts(from: Long, to: Long) {
+        if (from == to) {
+            throw ApiException(
+                HttpStatusCode.UnprocessableEntity,
+                "invalid_transfer",
+                "The two accounts must differ",
+                mapOf("toAccountId" to "Must differ from fromAccountId")
+            )
+        }
+    }
 
     private fun createSimple(body: TransactionWriteDto): TransactionDto {
         val accountId = body.accountId.requirePositive("accountId")

@@ -100,6 +100,34 @@ class ApiRoutes(
                 }
                 call.respond(HttpStatusCode.NoContent)
             }
+            post("/transfers") {
+                val created = dataSource.createTransfer(call.receive<TransferWriteDto>())
+                call.response.headers.append(
+                    HttpHeaders.Location,
+                    "/api/v1/transactions/${created.id}"
+                )
+                call.respond(HttpStatusCode.Created, created)
+            }
+            put("/transfers/{id}") {
+                val id = call.requirePathId()
+                call.respond(
+                    dataSource.updateTransfer(id, call.receive<TransferWriteDto>())
+                )
+            }
+            post("/split-transactions") {
+                val created = dataSource.createSplit(call.receive<SplitWriteDto>())
+                call.response.headers.append(
+                    HttpHeaders.Location,
+                    "/api/v1/transactions/${created.id}"
+                )
+                call.respond(HttpStatusCode.Created, created)
+            }
+            put("/split-transactions/{id}") {
+                val id = call.requirePathId()
+                call.respond(
+                    dataSource.updateSplit(id, call.receive<SplitWriteDto>())
+                )
+            }
             get("/reports/grouped") {
                 val accountId = call.requireLong("accountId")
                 val grouping = (call.parameters["grouping"] ?: "MONTH")

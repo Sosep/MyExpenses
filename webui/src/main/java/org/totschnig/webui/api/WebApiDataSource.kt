@@ -31,5 +31,9 @@ interface WebApiDataSource {
     ): List<GroupDto>
     fun createTransaction(body: TransactionWriteDto): TransactionDto
     fun updateTransaction(id: Long, body: TransactionWriteDto): TransactionDto
+    fun createTransfer(body: TransferWriteDto): TransactionDto
+    fun updateTransfer(id: Long, body: TransferWriteDto): TransactionDto
+    fun createSplit(body: SplitWriteDto): TransactionDto
+    fun updateSplit(id: Long, body: SplitWriteDto): TransactionDto
     fun deleteTransaction(id: Long): Boolean
 }

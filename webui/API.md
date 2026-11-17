@@ -1,7 +1,7 @@
 # API web de MyExpenses (borrador de contrato)
 
-Estado: **lectura y escritura simple implementadas**; transferencias y divididas
-siguen en solo lectura. El resto del documento describe el contrato objetivo.
+Estado: **lectura, escritura simple, transferencias y divididas implementadas**.
+Presupuestos, informes y ficheros siguen como contrato objetivo.
 Alcance: API JSON consumida por la web app de escritorio. La app Android sigue
 siendo la fuente de verdad; el servidor corre en el móvil (Ktor, dentro del
 módulo `:webui`). Interfaz y sistema visual: [`DESIGN.md`](./DESIGN.md).
@@ -153,6 +153,7 @@ Modelo de lectura (`kind` explícito):
   "referenceNumber": null,
   "crStatus": "UNRECONCILED",
   "transferPeerId": null,
+  "transferAccountId": null,
   "splitParts": null,
   "attachments": []
 }
@@ -221,13 +222,14 @@ Mismos campos. Reglas:
   transacción a mediodía ni pierde la fecha valor.
 - `uuid` no se modifica.
 
-#### Estado del corte actual
+#### Estado de implementación
 
-Implementado en `/api/v1`: `POST`, `PUT` y `DELETE` de transacciones **simples**.
-El editor de la SPA usa este contrato. Transferencias y divididas siguen en solo
-lectura; sus escrituras llegan con endpoints propios.
+Implementado en `/api/v1`: lectura, alta/edición/borrado de transacciones
+**simples**, **transferencias** y **divididas**. La SPA usa los tres editores.
+Presupuestos, informes y ficheros son el siguiente contrato; las reglas de
+dominio de transferencias y divididas se validan también en el dispositivo.
 
-#### POST /transfers (siguiente corte)
+#### POST /transfers
 
 ```json
 {
@@ -235,25 +237,30 @@ lectura; sus escrituras llegan con endpoints propios.
   "toAccountId": 2,
   "amountMinor": 5000,
   "date": "2026-11-17",
+  "time": null,
   "valueDate": "2026-11-17",
   "payeeId": null,
   "comment": "traspaso",
-  "methodId": null
+  "methodId": null,
+  "referenceNumber": null,
+  "tagIds": []
 }
 ```
 
-Servidor: `amountMinor` es magnitud positiva; genera las dos caras (origen
-`-5000`, destino `+5000`), mismo `uuid`, `transferAccountId`/`transferPeerId`
-cruzados, y llama a `Repository.createTransfer`. Rechaza misma cuenta y fecha
-distinta entre caras (no aplica porque las genera él).
+Servidor: `amountMinor` es **magnitud positiva**; genera las dos caras (origen
+`-5000`, destino `+5000`), mismo `uuid`, categoría de transferencia por defecto,
+`transferAccountId`/`transferPeerId` cruzados, y llama a
+`Repository.createTransaction(RepositoryTransaction(...))`. Rechaza la misma
+cuenta con `422`. `tagIds` es opcional: se aplica a ambas caras.
 
-#### PUT /transfers/{id} (siguiente corte)
+#### PUT /transfers/{id}
 
 Cuerpo igual. El servidor carga la pareja (`loadTransaction` con peer), aplica
-los cambios a ambas caras y llama a `updateTransfer`. Cambiar de cuenta destino
-se trata como borrar/crear si el provider no lo soporta (decisión a validar).
+los cambios a ambas caras y actualiza la pareja. Se permite cambiar las cuentas
+de origen/destino; validar el caso en dispositivo. Si `tagIds` se omite, cada
+cara conserva sus etiquetas.
 
-#### POST /split-transactions (siguiente corte)
+#### POST /split-transactions
 
 ```json
 {
@@ -263,8 +270,9 @@ se trata como borrar/crear si el provider no lo soporta (decisión a validar).
   "time": null,
   "valueDate": "2026-11-17",
   "comment": "compra grande",
+  "tagIds": [2],
   "parts": [
-    { "amountMinor": -6000, "categoryId": 3, "tagIds": [1] },
+    { "amountMinor": -6000, "categoryId": 3, "tagIds": [1], "comment": "comida" },
     { "amountMinor": -4000, "categoryId": 4, "payeeId": 7 }
   ]
 }
@@ -272,15 +280,16 @@ se trata como borrar/crear si el provider no lo soporta (decisión a validar).
 
 Reglas (ya existen en `createSplitTransaction`):
 
+- al menos una parte; cada `parts[].amountMinor` es distinto de cero y **con signo**
 - `sum(parts.amountMinor) == amountMinor`
-- todas las partes comparten cuenta y fecha
-- padre con `categoryId = SPLIT_CATID`, mismo `uuid` en padre y partes
-- partes con transferencia: v2 (`parts[].transferAccountId`), porque la app ya
-  tiene `createSplitTransactionWithTransfers`.
+- todas las partes comparten cuenta y fecha; `categoryId = SPLIT_CATID` en el padre
+- mismo `uuid` en padre y partes; etiquetas por padre y por parte
+- partes con transferencia: v2 (`parts[].transferAccountId`)
 
-Update: `PUT /split-transactions/{id}` envía el mismo cuerpo; el servidor
-reemplaza la lista completa (`updateSplitTransaction` ya gestiona altas, bajas y
-cambios).
+Update: `PUT /split-transactions/{id}` envía el mismo cuerpo. Una parte con `id`
+actualiza la existente; las existentes que no se envían se borran; una parte sin
+`id` se inserta. La cuenta del padre no se puede cambiar en este corte (`422`).
+`updateSplitTransaction` gestiona altas, bajas y cambios de forma atómica.
 
 ### 4.4 Categorías, beneficiarios, etiquetas, métodos
 
@@ -390,14 +399,15 @@ Tras revisar de nuevo el código:
 ## 8. Pruebas
 
 - **Rutas en JVM**: `webui/src/test/java/org/totschnig/webui/api/ApiRoutesTest.kt`
-  con un `WebApiDataSource` fake y Ktor `testApplication`. Cubren routing,
-  validación, `201/204/404/409`, JSON y body malformado. Comando:
+  con un `WebApiDataSource` fake y Ktor `testApplication`. 15 tests cubren
+  routing, validación, `201/204/404/409/422`, JSON, body malformado y los
+  endpoints de transferencias/divididas. Comando:
   `docker compose run --rm android-build :webui:testDebugUnitTest`.
 - **Capa Android**: `AndroidWebApiDataSource` y el `ContentProvider` se validan
   en el móvil o con tests instrumentados; los mapeadores puros pueden probarse
   sin Android.
 - **Contrato JSON**: la SPA usa el mock server para QA visual; los fixtures
   pueden compartirse cuando se añada Vitest.
-- **Pendientes para el siguiente corte**: suma de split incorrecta,
-  transferencia a la misma cuenta, borrado de split, edición de transferencia
-  como simple, importes con dígitos personalizados.
+- **Pendientes en dispositivo**: suma de split incorrecta, transferencia a la
+  misma cuenta, borrado de split, edición de transferencia como simple, importes
+  con dígitos personalizados.
