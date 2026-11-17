@@ -56,22 +56,23 @@ módulo `:webui`). Interfaz y sistema visual: [`DESIGN.md`](./DESIGN.md).
 
 ## 3. Autenticación
 
-### v1 (paridad con lo actual)
+Sesión por cookie con la contraseña de `PrefKey.WEBUI_PASSWORD`. Basic ya no se
+usa en la SPA.
 
-HTTP Basic con la contraseña de `PrefKey.WEBUI_PASSWORD`. Aplica a **todas** las
-rutas, incluidas `/api/v1/meta` y los assets de `/app`. Si no hay contraseña
-configurada, no se exige autenticación (comportamiento actual; ver riesgos).
-
-### v1.1 (recomendado para la web app)
-
-- `POST /auth/session` con `{"password": "..."}` → `Set-Cookie: sid=...;
-  HttpOnly; SameSite=Strict; Path=/`
-- `DELETE /auth/session` → logout real.
-- `GET /auth/me` → `{"authenticated": true}`
-- CSRF: `SameSite=Strict` + cabecera `X-Requested-With` obligatoria en métodos
-  no seguros.
-
-Nunca se registra la contraseña ni el hash en logs.
+- `POST /api/v1/session` con `{"password": "..."}` → `204` y
+  `Set-Cookie: myexpenses_session=…; HttpOnly; SameSite=Strict; Path=/`, más
+  `Secure` cuando el servidor usa HTTPS. Contraseña incorrecta: `401
+  unauthorized`.
+- `DELETE /api/v1/session` → borra el token y la cookie (`204`).
+- La cookie vale 7 días con expiración deslizante; los tokens viven en memoria
+  del servicio, así que reiniciar el servidor obliga a entrar de nuevo.
+- `/app` es el shell público; `/api/v1/**` y las descargas exigen sesión cuando
+  hay contraseña. Sin contraseña configurada el API queda abierto, como antes.
+- `/` redirige a `/app/` y `/download` a `/app/?view=files`; el formulario HTML
+  antiguo ya no se sirve.
+- CSRF: `SameSite=Strict` y misma origen. La SPA usa `credentials: same-origin`
+  y no guarda la contraseña ni la cookie en JavaScript.
+- Nunca se registra la contraseña ni el token en logs.
 
 ## 4. Recursos
 

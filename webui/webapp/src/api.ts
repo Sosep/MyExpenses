@@ -19,7 +19,6 @@ import type {
   TransferWrite,
 } from './types'
 
-const AUTH_KEY = 'myexpenses.auth'
 export const UNAUTHORIZED_EVENT = 'myexpenses:unauthorized'
 
 export class ApiError extends Error {
@@ -34,24 +33,15 @@ export class ApiError extends Error {
   }
 }
 
-let authHeader: string | null = sessionStorage.getItem(AUTH_KEY)
-
-export function hasStoredAuth(): boolean {
-  return Boolean(authHeader)
-}
-
-function encodeBasic(password: string): string {
-  const bytes = new TextEncoder().encode(':' + password)
-  let binary = ''
-  bytes.forEach((byte) => {
-    binary += String.fromCharCode(byte)
-  })
-  return 'Basic ' + btoa(binary)
-}
-
-export function logout(): void {
-  authHeader = null
-  sessionStorage.removeItem(AUTH_KEY)
+function requestInit(options: RequestOptions, headers: Headers): RequestInit {
+  return {
+    method: options.method ?? 'GET',
+    headers,
+    body: options.body === undefined ? undefined : JSON.stringify(options.body),
+    signal: options.signal,
+    cache: 'no-store',
+    credentials: 'same-origin',
+  }
 }
 
 interface RequestOptions {
@@ -62,21 +52,10 @@ interface RequestOptions {
 
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const headers = new Headers()
-  if (authHeader) headers.set('Authorization', authHeader)
-  let body: string | undefined
-  if (options.body !== undefined) {
-    headers.set('Content-Type', 'application/json')
-    body = JSON.stringify(options.body)
-  }
+  if (options.body !== undefined) headers.set('Content-Type', 'application/json')
   let response: Response
   try {
-    response = await fetch('/api/v1' + path, {
-      method: options.method ?? 'GET',
-      headers,
-      body,
-      signal: options.signal,
-      cache: 'no-store',
-    })
+    response = await fetch('/api/v1' + path, requestInit(options, headers))
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') throw error
     throw new ApiError(
@@ -86,9 +65,8 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     )
   }
   if (response.status === 401) {
-    logout()
     window.dispatchEvent(new Event(UNAUTHORIZED_EVENT))
-    throw new ApiError(401, 'unauthorized', 'Wrong password')
+    throw new ApiError(401, 'unauthorized', 'Sign in required')
   }
   if (!response.ok) {
     let payload: { error?: string; message?: string; fields?: Record<string, string> } | null = null
@@ -109,16 +87,37 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 }
 
 export async function login(password: string): Promise<Meta> {
-  authHeader = encodeBasic(password)
+  let response: Response
   try {
-    const meta = await getMeta()
-    sessionStorage.setItem(AUTH_KEY, authHeader)
-    return meta
-  } catch (error) {
-    authHeader = null
-    sessionStorage.removeItem(AUTH_KEY)
-    throw error
+    response = await fetch('/api/v1/session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password }),
+      credentials: 'same-origin',
+      cache: 'no-store',
+    })
+  } catch {
+    throw new ApiError(
+      0,
+      'network_error',
+      "Can't reach the phone. Check that My Expenses is open and on the same network.",
+    )
   }
+  if (response.status === 401) {
+    throw new ApiError(401, 'unauthorized', 'Wrong password')
+  }
+  if (!response.ok) {
+    throw new ApiError(response.status, 'http_error', 'Could not sign in')
+  }
+  return getMeta()
+}
+
+export function logout(): void {
+  fetch('/api/v1/session', {
+    method: 'DELETE',
+    credentials: 'same-origin',
+    cache: 'no-store',
+  }).catch(() => {})
 }
 
 export const getMeta = (signal?: AbortSignal) => request<Meta>('/meta', { signal })
@@ -188,21 +187,18 @@ export const getFiles = (signal?: AbortSignal) =>
   request<FileEntry[]>('/files', { signal })
 
 export async function downloadFile(name: string): Promise<Blob> {
-  const headers = new Headers()
-  if (authHeader) headers.set('Authorization', authHeader)
   let response: Response
   try {
     response = await fetch('/api/v1/files/' + encodeURIComponent(name), {
-      headers,
       cache: 'no-store',
+      credentials: 'same-origin',
     })
   } catch {
     throw new ApiError(0, 'network_error', "Can't reach the phone to download the file.")
   }
   if (response.status === 401) {
-    logout()
     window.dispatchEvent(new Event(UNAUTHORIZED_EVENT))
-    throw new ApiError(401, 'unauthorized', 'Wrong password')
+    throw new ApiError(401, 'unauthorized', 'Sign in required')
   }
   if (!response.ok) {
     throw new ApiError(

@@ -26,6 +26,8 @@ presupuestos e informes.
   rollover siguen en la app.
 - Informes: KPIs del mes y desglose por categoría, beneficiario o etiqueta, con
   tipo gasto/ingreso/ambos, importe, número y porcentaje.
+- PWA: manifiesto, iconos y service worker. Cachea el shell de `/app` y trata el
+  API como solo red; sin el móvil no hay datos.
 
 ## Desarrollo
 
@@ -40,8 +42,9 @@ VITE_API_TARGET=http://IP_DEL_MOVIL:9000 npm run dev
 Abre `http://localhost:5173/app/`. Vite hace proxy de `/api` al móvil, así que
 no hace falta configurar CORS.
 
-La autenticación es la misma contraseña que en la app. Si no hay contraseña
-configurada, deja el campo vacío.
+La autenticación es la misma contraseña que en la app. El servidor la cambia por
+una cookie de sesión `HttpOnly`; no se guarda en `sessionStorage`. Si no hay
+contraseña configurada, deja el campo vacío.
 
 ## Probar sin el móvil
 
@@ -62,7 +65,7 @@ el API real del teléfono. Acepta estos parámetros para QA visual:
 
 | Parámetro | Efecto |
 |---|---|
-| `?login=1` | Muestra la pantalla de login en vez de saltar la auth |
+| `?login=1` | Borra la cookie del mock y muestra la pantalla de login |
 | `?view=transactions` | Abre Transacciones |
 | `?view=reports` | Abre Informes |
 | `?view=reports&reportBy=Payee&reportType=Both` | Preselecciona dimensión y tipo en Informes |

@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Account, Meta } from './types'
-import { getAccounts, getMeta, hasStoredAuth, login, logout, UNAUTHORIZED_EVENT } from './api'
+import { ApiError, getAccounts, getMeta, login, logout, UNAUTHORIZED_EVENT } from './api'
 import { Budgets } from './components/Budgets'
 import { Dashboard } from './components/Dashboard'
 import { Files } from './components/Files'
@@ -29,7 +29,7 @@ function initialAccountId(): number | null {
 }
 
 export default function App() {
-  const [status, setStatus] = useState<Status>(hasStoredAuth() ? 'checking' : 'login')
+  const [status, setStatus] = useState<Status>('checking')
   const [authError, setAuthError] = useState<string | null>(null)
   const [meta, setMeta] = useState<Meta | null>(null)
   const [accounts, setAccounts] = useState<Account[]>([])
@@ -39,11 +39,18 @@ export default function App() {
   const [editor, setEditor] = useState<EditorState | null>(null)
   const [dataVersion, setDataVersion] = useState(0)
   const [toast, setToast] = useState<string | null>(null)
+  const wasReady = useRef(false)
+
+  useEffect(() => {
+    wasReady.current = status === 'ready'
+  }, [status])
 
   useEffect(() => {
     const onUnauthorized = () => {
       setStatus('login')
-      setAuthError('Your session expired. Sign in again.')
+      if (wasReady.current) {
+        setAuthError('Your session expired. Sign in again.')
+      }
     }
     window.addEventListener(UNAUTHORIZED_EVENT, onUnauthorized)
     return () => window.removeEventListener(UNAUTHORIZED_EVENT, onUnauthorized)
@@ -59,8 +66,12 @@ export default function App() {
         setAccounts(nextAccounts)
         setStatus('ready')
       })
-      .catch(() => {
-        if (!cancelled) setStatus('login')
+      .catch((error: unknown) => {
+        if (cancelled) return
+        if (error instanceof ApiError && error.status !== 401) {
+          setAuthError(error.message)
+        }
+        setStatus('login')
       })
     return () => {
       cancelled = true

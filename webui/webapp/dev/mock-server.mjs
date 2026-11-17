@@ -430,8 +430,10 @@ function serveAppIndex(response) {
     `<head><script>
       (function(){
         var q = new URLSearchParams(location.search)
-        if (q.get('login') !== '1') {
-          sessionStorage.setItem('myexpenses.auth','Basic '+btoa(':'))
+        if (q.get('login') === '1') {
+          document.cookie = 'myexpenses_session=; path=/; max-age=0'
+        } else {
+          document.cookie = 'myexpenses_session=mock; path=/'
         }
         localStorage.setItem('myexpenses.theme','light')
         window.addEventListener('load', function(){
@@ -596,6 +598,9 @@ function serveAppIndex(response) {
 
 const mime = {
   '.js': 'text/javascript; charset=utf-8',
+  '.webmanifest': 'application/manifest+json',
+  '.png': 'image/png',
+  '.svg': 'image/svg+xml',
   '.css': 'text/css; charset=utf-8',
   '.html': 'text/html; charset=utf-8',
   '.svg': 'image/svg+xml',
@@ -710,6 +715,32 @@ createServer(async (request, response) => {
   try {
     const url = new URL(request.url ?? '/', `http://localhost:${port}`)
     const path = decodeURIComponent(url.pathname)
+    const isSession = path === '/api/v1/session'
+
+    if (isSession && request.method === 'POST') {
+      await readJson(request)
+      response.writeHead(204, {
+        'Set-Cookie': 'myexpenses_session=mock; Path=/; HttpOnly; SameSite=Strict',
+        'Cache-Control': 'no-store',
+      })
+      return response.end()
+    }
+    if (isSession && request.method === 'DELETE') {
+      response.writeHead(204, {
+        'Set-Cookie': 'myexpenses_session=; Path=/; Max-Age=0; HttpOnly; SameSite=Strict',
+        'Cache-Control': 'no-store',
+      })
+      return response.end()
+    }
+    if (path.startsWith('/api/v1/') && path !== '/api/v1/session') {
+      const cookie = request.headers.cookie ?? ''
+      if (!cookie.includes('myexpenses_session=mock')) {
+        return sendJson(response, 401, {
+          error: 'unauthorized',
+          message: 'Sign in required',
+        })
+      }
+    }
 
     if (path === '/app' || path === '/app/') return serveAppIndex(response)
 

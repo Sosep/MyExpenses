@@ -288,3 +288,8 @@ data class BreakdownDto(
     val totalMinor: Long,
     val items: List<BreakdownItemDto>
 )
+
+@Keep
+data class SessionLoginDto(
+    val password: String? = null
+)

@@ -18,15 +18,14 @@ import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
 import com.google.gson.Gson
 import io.ktor.http.ContentType
+import io.ktor.http.Cookie
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.gson.gson
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.application.install
 import io.ktor.server.auth.Authentication
-import io.ktor.server.auth.UserIdPrincipal
 import io.ktor.server.auth.authenticate
-import io.ktor.server.auth.basic
 import io.ktor.server.cio.CIO
 import io.ktor.server.engine.EmbeddedServer
 import io.ktor.server.engine.connector
@@ -39,6 +38,7 @@ import io.ktor.server.plugins.statuspages.StatusPages
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.response.respondBytes
+import io.ktor.server.response.respondRedirect
 import io.ktor.server.response.respondText
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.delete
@@ -47,6 +47,14 @@ import io.ktor.server.routing.post
 import io.ktor.server.routing.put
 import io.ktor.server.routing.routing
 import io.ktor.utils.io.jvm.javaio.toByteReadChannel
+import java.io.IOException
+import java.lang.ref.WeakReference
+import java.net.ServerSocket
+import java.security.Security
+import java.time.LocalDate
+import java.time.LocalTime
+import java.util.Locale
+import javax.inject.Inject
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
@@ -56,11 +64,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import org.apache.commons.text.StringSubstitutor
-import org.apache.commons.text.StringSubstitutor.DEFAULT_ESCAPE
-import org.apache.commons.text.StringSubstitutor.DEFAULT_PREFIX
-import org.apache.commons.text.StringSubstitutor.DEFAULT_SUFFIX
-import org.apache.commons.text.lookup.StringLookup
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.totschnig.myexpenses.MyApplication
 import org.totschnig.myexpenses.R
@@ -106,19 +109,12 @@ import org.totschnig.myexpenses.util.NotificationBuilderWrapper.NOTIFICATION_WEB
 import org.totschnig.myexpenses.util.Utils
 import org.totschnig.myexpenses.util.io.getActiveIpAddress
 import org.totschnig.myexpenses.util.licence.LicenceHandler
+import org.totschnig.webui.api.AndroidWebApiDataSource
 import org.totschnig.webui.api.ApiError
 import org.totschnig.webui.api.ApiException
-import org.totschnig.webui.api.AndroidWebApiDataSource
 import org.totschnig.webui.api.ApiRoutes
 import org.totschnig.webui.api.FileDto
-import java.io.IOException
-import java.lang.ref.WeakReference
-import java.net.ServerSocket
-import java.security.Security
-import java.time.LocalDate
-import java.time.LocalTime
-import java.util.Locale
-import javax.inject.Inject
+import org.totschnig.webui.api.SessionLoginDto
 
 private const val STOP_CLICK_ACTION = "STOP_CLICK_ACTION"
 
@@ -165,9 +161,9 @@ class WebInputService : LifecycleService(), IWebInputService {
         DaggerWebUiComponent.builder().appComponent((application as MyApplication).appComponent)
             .build().inject(this)
         wrappedContext = (application as MyApplication).wrapContext(this)
-        //This shows the notification also if we bind to the service from WebUiViewModel.
-        //unfortunately I am not aware of any means to distinguish between being created in the context
-        //bindService or startService
+        // This shows the notification also if we bind to the service from WebUiViewModel.
+        // unfortunately I am not aware of any means to distinguish between being created in the context
+        // bindService or startService
         /*        val notification: Notification =
                     NotificationBuilderWrapper.defaultBigTextStyleBuilder(
                         this,
@@ -224,7 +220,6 @@ class WebInputService : LifecycleService(), IWebInputService {
         "${getProtocol(useHttps)}://$it:$port"
     } ?: "Listening on port $port"
 
-
     private fun readTextFromAssets(fileName: String) = assets.open(fileName).bufferedReader()
         .use {
             it.readText()
@@ -245,7 +240,6 @@ class WebInputService : LifecycleService(), IWebInputService {
         }
 
         if (action == START_ACTION || action == RESTART_ACTION) {
-
             licenceHandler.recordUsage(ContribFeature.WEB_UI)
             if (action == START_ACTION) {
                 updateNotification()
@@ -283,7 +277,8 @@ class WebInputService : LifecycleService(), IWebInputService {
                                     keyStore = keystore,
                                     keyAlias = "myKey",
                                     keyStorePassword = { charArrayOf() },
-                                    privateKeyPassword = { charArrayOf() }) {
+                                    privateKeyPassword = { charArrayOf() }
+                                ) {
                                     port = this@WebInputService.port
                                 }
                             } else {
@@ -307,18 +302,10 @@ class WebInputService : LifecycleService(), IWebInputService {
                             }
                             val passWord = prefHandler.getString(PrefKey.WEBUI_PASSWORD, "")
                                 .takeIf { !it.isNullOrBlank() }
+                            val sessions = SessionStore()
                             passWord?.let {
                                 install(Authentication) {
-                                    basic("auth-basic") {
-                                        realm = getString(R.string.app_name)
-                                        validate { credentials ->
-                                            if (credentials.password == it) {
-                                                UserIdPrincipal(credentials.name)
-                                            } else {
-                                                null
-                                            }
-                                        }
-                                    }
+                                    session(sessions)
                                 }
                             }
 
@@ -362,12 +349,11 @@ class WebInputService : LifecycleService(), IWebInputService {
                             }
 
                             routing {
-
-                                get("/styles.css") {
-                                    call.respondText(
-                                        readTextFromAssets("styles.css"),
-                                        ContentType.Text.CSS
-                                    )
+                                get("/") {
+                                    call.respondRedirect("/app/")
+                                }
+                                get("/download") {
+                                    call.respondRedirect("/app/?view=files")
                                 }
                                 get("/favicon.ico") {
                                     call.respondBytes(
@@ -375,42 +361,35 @@ class WebInputService : LifecycleService(), IWebInputService {
                                         ContentType.Image.XIcon
                                     )
                                 }
-                                get("messages.js") {
-                                    //@formatter:off
-                                    call.respondText(
-                                        """
-                                        let messages = {
-                                        ${i18nJson("app_name", R.string.app_name)},
-                                        ${i18nJson("title_webui", R.string.title_webui)},
-                                        ${i18nJson("account", R.string.account)},
-                                        ${i18nJson("amount", R.string.amount)},
-                                        ${i18nJson("date", R.string.date)},
-                                        ${i18nJson("time", R.string.time)},
-                                        ${i18nJson("booking_date", R.string.booking_date)},
-                                        ${i18nJson("value_date", R.string.value_date)},
-                                        ${i18nJson("payer_or_payee", R.string.payer_or_payee)},
-                                        ${i18nJson("category", R.string.category)},
-                                        ${i18nJson("tags", R.string.tags)},
-                                        ${i18nJson("comment", R.string.notes)},
-                                        ${i18nJson("method", R.string.method)},
-                                        ${i18nJson("menu_save", R.string.menu_save)},
-                                        ${i18nJson("menu_create_transaction", R.string.menu_create_transaction)},
-                                        ${i18nJson("menu_edit_transaction", R.string.menu_edit_transaction)},
-                                        ${i18nJson("reference_number", R.string.reference_number)},
-                                        ${i18nJson("menu_edit", R.string.menu_edit)},
-                                        ${i18nJson("dialog_confirm_discard_changes", R.string.dialog_confirm_discard_changes)},
-                                        ${i18nJson("menu_clone_transaction", R.string.menu_clone_transaction)},
-                                        ${i18nJson("menu_delete", R.string.menu_delete)},
-                                        ${i18nJson("no_expenses", R.string.no_expenses)},
-                                        ${i18nJson("webui_warning_move_transaction", R.string.webui_warning_move_transaction)},
-                                        ${i18nJson("validate_error_not_empty", R.string.validate_error_not_empty)},
-                                        ${i18nJsonPlurals("warning_delete_transaction", R.plurals.warning_delete_transaction)},
-                                        ${i18nJson("action_download", R.string.action_download)},
-                                        ${i18nJson("split_transaction", R.string.split_transaction)},
-                                        };
-                                    """.trimIndent(), ContentType.Text.JavaScript
+                                post("/api/v1/session") {
+                                    val body = call.receive<SessionLoginDto>()
+                                    if (passWord != null && body.password != passWord) {
+                                        throw ApiException(
+                                            HttpStatusCode.Unauthorized,
+                                            "unauthorized",
+                                            "Wrong password"
+                                        )
+                                    }
+                                    val token = sessions.create()
+                                    call.response.cookies.append(
+                                        Cookie(
+                                            name = SessionStore.COOKIE_NAME,
+                                            value = token,
+                                            maxAge = SessionStore.TTL.seconds.toInt(),
+                                            path = "/",
+                                            secure = useHttps,
+                                            httpOnly = true,
+                                            extensions = mapOf("SameSite" to "Strict")
+                                        )
                                     )
-                                    //@formatter:on
+                                    call.respond(HttpStatusCode.NoContent)
+                                }
+                                delete("/api/v1/session") {
+                                    call.request.cookies[SessionStore.COOKIE_NAME]?.let(
+                                        sessions::remove
+                                    )
+                                    call.clearSessionCookie(useHttps)
+                                    call.respond(HttpStatusCode.NoContent)
                                 }
                                 serveWebApp()
                                 val appVersion =
@@ -429,12 +408,10 @@ class WebInputService : LifecycleService(), IWebInputService {
                                     )
                                 )
                                 if (passWord == null) {
-                                    serve()
                                     api.register(this)
                                     fileRoutes()
                                 } else {
-                                    authenticate("auth-basic") {
-                                        serve()
+                                    authenticate("auth-session") {
                                         api.register(this)
                                         fileRoutes()
                                     }
@@ -471,229 +448,6 @@ class WebInputService : LifecycleService(), IWebInputService {
     private fun switchOff() {
         lifecycleScope.launch {
             dataStore.setWebUiActive(false)
-        }
-    }
-
-    private fun Route.serve() {
-
-        get("data.js") {
-            //noinspection Recycle
-            val categories = contentResolver.query(
-                TransactionProvider.CATEGORIES_URI.buildUpon()
-                    .appendBooleanQueryParameter(
-                        TransactionProvider.QUERY_PARAMETER_HIERARCHICAL
-                    ).build(),
-                arrayOf(KEY_ROWID, KEY_PARENTID, KEY_LABEL, KEY_LEVEL),
-                null, null, null
-            )?.useAndMapToList {
-                mapOf(
-                    "id" to it.getLong(0),
-                    "parent" to it.getLongOrNull(1),
-                    "label" to it.getString(2),
-                    "level" to it.getInt(3)
-                )
-            }
-            val data = mapOf(
-                //noinspection Recycle
-                "accounts" to contentResolver.query(
-                    TransactionProvider.ACCOUNTS_BASE_URI,
-                    arrayOf(KEY_ROWID, KEY_LABEL, KEY_TYPE, KEY_CURRENCY),
-                    "$KEY_SEALED = 0", null, null
-                )?.useAndMapToList {
-                    mapOf(
-                        "id" to it.getLong(0),
-                        "label" to it.getString(1),
-                        "type" to it.getString(2),
-                        "currency" to currencyContext[it.getString(3)].symbol
-                    )
-                },
-                //noinspection Recycle
-                "payees" to contentResolver.query(
-                    TransactionProvider.PAYEES_URI,
-                    arrayOf(KEY_ROWID, KEY_PAYEE_NAME),
-                    "$KEY_PARENTID IS  NULL", null, null
-                )?.useAndMapToList {
-                    mapOf(
-                        "id" to it.getLong(0),
-                        "name" to it.getString(1)
-                    )
-                },
-                "categories" to categories,
-                //noinspection Recycle
-                "tags" to contentResolver.query(
-                    TransactionProvider.TAGS_URI,
-                    arrayOf(KEY_ROWID, KEY_LABEL),
-                    null, null, null
-                )?.useAndMapToList {
-                    mapOf(
-                        "id" to it.getLong(0),
-                        "label" to it.getString(1)
-                    )
-                },
-                //noinspection Recycle
-                "methods" to contentResolver.query(
-                    TransactionProvider.METHODS_URI,
-                    arrayOf(
-                        KEY_ROWID,
-                        KEY_LABEL,
-                        KEY_IS_NUMBERED,
-                        KEY_TYPE,
-                        KEY_ACCOUNT_TYPE_LIST
-                    ),
-                    null, null, null
-                )?.useAndMapToList {
-                    mapOf(
-                        "id" to it.getLong(0),
-                        "label" to it.getString(1),
-                        "isNumbered" to (it.getInt(2) > 0),
-                        "type" to it.getInt(3),
-                        "accountTypes" to it.getString(4)?.split(',')
-                    )
-                },
-            )
-            val categoryTreeDepth = categories?.maxOfOrNull { it["level"] as Int } ?: 0
-            val categoryWatchers = if (categoryTreeDepth > 1) {
-                (0..categoryTreeDepth - 2).joinToString(separator = "\n") {
-                    "this.\$watch('categoryPath[$it].id', value => { this.categoryPath[${it + 1}].id=0 } );"
-                }
-            } else ""
-            val lookup = StringLookup { key ->
-                when (key) {
-                    "category_tree_depth" -> categoryTreeDepth.toString()
-                    "data" -> gson.toJson(data)
-                    "categoryWatchers" -> categoryWatchers
-                    "withValueDate" -> prefHandler.getBoolean(
-                        PrefKey.TRANSACTION_WITH_VALUE_DATE,
-                        false
-                    ).toString()
-
-                    "withTime" -> prefHandler.getBoolean(
-                        PrefKey.TRANSACTION_WITH_TIME,
-                        false
-                    ).toString()
-
-                    else -> throw IllegalStateException("Unknown substitution key $key")
-                }
-            }
-            val stringSubstitutor = StringSubstitutor(
-                lookup,
-                DEFAULT_PREFIX,
-                DEFAULT_SUFFIX,
-                DEFAULT_ESCAPE
-            )
-            val text = stringSubstitutor.replace(readTextFromAssets("data.js"))
-            call.respondText(text, ContentType.Text.JavaScript)
-        }
-
-        delete("/transactions/{id}") {
-            if (repository.deleteTransaction(call.parameters["id"]!!.toLong())) {
-                call.respond(
-                    HttpStatusCode.OK,
-                    getString(R.string.transaction_deleted)
-                )
-            } else {
-                call.respond(
-                    HttpStatusCode.Conflict,
-                    "Error while deleting transaction."
-                )
-            }
-        }
-
-        put("/transactions/{id}") {
-            val transaction = call.receive<TransactionDTO>()
-            val id = call.parameters["id"]!!.toLong()
-            require(transaction.id == id)
-            repository.updateTransaction(
-                transaction.toEntity(repository.getCurrencyUnitForAccount(transaction.account)!!)
-            )
-            call.respond(
-                HttpStatusCode.OK,
-                getString(R.string.save_transaction_and_new_success)
-            )
-        }
-
-        post("/transactions") {
-            val transaction = call.receive<TransactionDTO>()
-            val id = repository.createTransaction(
-                transaction.toEntity(
-                    repository.getCurrencyUnitForAccount(transaction.account)!!
-                ).copy(
-                    uuid = generateUuid()
-                )
-            ).id
-            call.response.headers.append(HttpHeaders.Location, "/transactions/$id")
-            call.respond(
-                HttpStatusCode.Created,
-                getString(R.string.save_transaction_and_new_success)
-            )
-        }
-
-        get("/") {
-            call.respondText(readTextFromAssets("form.html"), ContentType.Text.Html)
-        }
-
-        get("/transactions") {
-            val accountId = call.request.queryParameters["account_id"]!!.toLong()
-            val currencyUnit = repository.getCurrencyUnitForAccount(accountId)!!
-            val dateFormat = Utils.ensureDateFormatWithShortYear(this@WebInputService)
-            call.respond(
-                repository.loadTransactions(accountId)
-                    .map { entity ->
-                        TransactionDTO.fromEntity(
-                            entity,
-                            currencyUnit,
-                            currencyFormatter,
-                            dateFormat,
-                            payeeMapFlow.value,
-                            tagMapFlow.value
-                        )
-                    }
-            )
-        }
-
-        get("/download") {
-            val lookup = StringLookup { key ->
-                when (key) {
-                    "data" -> {
-                        gson.toJson(
-                            AppDirHelper
-                                .getAppDirFiles(this@WebInputService)
-                                .getOrThrow()
-                                .map {
-                                    mapOf(
-                                        "name" to it.format(this@WebInputService),
-                                        "link" to "download/${it.name}"
-                                    )
-                                }
-                        )
-                    }
-
-                    "no_results" -> getString(R.string.webui_download_no_data)
-                    else -> throw IllegalStateException("Unknown substitution key $key")
-                }
-            }
-            val stringSubstitutor = StringSubstitutor(
-                lookup,
-                DEFAULT_PREFIX,
-                DEFAULT_SUFFIX,
-                DEFAULT_ESCAPE
-            )
-            val text = stringSubstitutor.replace(readTextFromAssets("download.html"))
-            call.respondText(text, ContentType.Text.Html)
-        }
-
-        get("/download/{file}") {
-            val appDir = AppDirHelper.getAppDir(this@WebInputService).getOrThrow()
-            val file = appDir.findFile(call.parameters["file"]!!)?.uri?.let {
-                AppDirHelper.ensureContentUri(it, this@WebInputService)
-            }
-            if (file == null) {
-                call.respond(HttpStatusCode.NotFound, "File not found")
-            } else {
-                call.respond(
-                    contentResolver.openInputStream(file)!!.toByteReadChannel()
-                )
-            }
         }
     }
 
@@ -774,6 +528,7 @@ class WebInputService : LifecycleService(), IWebInputService {
             "js", "mjs" -> ContentType.Text.JavaScript
             "css" -> ContentType.Text.CSS
             "json" -> ContentType.Application.Json
+            "webmanifest" -> ContentType("application", "manifest+json")
             "svg" -> ContentType("image", "svg+xml")
             "png" -> ContentType.Image.PNG
             "jpg", "jpeg" -> ContentType("image", "jpeg")
@@ -791,21 +546,6 @@ class WebInputService : LifecycleService(), IWebInputService {
         false
     }
 
-    private fun i18nJsonPlurals(
-        resourceName: String,
-        @PluralsRes resourceId: Int,
-        quantity: Int = 1,
-    ) =
-        "$resourceName : '${tqPlurals(resourceId, quantity)}'"
-
-    private fun i18nJson(resourceName: String, @StringRes resourceId: Int) =
-        "$resourceName : '${tq(resourceId)}'"
-
-    private fun tq(@StringRes resId: Int) = wrappedContext.getString(resId).replace("'", "\\'")
-
-    private fun tqPlurals(@PluralsRes resId: Int, quantity: Int) =
-        wrappedContext.resources.getQuantityString(resId, quantity, quantity).replace("'", "\\'")
-
     override fun onDestroy() {
         stopServer()
         super.onDestroy()
@@ -818,7 +558,9 @@ class WebInputService : LifecycleService(), IWebInputService {
         ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
         serverStateObserver?.onStopped()
         true
-    } else false
+    } else {
+        false
+    }
 
     private fun updateNotification() {
         val content = serverAddress ?: getString(R.string.service_starting)
