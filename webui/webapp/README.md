@@ -32,6 +32,37 @@ no hace falta configurar CORS.
 La autenticación es la misma contraseña que en la app. Si no hay contraseña
 configurada, deja el campo vacío.
 
+## Probar sin el móvil
+
+El repo incluye un servidor de desarrollo con datos de ejemplo y 60 transacciones
+para probar scroll y paginación:
+
+```bash
+npm run build
+npm run mock
+# abre http://localhost:4173/app/
+```
+
+El mock sirve el build y el API en el mismo origen; no sustituye a probar contra
+el teléfono. Acepta estos parámetros para QA visual:
+
+| Parámetro | Efecto |
+|---|---|
+| `?login=1` | Muestra la pantalla de login en vez de saltar la auth |
+| `?view=transactions` | Abre Transacciones |
+| `?panel=split` | Abre el detalle de la dividida |
+| `?theme=dark` | Activa el tema oscuro |
+| `?metrics=1` | Añade un badge con `scrollHeight`/`clientHeight` y filas |
+
+Para trabajar con Vite en caliente y el mock como API:
+
+```bash
+node dev/mock-server.mjs
+VITE_API_TARGET=http://localhost:4173 npm run dev
+```
+
+En ese modo la SPA la sirve Vite y los parámetros de QA del mock no aplican.
+
 ## Build
 
 ```bash
