@@ -74,6 +74,7 @@ export function BudgetFilterFields({ criteria, onChange, unsupported }: BudgetFi
                 values={criteria.categoryIds.map(String)}
                 onChange={(values) => update({ categoryIds: values.map(Number) })}
               />
+              <span className="hint">{t`Includes subcategories`}</span>
             </label>
             <label className="field">
               <span className="field-label">{t`Payees`}</span>

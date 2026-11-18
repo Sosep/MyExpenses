@@ -4,7 +4,6 @@ import { describeError, getGrouped, getTransactions } from '../api'
 import {
   currentMonth,
   formatDate,
-  formatMoney,
   formatMonthKey,
   kindLabel,
   lastMonths,
@@ -12,6 +11,7 @@ import {
 } from '../format'
 import { t } from '@lingui/core/macro'
 import { useAsync } from '../hooks'
+import { Money } from '../privacy'
 import { fillSeries } from '../series'
 import { Chart } from './Chart'
 
@@ -110,11 +110,22 @@ export function Dashboard({
           <div className="accent-bar" />
           <div className="kpi-label">{t`Net worth`}</div>
           <div className="hero-value">
-            {formatMoney(account.currentBalanceMinor, account.currency, account.fractionDigits)}
+            <Money
+              scope="totals"
+              amountMinor={account.currentBalanceMinor}
+              currency={account.currency}
+              fractionDigits={account.fractionDigits}
+            />
           </div>
           <div className="hero-delta">
             <span className={saved >= 0 ? 'amount-pos' : 'amount-neg'}>
-              {formatMoney(saved, account.currency, account.fractionDigits, true)}
+              <Money
+                scope="totals"
+                amountMinor={saved}
+                currency={account.currency}
+                fractionDigits={account.fractionDigits}
+                showSign
+              />
             </span>{' '}
             {t`saved this month`}
           </div>
@@ -122,27 +133,49 @@ export function Dashboard({
         <div className="kpi mint">
           <div className="kpi-label">{t`Income`}</div>
           <div className="kpi-value">
-            {loading
-              ? '—'
-              : formatMoney(income, account.currency, account.fractionDigits)}
+            {loading ? (
+              '—'
+            ) : (
+              <Money
+                scope="totals"
+                amountMinor={income}
+                currency={account.currency}
+                fractionDigits={account.fractionDigits}
+              />
+            )}
           </div>
           <div className="kpi-foot">{t`This month`}</div>
         </div>
         <div className="kpi rose">
           <div className="kpi-label">{t`Expenses`}</div>
           <div className="kpi-value">
-            {loading
-              ? '—'
-              : formatMoney(expenses, account.currency, account.fractionDigits)}
+            {loading ? (
+              '—'
+            ) : (
+              <Money
+                scope="totals"
+                amountMinor={expenses}
+                currency={account.currency}
+                fractionDigits={account.fractionDigits}
+              />
+            )}
           </div>
           <div className="kpi-foot">{t`This month`}</div>
         </div>
         <div className="kpi lav">
           <div className="kpi-label">{t`Saved`}</div>
           <div className="kpi-value">
-            {loading
-              ? '—'
-              : formatMoney(saved, account.currency, account.fractionDigits, true)}
+            {loading ? (
+              '—'
+            ) : (
+              <Money
+                scope="totals"
+                amountMinor={saved}
+                currency={account.currency}
+                fractionDigits={account.fractionDigits}
+                showSign
+              />
+            )}
           </div>
           <div className="kpi-foot">{t`Income minus expenses`}</div>
         </div>
@@ -216,12 +249,12 @@ export function Dashboard({
                           : 'amount-neg'
                     }`}
                   >
-                    {formatMoney(
-                      transaction.amountMinor,
-                      transaction.currency,
-                      transaction.fractionDigits,
-                      true,
-                    )}
+                    <Money
+                      amountMinor={transaction.amountMinor}
+                      currency={transaction.currency}
+                      fractionDigits={transaction.fractionDigits}
+                      showSign
+                    />
                   </td>
                 </tr>
               ))

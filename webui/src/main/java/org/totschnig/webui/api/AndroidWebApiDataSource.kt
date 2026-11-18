@@ -325,7 +325,18 @@ class AndroidWebApiDataSource(
             from = from,
             to = to,
             type = type,
-            filters = filters,
+            // A category filter means its whole branch, as in the Android
+            // `CategoryCriterion`; the tree is only read when a category is set.
+            filters = if (filters.categoryIds.isEmpty()) {
+                filters
+            } else {
+                filters.copy(
+                    categoryIds = categoryBranchIds(
+                        filters.categoryIds,
+                        repository.queryCategories().associate { it.id to it.parentId }
+                    )
+                )
+            },
             limit = limit,
             offset = offset
         )

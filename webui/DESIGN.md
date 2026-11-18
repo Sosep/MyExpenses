@@ -207,7 +207,8 @@ píxeles como especificación.
 
 - Topbar: 48 px, `--bg-surface`, borde inferior de 1 px. Marca a la izquierda; cuenta a la
   derecha y, en pantallas estrechas, un menú `⋯` con idioma, tema y sesión. El nombre de la
-  vista no se repite en la barra: lo dice el H1 de cada pantalla.
+  vista no se repite en la barra: lo dice el H1 de cada pantalla. Los dos botones
+  de privacidad (ojo y filas) van los primeros, antes del idioma.
 - Rail: 56 px, `--bg-rail`, iconos de 18 px y pill activa de 36 px. Secciones:
   Overview, Transactions, Reports, Budgets, Files; Settings abajo. En móvil se
 convierte en una barra inferior fija con icono y etiqueta, y el contenido reserva
@@ -324,6 +325,29 @@ espacio para no quedar tapado.
 - Progreso: track 6 px, radio 999, relleno semántico. Se muestra porcentaje y
   resto ("78% · €88 left"). Si supera 100%, el relleno es `--negative` y el texto
   dice "Over by €26". No se recorta el número.
+
+### Privacidad de importes
+
+- Dos `icon-btn` al principio del grupo derecho de la topbar (y dos entradas del
+  menú `⋯` en móvil): **Totales** (`IconEye`/`IconEyeOff`) y **Transacciones**
+  (`IconRows`/`IconRowsOff`). `aria-pressed` con el estado y tooltip con la
+  acción siguiente.
+- Estado por navegador (`myexpenses.hideTotals`, `myexpenses.hideTransactions`),
+  apagado por defecto; no viaja al servidor.
+- Con un ámbito tapado el importe se **sustituye** por `€ ••••`
+  (`maskedMoney()`): no queda ningún dígito en el DOM. Los puntos van
+  `aria-hidden` y un `sr-only` dice "Amount hidden" (en `<Money>`; dentro de una
+  frase extraída la máscara sustituye al número). Prohibido `blur`, `opacity` o
+  `color: transparent`.
+- Ámbito de cada botón:
+  - **Totales**: patrimonio del héroe, KPIs del panel y de informes, cabeceras de
+    periodo, "N groups · X total", desglose de informes, tooltip del gráfico y
+    resumen, tarjetas y detalle de presupuesto.
+  - **Transacciones**: importes de fila (lista, últimas del panel, drill-down),
+    panel de detalle, partes y total de partes, y el chip de rango de importes.
+- Nunca se tapan los campos de un editor abierto (`TransactionEditor`,
+  `BudgetEditor`). Porcentajes, barras, fechas, descripciones y contadores siguen
+  visibles.
 
 ### Gráficas
 
@@ -707,7 +731,9 @@ plural(count, { one: '# transaction', other: '# transactions' }) // bien
 - Fechas del API en ISO (`YYYY-MM-DD`); se interpretan en la zona del dispositivo
   que aloja el servidor. No usar `new Date('2026-11-17')` (UTC): parsear y
   construir en local.
-- Importes: unidades menores (enteros) + divisa; el componente `Money` formatea.
+- Importes: unidades menores (enteros) + divisa; `<Money>` (en JSX) o
+  `useMoney()` (dentro de una frase de Lingui) formatean y aplican la máscara;
+  `formatMoney` es el núcleo y `maskedMoney()` la máscara.
 - Sin texto dentro de imágenes. Sin `innerHTML` con texto traducido.
 - Comentarios para traductores en mensajes ambiguos ("Budget" como sustantivo,
   "Part" como parte de una dividida).
@@ -739,6 +765,8 @@ plural(count, { one: '# transaction', other: '# transactions' }) // bien
 | Conciliación | Reconciliation | Unreconciled / Cleared / Reconciled |
 | Fecha valor | Value date | Distinta de Booking date |
 
+- Privacidad: "Hide totals" / "Show totals" y "Hide transaction amounts" /
+  "Show transaction amounts"; la cifra tapada se anuncia como "Amount hidden".
 - Errores: qué pasó y qué hacer. Sin "Oops", sin "Something went wrong" a secas.
 - Vacíos: describen el estado y ofrecen la acción siguiente.
 - Confirmaciones destructivas: nombran el objeto y el alcance ("This also deletes
@@ -858,6 +886,8 @@ src/
 - [ ] Estados vacío, carga y error definidos.
 - [ ] Copia en inglés extraída a `.po`; sin concatenación.
 - [ ] Importes y fechas con `Money`/`DateText`; tabulares y alineados.
+- [ ] Los importes nuevos declaran su ámbito (`totals`/`transactions`) y los
+      editores abiertos se siguen leyendo.
 - [ ] Tabla: totales del servidor, no sumas de la página.
 - [ ] Confirmación destructiva nombra el objeto y el alcance.
 - [ ] Responsive en 1280, 1024 y 768.
@@ -908,3 +938,4 @@ src/
 | 2026-11-17 | 1.7 | Informes: resumen y desglose por categoría, beneficiario o etiqueta con barras y porcentajes. |
 | 2026-11-17 | 1.8 | Lingui EN/ES, selector de idioma, Geist Sans empaquetada, caché TanStack y avisos PWA. |
 | 2026-11-17 | 1.9 | Informes v2 (presets, métodos, todas las cuentas y drill-down), asignaciones por categoría y Tailwind v4 procesando toda la CSS (app.css en la capa components). |
+| 2026-11-18 | 1.10 | Privacidad de importes: dos botones (totales y transacciones), máscara `€ ••••` y `Money`/`useMoney` en todas las pantallas. |

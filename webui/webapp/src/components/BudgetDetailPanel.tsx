@@ -4,7 +4,8 @@ import type { Budget, BudgetProgress } from '../types'
 import { describeError, getBudgetBreakdown, getBudgetHistory } from '../api'
 import { daysLeft, groupingLabel, progressRatio } from '../budgetUi'
 import { useFocusTrap } from '../useFocusTrap'
-import { formatMoney, formatMonthShort, formatPercent, statusLabel } from '../format'
+import { formatMonthShort, formatPercent, statusLabel } from '../format'
+import { useMoney } from '../privacy'
 import { useAsync } from '../hooks'
 import { loadReferences } from '../references'
 import { IconX } from './Icons'
@@ -60,7 +61,9 @@ export function BudgetDetailPanel({
     }
   }, [onClose])
 
-  const money = (value: number) => formatMoney(value, progress.currency, progress.fractionDigits)
+  const totalsMoney = useMoney('totals')
+  const money = (value: number) =>
+    totalsMoney(value, progress.currency, progress.fractionDigits)
   const over = progress.remainingMinor < 0
   const ratio = progressRatio(progress)
   const days = daysLeft(progress)
@@ -112,7 +115,7 @@ export function BudgetDetailPanel({
     return parts.length > 0 ? t`Filter: ${parts.join(' · ')}` : t`No filter: the whole account`
   }, [budget.criteria, budget.criteriaUnsupported, references.data])
 
-  /** The row and every category hanging from it, which is what the row sums. */
+  /** The row links to its branch; the API expands the category to its subtree. */
   const drilldownUrl = (categoryId: number): string | null => {
     const data = breakdown.data
     if (!data) return null
@@ -125,15 +128,7 @@ export function BudgetDetailPanel({
     if (categoryId <= 0) {
       params.set('uncategorized', 'true')
     } else {
-      const collected: number[] = []
-      const walk = (id: number) => {
-        collected.push(id)
-        for (const row of data.categories) {
-          if (row.parentId === id) walk(row.categoryId)
-        }
-      }
-      walk(categoryId)
-      for (const id of collected) params.append('categoryId', String(id))
+      params.append('categoryId', String(categoryId))
     }
     const criteria = budget.criteria
     if (criteria) {

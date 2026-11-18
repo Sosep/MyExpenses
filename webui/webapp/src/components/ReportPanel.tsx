@@ -3,7 +3,8 @@ import { t } from '@lingui/core/macro'
 import type { BreakdownItem, Transaction } from '../types'
 import { describeError, getReportTransactions } from '../api'
 import { useFocusTrap } from '../useFocusTrap'
-import { formatDate, formatMoney } from '../format'
+import { formatDate } from '../format'
+import { Money } from '../privacy'
 import { useAsync } from '../hooks'
 import { IconX } from './Icons'
 
@@ -85,12 +86,12 @@ export function ReportPanel({
                     <td className="date">{formatDate(transaction.date)}</td>
                     <td className="desc">{description(transaction)}</td>
                     <td className="num">
-                      {formatMoney(
-                        transaction.amountMinor,
-                        transaction.currency,
-                        transaction.fractionDigits,
-                        true,
-                      )}
+                      <Money
+                        amountMinor={transaction.amountMinor}
+                        currency={transaction.currency}
+                        fractionDigits={transaction.fractionDigits}
+                        showSign
+                      />
                     </td>
                   </tr>
                 ))}

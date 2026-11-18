@@ -34,6 +34,9 @@ presupuestos e informes.
   API como solo red; avisa sin conexión y cuando hay una versión nueva.
 - i18n: inglés y español con Lingui (`.po`). Selector de idioma en la barra
   superior; el idioma se recuerda en `localStorage`.
+- Privacidad: dos botones en la barra superior (ojo = totales, filas = importes
+  de transacciones) que sustituyen cada cifra por `€ ••••`; cada uno recuerda su
+  estado en `localStorage` y los editores abiertos se siguen leyendo.
 - Datos de servidor con TanStack Query: caché compartida y refresco por
   invalidación tras cada escritura.
 - Geist Sans empaquetada (`@fontsource/geist-sans`), sin depender de la red.
@@ -149,6 +152,7 @@ El detalle de una transacción abre una entrada de historial: atrás lo cierra.
 | `?locale=es` | Activa español |
 | `?view=transactions` | Transacciones |
 | `?view=transactions&filter=groceries` | Filtra por la categoría Groceries |
+| `?view=transactions&categoryId=1` | Filtra por Food y toda su rama (subcategorías incluidas) |
 | `?view=transactions&grouping=WEEK` | Agrupa por semana (`DAY`, `MONTH`, `YEAR`, `NONE`) |
 | `?view=transactions&preset=month` | Rango del mes actual (`last3`, `year`, `custom` con `from`/`to`) |
 | `?view=transactions&q=cafe` | Busca en descripción, beneficiario y referencia |
@@ -170,6 +174,9 @@ El detalle de una transacción abre una entrada de historial: atrás lo cierra.
 | `?edit=simple` / `?edit=split` / `?edit=transfer` | Abre esa transacción en su editor |
 | `?new=1&save=1` | Crea una transacción simple de prueba |
 | `?theme=dark` | Tema oscuro |
+| `?hidden=1` | Tapa totales e importes de transacciones |
+| `?hidden=totals` | Tapa solo patrimonio, KPIs y agregados |
+| `?hidden=transactions` | Tapa solo los importes de las filas |
 | `?metrics=1` | Badge con `scrollHeight`/`clientHeight` y filas |
 
 ### Viewport móvil

@@ -1,6 +1,7 @@
 import { t } from '@lingui/core/macro'
 import type { Group } from '../types'
-import { formatMoney, formatMonth, formatMonthShort } from '../format'
+import { formatMonth, formatMonthShort } from '../format'
+import { useMoney } from '../privacy'
 
 interface ChartProps {
   series: Group[]
@@ -9,6 +10,7 @@ interface ChartProps {
 }
 
 export function Chart({ series, currency, fractionDigits }: ChartProps) {
+  const money = useMoney('totals')
   // A month without expenses arrives without the field (or null). Treating it as
   // zero keeps one missing value from turning every bar height into NaN.
   const amount = (value?: number | null): number =>
@@ -45,15 +47,11 @@ export function Chart({ series, currency, fractionDigits }: ChartProps) {
           <div
             className="chart-col"
             key={`${group.year}-${group.second}`}
-            title={t`${formatMonth(group.year, group.second)} — income ${formatMoney(
+            title={t`${formatMonth(group.year, group.second)} — income ${money(
               group.incomeMinor,
               currency,
               fractionDigits,
-            )}, expenses ${formatMoney(
-              group.expensesMinor,
-              currency,
-              fractionDigits,
-            )}`}
+            )}, expenses ${money(group.expensesMinor, currency, fractionDigits)}`}
           >
             <div className="chart-half top">
               <div className="bar income" style={{ height: `${height(group.incomeMinor)}%` }} />

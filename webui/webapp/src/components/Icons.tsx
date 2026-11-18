@@ -121,6 +121,48 @@ export function IconDownload({ size = 16 }: IconProps) {
   )
 }
 
+/** Privacy: the headline figures are visible. */
+export function IconEye({ size = 18 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" {...stroke} aria-hidden="true">
+      <path d="M2.5 12S6.2 6.5 12 6.5 21.5 12 21.5 12 17.8 17.5 12 17.5 2.5 12 2.5 12z" />
+      <circle cx="12" cy="12" r="2.6" />
+    </svg>
+  )
+}
+
+/** Privacy: the headline figures are hidden. */
+export function IconEyeOff({ size = 18 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" {...stroke} aria-hidden="true">
+      <path d="M2.5 12S6.2 6.5 12 6.5 21.5 12 21.5 12 17.8 17.5 12 17.5 2.5 12 2.5 12z" />
+      <circle cx="12" cy="12" r="2.6" />
+      <path d="M4 4l16 16" />
+    </svg>
+  )
+}
+
+/** Privacy: the amounts of the list rows are visible. */
+export function IconRows({ size = 18 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" {...stroke} aria-hidden="true">
+      <path d="M4 6h7M4 12h7M4 18h7" />
+      <path d="M14 6h6M14 12h6M14 18h6" />
+    </svg>
+  )
+}
+
+/** Privacy: the amounts of the list rows are hidden. */
+export function IconRowsOff({ size = 18 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" {...stroke} aria-hidden="true">
+      <path d="M4 6h7M4 12h7M4 18h7" />
+      <path d="M14 6h6M14 12h6M14 18h6" />
+      <path d="M4 4l16 16" />
+    </svg>
+  )
+}
+
 export function IconMore({ size = 18 }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" {...stroke} aria-hidden="true">

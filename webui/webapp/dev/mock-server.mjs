@@ -16,6 +16,10 @@
  *   ?view=reports       open the reports screen
  *   ?panel=split        open the split transaction detail panel
  *   ?theme=dark         toggle dark mode
+ *   ?hidden=1           hide totals and transaction amounts (`totals`, `transactions`)
+ *   ?hidden=1           hide the totals and the transaction amounts
+ *   ?hidden=totals      hide only the headline figures
+ *   ?hidden=transactions hide only the amounts of the rows
  *   ?metrics=1          show scroll/row metrics in a corner badge
  */
 
@@ -601,7 +605,6 @@ const defaultTransactions = [...special, ...fillers, ...history]
 const transactions = (qaSeed ? qaSeed.transactions : defaultTransactions).sort((a, b) =>
   b.date.localeCompare(a.date),
 )
-const splitParts = qaSeed ? qaSeed.splitParts : defaultSplitParts
 
 const defaultSplitParts = [
   {
@@ -641,6 +644,8 @@ const defaultSplitParts = [
     transferAccountId: null,
   },
 ]
+
+const splitParts = qaSeed ? qaSeed.splitParts : defaultSplitParts
 
 // Same set the summary uses: a transfer's leg is not income or expense, it is
 // `transfersMinor`. Counting it here made the chart's current month disagree
@@ -686,6 +691,12 @@ function serveAppIndex(response) {
         }
         if (q.get('locale')) localStorage.setItem('myexpenses.locale', q.get('locale'))
         localStorage.setItem('myexpenses.theme', q.get('theme') === 'dark' ? 'dark' : 'light')
+        var hidden = q.get('hidden')
+        localStorage.setItem('myexpenses.hideTotals', hidden === '1' || hidden === 'totals' ? '1' : '0')
+        localStorage.setItem('myexpenses.hideTransactions', hidden === '1' || hidden === 'transactions' ? '1' : '0')
+        var hidden = q.get('hidden')
+        localStorage.setItem('myexpenses.hideTotals', hidden === '1' || hidden === 'totals' ? '1' : '0')
+        localStorage.setItem('myexpenses.hideTransactions', hidden === '1' || hidden === 'transactions' ? '1' : '0')
         window.addEventListener('load', function(){
           if (q.get('view') === 'reports') {
             setTimeout(function(){ document.querySelector('button[data-view="reports"]')?.click() }, 250)
@@ -1603,12 +1614,32 @@ createServer(async (request, response) => {
       const amountMax = Number(url.searchParams.get('amountMax')) || null
       const transfer = url.searchParams.get('transfer')
 
+      // A category filter means the category and everything below it, like the
+      // Android CategoryCriterion. A split counts when one of its parts falls
+      // in the branch.
+      const categoryBranch = new Set()
+      for (const id of categoryIds) {
+        const pending = [id]
+        while (pending.length) {
+          const current = pending.pop()
+          if (categoryBranch.has(current)) continue
+          categoryBranch.add(current)
+          for (const entry of categories) {
+            if (entry.parentId === current) pending.push(entry.id)
+          }
+        }
+      }
+      const inCategoryBranch = (item) =>
+        item.category
+          ? categoryBranch.has(item.category.id)
+          : (item.splitParts ?? []).some((part) => categoryBranch.has(part.category?.id))
+
       const matches = transactions.filter((item) => {
         if (item.date < from || item.date > to) return false
         if (type === 'income' && item.amountMinor <= 0) return false
         if (type === 'expense' && item.amountMinor >= 0) return false
         if (url.searchParams.get('uncategorized') === 'true' && item.category) return false
-        if (categoryIds.length && !categoryIds.includes(item.category?.id)) return false
+        if (categoryBranch.size && !inCategoryBranch(item)) return false
         if (payeeIds.length && !payeeIds.includes(item.payee?.id)) return false
         if (methodIds.length && !methodIds.includes(item.method?.id)) return false
         if (tagIds.length && !(item.tags ?? []).some((tag) => tagIds.includes(tag.id))) {

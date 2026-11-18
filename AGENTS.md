@@ -45,6 +45,13 @@ Read this before changing code. Detailed sources:
   and deep links open a filtered list; the transaction detail is a history entry
   that back closes. Other panels still open from state.
 - Search: `q` folds case and diacritics on both sides (`Cafetería` = `cafeteria`).
+- Privacy: two topbar switches mask money as `€ ••••` (no digits in the DOM) —
+  `totals` for net worth, KPIs, report and budget aggregates and the chart
+  tooltip; `transactions` for row amounts, the detail panel and its parts, period
+  sums, the amount filter chip, report drill-down and budget cards. Each state
+  lives in `localStorage`, never goes to the server, and open editors stay
+  readable. Amounts render through `Money`/`useMoney` in `webui/webapp/src/privacy.tsx`;
+  `formatMoney` and `maskedMoney` are in `format.ts`.
 - Files: `GET /api/v1/files` lists app-directory backups and `GET /api/v1/files/{name}`
   streams one with `Content-Disposition`; the SPA downloads via fetch + blob with
   the session cookie.
@@ -70,7 +77,11 @@ Read this before changing code. Detailed sources:
   comment, payee and reference), `amountMin`/`amountMax` (absolute minor units),
   repeated `status` and a `transfer` switch; the SPA exposes them with
   `MultiPicker`/`SearchSelect`, keeps them in the URL and as removable chips, and
-  collapses them behind `Filters (n)` on phones.
+  collapses them behind `Filters (n)` on phones. `categoryId` means the category
+  and every category below it, like the Android `CategoryCriterion`; a split
+  counts when one of its parts falls in the branch. The list expands the tree on
+  the server, so the SPA sends one id and the `total` already includes the
+  subtree.
   The list is not tied to a month: the grouping (`NONE/DAY/WEEK/MONTH/YEAR`) is a
   visual choice kept in the URL and `localStorage`, each period header carries
   its income, expenses and transfers from `/reports/grouped` (`firstDate`
@@ -78,7 +89,10 @@ Read this before changing code. Detailed sources:
   by default, plus `Este mes`, `Últimos 3 meses`, `Este año` and a custom one).
 - Budgets have month navigation; monthly budgets load that month's progress,
   allocations and period total. Each budget has a 12-month history panel and
-  per-category spent/allocated bars.
+  per-category spent/allocated bars. A budget's saved category filter is the
+  app's own `CategoryCriterion`, so its spend already covers the whole branch;
+  the detail panel sends a single `categoryId` when it opens the matching
+  transactions.
 - Reports: `/reports/summary`, `/reports/breakdown` (category, payee, tag or
   method) and `/reports/transactions` for drill-down. Period presets, `All
   accounts` converted to the home currency and server-computed shares. Category breakdown
@@ -173,9 +187,11 @@ npm run mock           # http://localhost:4173/app/
 - The mock state is in memory; restarting it resets the fixtures.
 
 QA switches: `?login=1` (clears the mock cookie), `?locale=es`,
-`?view=transactions`, `?view=transactions&filter=groceries`, `?view=reports`, `?view=reports&reportBy=Payee&reportType=Both`,
+`?view=transactions`, `?view=transactions&filter=groceries`,
+`?view=transactions&categoryId=1` (Food and its subcategories), `?view=reports`, `?view=reports&reportBy=Payee&reportType=Both`,
 `?view=reports&reportDrill=1`, `?view=budgets`, `?view=budgets&budgetMonth=-1`, `?view=budgets&new=1`,
 `?view=budgets&edit=1`, `?view=budgets&edit=1&periodOverride=1`, `?view=budgets&detail=1`, `?view=files`,
+`?hidden=1|totals|transactions`,
 `?panel=split`, `?panel=transfer`, `?new=1`, `?new=1&kind=transfer`,
 `?new=1&kind=split`, `?new=1&combo=1`, `?edit=simple`, `?edit=split`,
 `?edit=transfer`, `?new=1&save=1`, `?theme=dark`, `?metrics=1`.
@@ -220,5 +236,9 @@ Update the docs while the change is fresh; do not defer them to a later commit.
   January and a 12-month history (the two contract fixes), a split inside a
   budget counted once, and a budget created from the web with two categories and
   a state showing that same filter and spend in the Android app.
+- Category branch: the SQL lives in the provider, so the phone must confirm that
+  a parent category and a split give the same count and total as the Android
+  app, and that a budget filtered by a parent opens its movements with one
+  `categoryId`.
 - Files are device-level: the route lives in `WebInputService` (`AppDirHelper`),
   so `ApiRoutesTest` does not cover it; verify on the phone.

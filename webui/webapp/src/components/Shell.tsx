@@ -3,8 +3,11 @@ import type { ReactNode } from 'react'
 import { t } from '@lingui/core/macro'
 import type { Locale } from '../i18n'
 import type { Account, Meta } from '../types'
+import { useAmounts } from '../privacy'
 import {
   IconChart,
+  IconEye,
+  IconEyeOff,
   IconFile,
   IconGrid,
   IconList,
@@ -12,6 +15,8 @@ import {
   IconMore,
   IconMoon,
   IconPie,
+  IconRows,
+  IconRowsOff,
   IconSettings,
   IconSun,
 } from './Icons'
@@ -54,6 +59,11 @@ export function Shell({
 }: ShellProps) {
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
+  const amounts = useAmounts()
+  const totalsAction = amounts.totals ? t`Show totals` : t`Hide totals`
+  const transactionsAction = amounts.transactions
+    ? t`Show transaction amounts`
+    : t`Hide transaction amounts`
 
   useEffect(() => {
     if (!menuOpen) return
@@ -100,6 +110,28 @@ export function Shell({
             </button>
           ) : null}
           <div className="top-inline">
+            <div className="top-privacy">
+              <button
+                type="button"
+                className="icon-btn"
+                aria-pressed={amounts.totals}
+                title={totalsAction}
+                aria-label={totalsAction}
+                onClick={() => amounts.toggle('totals')}
+              >
+                {amounts.totals ? <IconEyeOff /> : <IconEye />}
+              </button>
+              <button
+                type="button"
+                className="icon-btn"
+                aria-pressed={amounts.transactions}
+                title={transactionsAction}
+                aria-label={transactionsAction}
+                onClick={() => amounts.toggle('transactions')}
+              >
+                {amounts.transactions ? <IconRowsOff /> : <IconRows />}
+              </button>
+            </div>
             <label className="account-picker locale-picker">
               <span className="sr-only">{t`Language`}</span>
               <select
@@ -171,6 +203,32 @@ export function Shell({
                 >
                   {theme === 'dark' ? <IconSun /> : <IconMoon />}
                   {theme === 'dark' ? t`Switch to bright` : t`Switch to dark`}
+                </button>
+                <button
+                  type="button"
+                  className="menu-item"
+                  aria-pressed={amounts.totals}
+                  onClick={() => {
+                    setMenuOpen(false)
+                    amounts.toggle('totals')
+                  }}
+                >
+                  {amounts.totals ? <IconEyeOff /> : <IconEye />}
+                  {amounts.totals ? t`Show totals` : t`Hide totals`}
+                </button>
+                <button
+                  type="button"
+                  className="menu-item"
+                  aria-pressed={amounts.transactions}
+                  onClick={() => {
+                    setMenuOpen(false)
+                    amounts.toggle('transactions')
+                  }}
+                >
+                  {amounts.transactions ? <IconRowsOff /> : <IconRows />}
+                  {amounts.transactions
+                    ? t`Show transaction amounts`
+                    : t`Hide transaction amounts`}
                 </button>
                 <button
                   type="button"

@@ -12,6 +12,7 @@ import { Dashboard } from './components/Dashboard'
 import { Files } from './components/Files'
 import { Login } from './components/Login'
 import { Pwa } from './components/Pwa'
+import { AmountsProvider } from './privacy'
 import { Reports } from './components/Reports'
 import { Shell } from './components/Shell'
 import type { View } from './components/Shell'
@@ -191,7 +192,7 @@ export default function App({ initialLocale: initial }: { initialLocale: Locale 
   const account = accounts.find((candidate) => candidate.id === accountId) ?? accounts[0]
 
   return (
-    <>
+    <AmountsProvider>
       <Shell
         view={view}
         onView={setView}
@@ -291,6 +292,6 @@ export default function App({ initialLocale: initial }: { initialLocale: Locale 
         </div>
       ) : null}
       <Pwa />
-    </>
+    </AmountsProvider>
   )
 }

@@ -7,8 +7,8 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 #. placeholder {0}: formatMonth(group.year, group.second)
-#. placeholder {1}: formatMoney( group.incomeMinor, currency, fractionDigits, )
-#. placeholder {2}: formatMoney( group.expensesMinor, currency, fractionDigits, )
+#. placeholder {1}: money( group.incomeMinor, currency, fractionDigits, )
+#. placeholder {2}: money(group.expensesMinor, currency, fractionDigits)
 #: src/components/Chart.tsx
 msgid "{0} — income {1}, expenses {2}"
 msgstr "{0} — income {1}, expenses {2}"
@@ -25,21 +25,21 @@ msgid "{0} budgets · {1}"
 msgstr "{0} budgets · {1}"
 
 #. placeholder {0}: data.items.length
-#. placeholder {1}: formatMoney( data.totalMinor, data.currency, data.fractionDigits, )
+#. placeholder {1}: reportMoney( data.totalMinor, data.currency, data.fractionDigits, )
 #: src/components/Reports.tsx
 msgid "{0} groups · {1} total"
 msgstr "{0} groups · {1} total"
 
-#. placeholder {0}: formatMoney( progress.remainingMinor, progress.currency, progress.fractionDigits, )
-#. placeholder {0}: formatMoney( summary.remaining, summary.currency, summary.fractionDigits, )
+#. placeholder {0}: cardMoney( progress.remainingMinor, progress.currency, progress.fractionDigits, )
 #. placeholder {0}: formatMoney(remaining, account?.currency ?? 'EUR', fractionDigits, true)
+#. placeholder {0}: money(progress.remainingMinor)
 #: src/components/BudgetDetailPanel.tsx
 #: src/components/Budgets.tsx
 #: src/components/TransactionEditor.tsx
 msgid "{0} left"
 msgstr "{0} left"
 
-#. placeholder {0}: formatMoney( Math.abs(summary.remaining), summary.currency, summary.fractionDigits, )
+#. placeholder {0}: summaryMoney( Math.abs(summary.remaining), summary.currency, summary.fractionDigits, )
 #: src/components/Budgets.tsx
 msgid "{0} over"
 msgstr "{0} over"
@@ -179,6 +179,10 @@ msgstr "Amount (signed)"
 #: src/components/Transactions.tsx
 msgid "Amount from"
 msgstr "Amount from"
+
+#: src/privacy.tsx
+msgid "Amount hidden"
+msgstr "Amount hidden"
 
 #: src/components/Transactions.tsx
 msgid "Amount to"
@@ -696,6 +700,14 @@ msgstr "From account"
 msgid "Group by"
 msgstr "Group by"
 
+#: src/components/Shell.tsx
+msgid "Hide totals"
+msgstr "Hide totals"
+
+#: src/components/Shell.tsx
+msgid "Hide transaction amounts"
+msgstr "Hide transaction amounts"
+
 #: src/components/Transactions.tsx
 msgid "History"
 msgstr "History"
@@ -703,6 +715,11 @@ msgstr "History"
 #: src/components/Reports.tsx
 msgid "In this month"
 msgstr "In this month"
+
+#: src/components/BudgetFilterFields.tsx
+#: src/components/Transactions.tsx
+msgid "Includes subcategories"
+msgstr "Includes subcategories"
 
 #: src/components/Chart.tsx
 #: src/components/Dashboard.tsx
@@ -973,7 +990,7 @@ msgstr "Other periods keep using the default amount."
 msgid "Over"
 msgstr "Over"
 
-#. placeholder {0}: formatMoney( Math.abs(progress.remainingMinor), progress.currency, progress.fractionDigits, )
+#. placeholder {0}: cardMoney( Math.abs(progress.remainingMinor), progress.currency, progress.fractionDigits, )
 #. placeholder {0}: money(Math.abs(progress.remainingMinor))
 #: src/components/BudgetDetailPanel.tsx
 #: src/components/Budgets.tsx
@@ -1175,6 +1192,14 @@ msgstr "Set for this period"
 #: src/components/Shell.tsx
 msgid "Settings (next milestone)"
 msgstr "Settings (next milestone)"
+
+#: src/components/Shell.tsx
+msgid "Show totals"
+msgstr "Show totals"
+
+#: src/components/Shell.tsx
+msgid "Show transaction amounts"
+msgstr "Show transaction amounts"
 
 #: src/components/Login.tsx
 msgid "Sign in"

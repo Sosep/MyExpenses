@@ -78,6 +78,11 @@ button:disabled {
   @apply flex items-center gap-2;
 }
 
+/* The two privacy toggles read as one control: totals and transaction amounts. */
+.top-privacy {
+  @apply flex items-center gap-1;
+}
+
 /* The menu only exists on narrow screens: there the language, theme and session
    controls do not fit next to the account picker. */
 .more-menu {
@@ -455,6 +460,13 @@ button:disabled {
 
 .status-void {
   @apply bg-negative;
+}
+
+/* A hidden amount: the currency and four dots stand in for the figure, with the
+   same tabular rhythm so the row does not jump when it is toggled. */
+.money-masked {
+  @apply tabular-nums;
+  letter-spacing: 0.06em;
 }
 
 .amount-pos {

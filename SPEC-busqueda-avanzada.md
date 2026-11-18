@@ -32,7 +32,7 @@ Criterios, todos opcionales y combinados con AND:
 | Fechas | desde / hasta / entre; presets de la app (hoy, esta semana, este mes, este año) | `from`, `to` |
 | Importe | mínimo y máximo sobre el valor absoluto, con signo opcional (solo gastos / solo ingresos) | `amountMin`, `amountMax`, `type` |
 | Tipo | gastos, ingresos, ambos; transferencias incluidas o excluidas | `type`, `transfer` |
-| Categorías | una o varias por id; una dividida entra si alguna parte la tiene (las hijas de una categoría padre quedan para cuando el API exponga el árbol) | `categoryId` (repetido o lista) |
+| Categorías | una o varias por id; una dividida entra si alguna parte la tiene. La categoría incluye toda su rama (hijas, nietas) desde [`SPEC-categorias-recursivas.md`](./SPEC-categorias-recursivas.md) | `categoryId` (repetido o lista) |
 | Beneficiarios | uno o varios | `payeeId` |
 | Etiquetas | una o varias; coincide con cualquiera | `tagId` |
 | Métodos | uno o varios | `methodId` |

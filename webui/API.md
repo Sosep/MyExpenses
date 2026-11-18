@@ -262,7 +262,7 @@ Todos opcionales, combinados con **AND**; dentro de una dimensión, OR.
 | `accountId` | obligatorio |
 | `from`, `to` | rango de fechas inclusivo; sin ellos, todo el historial |
 | `type` | `income`, `expense` o `both` |
-| `categoryId` | repetible (`?categoryId=1&categoryId=2`); una dividida entra si alguna parte la tiene |
+| `categoryId` | repetible (`?categoryId=1&categoryId=2`); **significa la rama**: el id y todos sus descendientes, como el `CategoryCriterion` de la app. Varios ids devuelven la unión, sin duplicados. Una dividida entra si alguna parte cae en la rama. Elegir una hija no trae la madre |
 | `payeeId`, `tagId`, `methodId` | repetibles; `tagId` coincide con cualquiera de las etiquetas |
 | `q` | texto en comentario, nombre del beneficiario y referencia; no distingue mayúsculas **ni acentos** (las dos caras se pliegan); máximo 200 caracteres |
 | `uncategorized` | `true` limita a movimientos sin categoría; no se puede combinar con `categoryId` (`400 invalid_filter`) |
@@ -386,7 +386,7 @@ actualiza la existente; las existentes que no se envían se borran; una parte si
 `id` se inserta. La cuenta del padre no se puede cambiar en este corte (`422`).
 `updateSplitTransaction` gestiona altas, bajas y cambios de forma atómica.
 
-Los filtros `categoryId`, `payeeId`, `tagId` y `methodId` son opcionales y se combinan con AND. `categoryId` incluye una dividida si alguna de sus partes tiene esa categoría; `tagId` coincide con cualquiera de las etiquetas. Solo se listan transacciones completas (padre), no partes sueltas.
+Los filtros `categoryId`, `payeeId`, `tagId` y `methodId` son opcionales y se combinan con AND. `categoryId` significa la categoría **y toda su rama** (`parent_id` a cualquier profundidad, sin ascendientes); una dividida entra si alguna parte cae en la rama y el `total` ya cuenta el subárbol. `tagId` coincide con cualquiera de las etiquetas. Solo se listan transacciones completas (padre), no partes sueltas.
 
 ### 4.4 Categorías, beneficiarios, etiquetas, métodos
 

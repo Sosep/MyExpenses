@@ -4,6 +4,7 @@ import axe from 'axe-core'
 import { Login } from '../components/Login'
 import { Shell } from '../components/Shell'
 import { i18n } from '../i18n'
+import { AmountsProvider } from '../privacy'
 import type { Account, Meta } from '../types'
 
 i18n.activate('es')
@@ -50,6 +51,31 @@ async function seriousViolations(container: HTMLElement) {
   )
 }
 
+function shell() {
+  return (
+    <Shell
+      view="dashboard"
+      onView={() => {}}
+      accounts={accounts}
+      accountId={1}
+      onAccount={() => {}}
+      onNewAccount={() => {}}
+      theme="light"
+      onTheme={() => {}}
+      locale="es"
+      locales={[
+        { value: 'en', label: 'English' },
+        { value: 'es', label: 'Español' },
+      ]}
+      onLocale={() => {}}
+      onLogout={() => {}}
+      meta={meta}
+    >
+      <h1>Resumen</h1>
+    </Shell>
+  )
+}
+
 describe('accessibility', () => {
   it('renders the sign in screen without serious violations', async () => {
     const { container } = render(<Login onSubmit={async () => {}} error={null} />)
@@ -58,29 +84,21 @@ describe('accessibility', () => {
   })
 
   it('renders the shell without serious violations', async () => {
-    const { container } = render(
-      <Shell
-        view="dashboard"
-        onView={() => {}}
-        accounts={accounts}
-        accountId={1}
-        onAccount={() => {}}
-            onNewAccount={() => {}}
-        theme="light"
-        onTheme={() => {}}
-        locale="es"
-        locales={[
-          { value: 'en', label: 'English' },
-          { value: 'es', label: 'Español' },
-        ]}
-        onLocale={() => {}}
-        onLogout={() => {}}
-        meta={meta}
-      >
-        <h1>Resumen</h1>
-      </Shell>,
-    )
+    const { container } = render(shell())
 
     expect(await seriousViolations(container)).toEqual([])
+  })
+
+  it('renders the shell with both privacy toggles on without serious violations', async () => {
+    localStorage.setItem('myexpenses.hideTotals', '1')
+    localStorage.setItem('myexpenses.hideTransactions', '1')
+    const { container } = render(<AmountsProvider>{shell()}</AmountsProvider>)
+
+    expect(await seriousViolations(container)).toEqual([])
+    const pressed = Array.from(
+      container.querySelectorAll('.top-privacy button[aria-pressed="true"]'),
+    )
+    expect(pressed).toHaveLength(2)
+    localStorage.clear()
   })
 })

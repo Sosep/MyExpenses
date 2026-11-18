@@ -634,6 +634,34 @@ internal fun Repository.queryTransactionsPage(
     return items to total
 }
 
+/**
+ * The chosen categories plus every category below them, at any depth.
+ *
+ * `categoryId` means the branch, like the Android `CategoryCriterion`, whose
+ * recursive CTE walks down `parent_id`. Expanding here keeps the SQL a flat
+ * `IN` and lets the walk be tested on the JVM. A child does not bring its
+ * parent, and an id the tree does not know is kept as it came, so a stale link
+ * still filters instead of silently matching everything.
+ */
+internal fun categoryBranchIds(
+    selected: List<Long>,
+    parentById: Map<Long, Long?>
+): List<Long> {
+    if (selected.isEmpty()) return emptyList()
+    val children = mutableMapOf<Long, MutableList<Long>>()
+    parentById.forEach { (id, parent) ->
+        if (parent != null) children.getOrPut(parent) { mutableListOf() }.add(id)
+    }
+    val branch = linkedSetOf<Long>()
+    val pending = ArrayDeque(selected)
+    while (pending.isNotEmpty()) {
+        val id = pending.removeFirst()
+        if (!branch.add(id)) continue
+        children[id]?.forEach { pending.addLast(it) }
+    }
+    return branch.toList()
+}
+
 private fun transactionSelection(
     from: LocalDate?,
     to: LocalDate?,

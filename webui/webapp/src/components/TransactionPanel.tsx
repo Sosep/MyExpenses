@@ -3,7 +3,8 @@ import type { ReactNode } from 'react'
 import type { Account } from '../types'
 import { deleteTransaction, describeError, getTransaction } from '../api'
 import { useFocusTrap } from '../useFocusTrap'
-import { formatDate, formatMoney, kindLabel, statusLabel } from '../format'
+import { formatDate, kindLabel, statusLabel } from '../format'
+import { Money } from '../privacy'
 import { t } from '@lingui/core/macro'
 import { useAsync } from '../hooks'
 import { IconX } from './Icons'
@@ -130,12 +131,12 @@ export function TransactionPanel({
                         : 'amount-neg'
                   }`}
                 >
-                  {formatMoney(
-                    transaction.amountMinor,
-                    transaction.currency,
-                    transaction.fractionDigits,
-                    true,
-                  )}
+                  <Money
+                    amountMinor={transaction.amountMinor}
+                    currency={transaction.currency}
+                    fractionDigits={transaction.fractionDigits}
+                    showSign
+                  />
                 </div>
                 <div className="panel-date">
                   {formatDate(transaction.date, {
@@ -206,11 +207,11 @@ export function TransactionPanel({
                           </td>
                           <td>{part.payee?.label || '—'}</td>
                           <td className="num">
-                            {formatMoney(
-                              part.amountMinor,
-                              transaction.currency,
-                              transaction.fractionDigits,
-                            )}
+                            <Money
+                              amountMinor={part.amountMinor}
+                              currency={transaction.currency}
+                              fractionDigits={transaction.fractionDigits}
+                            />
                           </td>
                         </tr>
                       ))}
@@ -219,11 +220,11 @@ export function TransactionPanel({
                   <div className="parts-total">
                     <span>{t`Total`}</span>
                     <b>
-                      {formatMoney(
-                        transaction.amountMinor,
-                        transaction.currency,
-                        transaction.fractionDigits,
-                      )}
+                      <Money
+                        amountMinor={transaction.amountMinor}
+                        currency={transaction.currency}
+                        fractionDigits={transaction.fractionDigits}
+                      />
                     </b>
                   </div>
                 </div>

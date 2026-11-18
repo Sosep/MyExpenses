@@ -6,13 +6,13 @@ import { describeError, getBreakdown, getReportSummary } from '../api'
 import {
   addMonths,
   currentMonth,
-  formatMoney,
   formatMonthKey,
   formatPercent,
   lastMonths,
   monthRange,
 } from '../format'
 import { useAsync } from '../hooks'
+import { Money, useMoney } from '../privacy'
 import { IconChevronLeft, IconChevronRight } from './Icons'
 import { ReportPanel } from './ReportPanel'
 
@@ -62,6 +62,7 @@ function titleFor(by: By, type: Type): string {
 }
 
 export function Reports({ account, accounts }: ReportsProps) {
+  const reportMoney = useMoney('totals')
   const [month, setMonth] = useState(currentMonth())
   const [by, setBy] = useState<By>('category')
   const [type, setType] = useState<Type>('expense')
@@ -218,25 +219,37 @@ export function Reports({ account, accounts }: ReportsProps) {
               <div className="kpi mint">
                 <div className="kpi-label">{t`Income`}</div>
                 <div className="kpi-value">
-                  {formatMoney(totals.incomeMinor, totals.currency, totals.fractionDigits)}
+                  <Money
+                    scope="totals"
+                    amountMinor={totals.incomeMinor}
+                    currency={totals.currency}
+                    fractionDigits={totals.fractionDigits}
+                  />
                 </div>
                 <div className="kpi-foot">{t`This month`}</div>
               </div>
               <div className="kpi rose">
                 <div className="kpi-label">{t`Expenses`}</div>
                 <div className="kpi-value">
-                  {formatMoney(
-                    Math.abs(totals.expensesMinor),
-                    totals.currency,
-                    totals.fractionDigits,
-                  )}
+                  <Money
+                    scope="totals"
+                    amountMinor={Math.abs(totals.expensesMinor)}
+                    currency={totals.currency}
+                    fractionDigits={totals.fractionDigits}
+                  />
                 </div>
                 <div className="kpi-foot">{t`This month`}</div>
               </div>
               <div className="kpi lav">
                 <div className="kpi-label">{t`Net`}</div>
                 <div className="kpi-value">
-                  {formatMoney(totals.netMinor, totals.currency, totals.fractionDigits, true)}
+                  <Money
+                    scope="totals"
+                    amountMinor={totals.netMinor}
+                    currency={totals.currency}
+                    fractionDigits={totals.fractionDigits}
+                    showSign
+                  />
                 </div>
                 <div className="kpi-foot">{t`Income minus expenses`}</div>
               </div>
@@ -254,7 +267,7 @@ export function Reports({ account, accounts }: ReportsProps) {
                 <h2>{titleFor(by, type)}</h2>
                 <p>
                   {data && data.items.length > 0
-                    ? t`${data.items.length} groups · ${formatMoney(
+                    ? t`${data.items.length} groups · ${reportMoney(
                         data.totalMinor,
                         data.currency,
                         data.fractionDigits,
@@ -286,11 +299,12 @@ export function Reports({ account, accounts }: ReportsProps) {
                     <div className="breakdown-main">
                       <span className="breakdown-label">{item.label}</span>
                       <span className="breakdown-amount">
-                        {formatMoney(
-                          item.amountMinor,
-                          data.currency,
-                          data.fractionDigits,
-                        )}
+                        <Money
+                          scope="totals"
+                          amountMinor={item.amountMinor}
+                          currency={data.currency}
+                          fractionDigits={data.fractionDigits}
+                        />
                       </span>
                     </div>
                     <div className="breakdown-bar">

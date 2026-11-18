@@ -171,6 +171,16 @@ export function currencySymbol(currency: string): string {
   return parts.find((part) => part.type === 'currency')?.value ?? currency
 }
 
+/**
+ * Stand-in for a hidden amount: the currency and four dots. It keeps the column
+ * recognisably money-shaped without leaving a single digit of the value in the
+ * DOM, so screenshots and screen readers see the mask and nothing else.
+ */
+export function maskedMoney(currency: string): string {
+  return `${currencySymbol(currency)} ••••`
+}
+
+
 export function categoryPathMap(categories: Category[]): Map<number, string> {
   const byId = new Map(categories.map((category) => [category.id, category]))
   const paths = new Map<number, string>()

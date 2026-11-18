@@ -4,7 +4,8 @@ import { t } from '@lingui/core/macro'
 import type { Account, Budget, BudgetProgress } from '../types'
 import { describeError, getBudgetProgress, getBudgets } from '../api'
 import { budgetState, daysLeft, groupingLabel, progressRatio } from '../budgetUi'
-import { addMonths, currentMonth, formatMoney, formatMonthKey, formatPercent } from '../format'
+import { addMonths, currentMonth, formatMonthKey, formatPercent } from '../format'
+import { Money, useMoney } from '../privacy'
 import { useAsync } from '../hooks'
 import { BudgetDetailPanel } from './BudgetDetailPanel'
 import { BudgetEditor } from './BudgetEditor'
@@ -38,6 +39,8 @@ export function Budgets({
     { kind: 'detail'; entry: BudgetEntry } | { kind: 'create' } | { kind: 'edit'; entry: BudgetEntry } | null
   >(null)
   const closePanel = useHistoryPanel(panel !== null, () => setPanel(null))
+  const summaryMoney = useMoney('totals')
+  const cardMoney = useMoney('transactions')
   const [month, setMonth] = useState(currentMonth())
   const current = currentMonth()
   const atCurrentMonth = month >= current
@@ -167,20 +170,35 @@ export function Budgets({
               </div>
               <div className="budget-summary-figures">
                 <span>
-                  <strong>{formatMoney(summary.spent, summary.currency, summary.fractionDigits)}</strong> {t`spent`}
+                  <strong>
+                    <Money
+                      scope="totals"
+                      amountMinor={summary.spent}
+                      currency={summary.currency}
+                      fractionDigits={summary.fractionDigits}
+                    />
+                  </strong>{' '}
+                  {t`spent`}
                 </span>
                 <span>
-                  <strong>{formatMoney(summary.allocated, summary.currency, summary.fractionDigits)}</strong>{' '}
+                  <strong>
+                    <Money
+                      scope="totals"
+                      amountMinor={summary.allocated}
+                      currency={summary.currency}
+                      fractionDigits={summary.fractionDigits}
+                    />
+                  </strong>{' '}
                   {t`allocated`}
                 </span>
                 <span className={summary.remaining < 0 ? 'over' : 'positive'}>
                   {summary.remaining < 0
-                    ? t`${formatMoney(
+                    ? t`${summaryMoney(
                         Math.abs(summary.remaining),
                         summary.currency,
                         summary.fractionDigits,
                       )} over`
-                    : t`${formatMoney(
+                    : t`${summaryMoney(
                         summary.remaining,
                         summary.currency,
                         summary.fractionDigits,
@@ -227,26 +245,26 @@ export function Budgets({
 
                   <div className="budget-figures">
                     <span>
-                      {formatMoney(
-                        progress.spentMinor,
-                        progress.currency,
-                        progress.fractionDigits,
-                      )}{' '}
+                      <Money
+                        amountMinor={progress.spentMinor}
+                        currency={progress.currency}
+                        fractionDigits={progress.fractionDigits}
+                      />{' '}
                       {t`of`}{' '}
-                      {formatMoney(
-                        progress.allocatedMinor,
-                        progress.currency,
-                        progress.fractionDigits,
-                      )}
+                      <Money
+                        amountMinor={progress.allocatedMinor}
+                        currency={progress.currency}
+                        fractionDigits={progress.fractionDigits}
+                      />
                     </span>
                     <span className={over ? 'over' : 'positive'}>
                       {over
-                        ? t`Over by ${formatMoney(
+                        ? t`Over by ${cardMoney(
                             Math.abs(progress.remainingMinor),
                             progress.currency,
                             progress.fractionDigits,
                           )}`
-                        : t`${formatMoney(
+                        : t`${cardMoney(
                             progress.remainingMinor,
                             progress.currency,
                             progress.fractionDigits,

@@ -12,7 +12,6 @@ import {
 import {
   currentMonth,
   formatDate,
-  formatMoney,
   formatMonth,
   lastMonths,
   monthRange,
@@ -24,6 +23,7 @@ import {
 } from '../format'
 import { t } from '@lingui/core/macro'
 import { useHistoryPanel } from '../navigation'
+import { Money, useMoney } from '../privacy'
 import { useAsync } from '../hooks'
 import { MultiPicker } from './MultiPicker'
 import { NO_FILTERS, filtersFromUrl, searchWithFilters } from '../filters'
@@ -104,6 +104,7 @@ export function Transactions({
   onEditTransaction,
   onDataChanged,
 }: TransactionsProps) {
+  const money = useMoney('transactions')
   const [grouping, setGrouping] = useState<Grouping>(() =>
     groupingFromUrl(window.location.search),
   )
@@ -208,8 +209,8 @@ export function Transactions({
         key: 'amount',
         label:
           max === null
-            ? `≥ ${formatMoney(min, account.currency, account.fractionDigits)}`
-            : `${formatMoney(min, account.currency, account.fractionDigits)} – ${formatMoney(
+            ? `≥ ${money(min, account.currency, account.fractionDigits)}`
+            : `${money(min, account.currency, account.fractionDigits)} – ${money(
                 max,
                 account.currency,
                 account.fractionDigits,
@@ -237,7 +238,7 @@ export function Transactions({
       })
     }
     return list
-  }, [filters, references.data, paths, account.currency, account.fractionDigits])
+  }, [filters, references.data, paths, account.currency, account.fractionDigits, money])
 
   const grouped = useAsync(
     () => getGrouped(account.id, grouping, window_.from ?? '1970-01-01', window_.to ?? '2999-12-31'),
@@ -373,12 +374,12 @@ export function Transactions({
           )}
         </td>
         <td className={`num ${amountClass(transaction)}`}>
-          {formatMoney(
-            transaction.amountMinor,
-            transaction.currency,
-            transaction.fractionDigits,
-            true,
-          )}
+          <Money
+            amountMinor={transaction.amountMinor}
+            currency={transaction.currency}
+            fractionDigits={transaction.fractionDigits}
+            showSign
+          />
         </td>
       </tr>
     )
@@ -580,6 +581,7 @@ export function Transactions({
               }))
             }
           />
+          <span className="hint">{t`Includes subcategories`}</span>
         </label>
         <label className="field">
           <span className="field-label">{t`Payee`}</span>
@@ -747,32 +749,32 @@ export function Transactions({
                               <span className="group-sums">
                                 {group.incomeMinor !== 0 ? (
                                   <span className="amount-pos" title={t`Income`}>
-                                    {formatMoney(
-                                      group.incomeMinor,
-                                      account.currency,
-                                      account.fractionDigits,
-                                      true,
-                                    )}
+                                    <Money
+                                      amountMinor={group.incomeMinor}
+                                      currency={account.currency}
+                                      fractionDigits={account.fractionDigits}
+                                      showSign
+                                    />
                                   </span>
                                 ) : null}
                                 {group.expensesMinor !== 0 ? (
                                   <span className="amount-neg" title={t`Expenses`}>
-                                    {formatMoney(
-                                      group.expensesMinor,
-                                      account.currency,
-                                      account.fractionDigits,
-                                      true,
-                                    )}
+                                    <Money
+                                      amountMinor={group.expensesMinor}
+                                      currency={account.currency}
+                                      fractionDigits={account.fractionDigits}
+                                      showSign
+                                    />
                                   </span>
                                 ) : null}
                                 {transfers !== 0 ? (
                                   <span className="amount-neutral" title={t`Transfer`}>
-                                    {formatMoney(
-                                      transfers,
-                                      account.currency,
-                                      account.fractionDigits,
-                                      true,
-                                    )}
+                                    <Money
+                                      amountMinor={transfers}
+                                      currency={account.currency}
+                                      fractionDigits={account.fractionDigits}
+                                      showSign
+                                    />
                                   </span>
                                 ) : null}
                               </span>
