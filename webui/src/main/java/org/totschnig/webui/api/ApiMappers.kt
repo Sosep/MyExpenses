@@ -11,7 +11,8 @@ internal fun Transaction.toApiDto(
     payeeMap: Map<Long, String>,
     tagMap: Map<Long, String>,
     withTime: Boolean,
-    splitParts: List<RepositoryTransaction>? = null
+    splitParts: List<RepositoryTransaction>? = null,
+    methodMap: Map<Long, String> = emptyMap()
 ) = TransactionDto(
     id = id,
     kind = when {
@@ -30,17 +31,22 @@ internal fun Transaction.toApiDto(
     category = categoryRef(),
     tags = tagList.map { EntityRef(it, tagMap[it] ?: "") },
     comment = comment.orEmpty(),
-    method = methodId?.takeIf { it > 0 }?.let { EntityRef(it, methodLabel.orEmpty()) },
+    // The view stores the technical name for predefined methods (CREDITCARD);
+    // the localized label lives in the methods table.
+    method = methodId?.takeIf { it > 0 }?.let {
+        EntityRef(it, methodMap[it] ?: methodLabel.orEmpty())
+    },
     referenceNumber = referenceNumber,
     crStatus = crStatus.name,
     transferPeerId = transferPeerId,
     transferAccountId = transferAccountId,
-    splitParts = splitParts?.map { it.data.toSplitPartDto(payeeMap, tagMap) }
+    splitParts = splitParts?.map { it.data.toSplitPartDto(payeeMap, tagMap, methodMap) }
 )
 
 internal fun Transaction.toSplitPartDto(
     payeeMap: Map<Long, String>,
-    tagMap: Map<Long, String>
+    tagMap: Map<Long, String>,
+    methodMap: Map<Long, String> = emptyMap()
 ) = SplitPartDto(
     id = id,
     amountMinor = amount,
@@ -48,7 +54,9 @@ internal fun Transaction.toSplitPartDto(
     category = categoryRef(),
     tags = tagList.map { EntityRef(it, tagMap[it] ?: "") },
     comment = comment.orEmpty(),
-    method = methodId?.takeIf { it > 0 }?.let { EntityRef(it, methodLabel.orEmpty()) },
+    method = methodId?.takeIf { it > 0 }?.let {
+        EntityRef(it, methodMap[it] ?: methodLabel.orEmpty())
+    },
     referenceNumber = referenceNumber,
     transferPeerId = transferPeerId,
     transferAccountId = transferAccountId

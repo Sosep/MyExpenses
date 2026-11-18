@@ -166,9 +166,16 @@ class AndroidWebApiDataSource(
             offset = offset
         )
         val withTime = prefHandler.getBoolean(PrefKey.TRANSACTION_WITH_TIME, false)
+        val methodLabels = repository.queryMethods().associate { it.id to it.label }
         return PageDto(
             items = items.map {
-                it.toApiDto(currency, payeeMap.value, tagMap.value, withTime)
+                it.toApiDto(
+                    currencyUnit = currency,
+                    payeeMap = payeeMap.value,
+                    tagMap = tagMap.value,
+                    withTime = withTime,
+                    methodMap = methodLabels
+                )
             },
             total = total,
             limit = limit,
@@ -290,9 +297,16 @@ class AndroidWebApiDataSource(
             offset
         )
         val withTime = prefHandler.getBoolean(PrefKey.TRANSACTION_WITH_TIME, false)
+        val methodLabels = repository.queryMethods().associate { it.id to it.label }
         return PageDto(
             items = items.map {
-                it.toApiDto(currency, payeeMap.value, tagMap.value, withTime)
+                it.toApiDto(
+                    currencyUnit = currency,
+                    payeeMap = payeeMap.value,
+                    tagMap = tagMap.value,
+                    withTime = withTime,
+                    methodMap = methodLabels
+                )
             },
             total = total,
             limit = limit,
@@ -1422,7 +1436,8 @@ class AndroidWebApiDataSource(
             payeeMap = payeeMap.value,
             tagMap = tagMap.value,
             withTime = prefHandler.getBoolean(PrefKey.TRANSACTION_WITH_TIME, false),
-            splitParts = transaction.splitParts
+            splitParts = transaction.splitParts,
+            methodMap = repository.queryMethods().associate { it.id to it.label }
         )
     }
 

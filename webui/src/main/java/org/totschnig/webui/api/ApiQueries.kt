@@ -381,8 +381,16 @@ internal fun Repository.queryBreakdown(
 
         else -> throw IllegalArgumentException("Unknown breakdown $by")
     }
-    val total = items.sumOf { it.amountMinor }
-    val withShare = items.map {
+    // Methods group by id and carry the technical name in the view; the
+    // localized label comes from the methods table.
+    val labelled = if (by == "method") {
+        val labels = queryMethods().associate { it.id to it.label }
+        items.map { it.copy(label = labels[it.id] ?: it.label) }
+    } else {
+        items
+    }
+    val total = labelled.sumOf { it.amountMinor }
+    val withShare = labelled.map {
         it.copy(share = if (total > 0) it.amountMinor * 100.0 / total else 0.0)
     }.sortedWith(compareByDescending<BreakdownItemDto> { it.amountMinor }.thenBy { it.label })
     return BreakdownDto(
