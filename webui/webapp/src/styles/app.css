@@ -1421,11 +1421,69 @@ button:disabled {
 }
 
 
-/* Budget history */
+/* Budget detail */
 
-.budget-history-btn {
+.budget-detail-btn {
   @apply ml-auto;
 }
+
+.budget-detail-filter {
+  @apply m-0 mt-1 text-[11.5px] text-muted;
+}
+
+.budget-detail-hero {
+  @apply mt-1 flex flex-wrap items-baseline justify-between gap-2;
+}
+
+.budget-detail-amount {
+  @apply text-[19px] font-semibold tracking-[-0.02em] tabular-nums;
+}
+
+.budget-detail-amount small {
+  @apply text-[13px] font-normal tracking-normal text-muted;
+}
+
+.budget-detail-hero .over {
+  @apply text-negative;
+}
+
+.budget-detail-hero .positive {
+  @apply text-positive;
+}
+
+.budget-detail-section {
+  @apply flex flex-col gap-2 border-t border-line pt-3.5;
+}
+
+.budget-detail-total {
+  @apply text-[15px] font-semibold tabular-nums;
+}
+
+.budget-detail-note {
+  @apply m-0 text-[12px] text-muted;
+}
+
+.budget-cat-row {
+  @apply flex items-baseline gap-2 text-[12.5px];
+}
+
+.budget-cat-label {
+  @apply min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap;
+}
+
+.budget-cat-pct {
+  @apply text-[10.5px] tabular-nums text-muted;
+}
+
+.budget-cat-amount {
+  @apply whitespace-nowrap tabular-nums;
+}
+
+.budget-cat-bar {
+  @apply mt-1 h-1;
+}
+
+/* Budget history */
 
 .budget-history {
   @apply flex flex-col gap-3.5;
@@ -1532,7 +1590,7 @@ button:disabled {
   }
 }
 
-.budget-card-foot .budget-history-btn {
+.budget-card-foot .budget-detail-btn {
   @apply ml-auto;
 }
 

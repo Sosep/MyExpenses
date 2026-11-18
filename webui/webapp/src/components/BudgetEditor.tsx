@@ -15,6 +15,7 @@ import { amountInputValue, currencySymbol, parseAmountMinor, todayIso } from '..
 import { useFocusTrap } from '../useFocusTrap'
 import { useAsync } from '../hooks'
 import { SearchSelect } from './SearchSelect'
+import { BudgetFilterFields, emptyCriteria } from './BudgetFilterFields'
 import { IconX } from './Icons'
 
 interface BudgetEditorProps {
@@ -111,6 +112,8 @@ export function BudgetEditor({
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [allocationValues, setAllocationValues] = useState<Record<number, string>>({})
   const [rolloverValues, setRolloverValues] = useState<Record<number, boolean>>({})
+  const [initialCriteria] = useState(() => budget?.criteria ?? emptyCriteria())
+  const [criteria, setCriteria] = useState(initialCriteria)
   const [customPeriod, setCustomPeriod] = useState(progress?.periodAllocationMinor != null)
   const [periodAmount, setPeriodAmount] = useState(
     progress?.periodAllocationMinor != null && budget
@@ -239,6 +242,10 @@ export function BudgetEditor({
       end: state.grouping === 'NONE' ? state.end : null,
       isDefault: state.grouping === 'NONE' ? false : state.isDefault,
       amountMinor: amount,
+    }
+    // Omitting the filter keeps the stored one; only send it when it changed.
+    if (JSON.stringify(criteria) !== JSON.stringify(initialCriteria)) {
+      payload.criteria = criteria
     }
     setSaving(true)
     setSubmitError(null)
@@ -494,6 +501,12 @@ export function BudgetEditor({
               <span>{t`Use as default budget for this account and period`}</span>
             </label>
           )}
+
+          <BudgetFilterFields
+            criteria={criteria}
+            onChange={setCriteria}
+            unsupported={budget?.criteriaUnsupported}
+          />
 
           {mode === 'edit' && budget && budget.grouping !== 'NONE' ? (
             <section className="field">

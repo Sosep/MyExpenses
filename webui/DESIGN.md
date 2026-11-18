@@ -562,6 +562,20 @@ November 2026                     All budgets
 - La asignación por categorías se edita en el mismo panel: lista con sangría por
   nivel y un importe por categoría para el periodo actual. Se guarda junto al
   presupuesto. El rollover sigue en la app Android.
+- `Detalle` abre un panel de lectura (mismo patrón `panel`, 380-420 px) con el
+  progreso, el gasto por categoría, el importe del periodo y los últimos 12
+  meses. Sustituye al antiguo botón `Historial`: una sola puerta al detalle.
+- El reparto lista solo categorías con gasto y **no anuncia las que quedan a
+  cero**. Con jerarquía, la madre va arriba con su total y las hijas debajo con
+  sangría; la cifra de la madre ya incluye a las hijas, de modo que el total
+  cuenta cada euro una vez.
+- Bajo la cabecera del panel, una línea dice el filtro del presupuesto
+  (`Filtro: Comida, Supermercado · Conciliado`) o `Sin filtro: toda la cuenta`.
+  Es la explicación de por qué el reparto es el que es.
+- El editor incluye una sección `Filtro` con categorías, beneficiarios, métodos,
+  etiquetas y estado, los mismos cinco criterios que la app Android, y un
+  resumen `Sin filtro: toda la cuenta` / `n filtros`. Si el presupuesto trae un
+  filtro que la web no puede expresar, el editor lo dice y no lo reescribe.
 
 ### Maestros
 

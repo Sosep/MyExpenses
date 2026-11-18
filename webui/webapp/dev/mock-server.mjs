@@ -113,6 +113,8 @@ const budgets = [
     isDefault: false,
     uuid: 'budget-groceries',
     allocationMinor: 40000,
+    criteria: { categoryIds: [2, 5], payeeIds: [], methodIds: [], tagIds: [], statuses: [] },
+    criteriaUnsupported: false,
   },
   {
     id: 2,
@@ -129,6 +131,8 @@ const budgets = [
     isDefault: false,
     uuid: 'budget-restaurants',
     allocationMinor: 12000,
+    criteria: { categoryIds: [5], payeeIds: [], methodIds: [], tagIds: [], statuses: [] },
+    criteriaUnsupported: false,
   },
   {
     id: 3,
@@ -145,6 +149,8 @@ const budgets = [
     isDefault: false,
     uuid: 'budget-fuel',
     allocationMinor: 18000,
+    criteria: null,
+    criteriaUnsupported: false,
   },
   {
     id: 4,
@@ -161,6 +167,8 @@ const budgets = [
     isDefault: false,
     uuid: 'budget-household',
     allocationMinor: 25000,
+    criteria: null,
+    criteriaUnsupported: false,
   },
 ]
 
@@ -171,6 +179,25 @@ const budgetProgresses = {
   4: { allocated: 25000, spent: 12400 },
 }
 let nextBudgetId = 5
+
+// One row per category with spend. Budget 1 keeps a parent with its children so
+// the detail panel can show the indentation and the rolled-up figure.
+const budgetBreakdowns = {
+  1: [
+    { categoryId: 1, label: 'Food', level: 1, parentId: null, allocatedMinor: 0, spentMinor: 31200, rolloverPreviousMinor: 0, rolloverNextMinor: 0 },
+    { categoryId: 2, label: 'Groceries', level: 2, parentId: 1, allocatedMinor: 30000, spentMinor: 24000, rolloverPreviousMinor: 0, rolloverNextMinor: 0 },
+    { categoryId: 5, label: 'Restaurants', level: 2, parentId: 1, allocatedMinor: 10000, spentMinor: 7200, rolloverPreviousMinor: 0, rolloverNextMinor: 0 },
+  ],
+  2: [
+    { categoryId: 5, label: 'Restaurants', level: 1, parentId: null, allocatedMinor: 12000, spentMinor: 14600, rolloverPreviousMinor: 0, rolloverNextMinor: 0 },
+  ],
+  3: [
+    { categoryId: 4, label: 'Transport', level: 1, parentId: null, allocatedMinor: 18000, spentMinor: 9630, rolloverPreviousMinor: 0, rolloverNextMinor: 0 },
+  ],
+  4: [
+    { categoryId: 8, label: 'Household', level: 1, parentId: null, allocatedMinor: 25000, spentMinor: 12400, rolloverPreviousMinor: 0, rolloverNextMinor: 0 },
+  ],
+}
 
 const budgetAllocations = {
   1: [
@@ -531,9 +558,9 @@ function serveAppIndex(response) {
                 document.querySelector('.budget-edit')?.click()
               }, 900)
             }
-            if (q.get('history') === '1') {
+            if (q.get('detail') === '1' || q.get('history') === '1') {
               setTimeout(function(){
-                document.querySelector('[data-action="budget-history"]')?.click()
+                document.querySelector('[data-action="budget-detail"]')?.click()
               }, 1000)
             }
             if (q.get('periodOverride') === '1') {
@@ -882,6 +909,42 @@ createServer(async (request, response) => {
       return sendJson(response, 200, points)
     }
 
+    const breakdownMatch = path.match(/^\/api\/v1\/budgets\/(\d+)\/breakdown$/)
+    if (breakdownMatch) {
+      const id = Number(breakdownMatch[1])
+      const budget = budgets.find((item) => item.id === id)
+      const values = budgetProgresses[id]
+      if (!budget || !values) {
+        return sendJson(response, 404, { error: 'budget_not_found', message: 'Budget not found' })
+      }
+      const qYear = Number(url.searchParams.get('year')) || year
+      const rawSecond = url.searchParams.get('second')
+      const qSecond = rawSecond === null ? month - 1 : Number(rawSecond)
+      const qMonthNumber = qSecond + 1
+      const override = (values.periodAllocated ?? {})[`${qYear}-${qSecond}`] ?? null
+      return sendJson(response, 200, {
+        budgetId: budget.id,
+        accountId: budget.accountId,
+        title: budget.title,
+        currency: budget.currency,
+        fractionDigits: budget.fractionDigits,
+        grouping: budget.grouping,
+        periodYear: qYear,
+        periodSecond: qSecond,
+        periodDescription: new Intl.DateTimeFormat('en-GB', {
+          month: 'long',
+          year: 'numeric',
+        }).format(new Date(qYear, qSecond, 1)),
+        periodStart: `${qYear}-${pad(qMonthNumber)}-01`,
+        periodEnd: `${qYear}-${pad(qMonthNumber)}-${pad(
+          new Date(qYear, qMonthNumber, 0).getDate(),
+        )}`,
+        totalAllocatedMinor: override ?? values.allocated,
+        totalSpentMinor: values.spent,
+        categories: budgetBreakdowns[id] ?? [],
+      })
+    }
+
     const allocationMatch = path.match(/^\/api\/v1\/budgets\/(\d+)\/allocations$/)
     if (allocationMatch) {
       const id = Number(allocationMatch[1])
@@ -960,6 +1023,8 @@ createServer(async (request, response) => {
         isDefault: body.isDefault ?? false,
         uuid: `budget-${nextBudgetId}`,
         allocationMinor: body.amountMinor,
+        criteria: body.criteria ?? null,
+        criteriaUnsupported: false,
       }
       budgets.push(budget)
       budgetProgresses[budget.id] = { allocated: body.amountMinor, spent: 0 }
@@ -985,6 +1050,12 @@ createServer(async (request, response) => {
         budget.title = body.title ?? budget.title
         budget.description = body.description ?? null
         budget.isDefault = body.isDefault ?? budget.isDefault
+        if (body.criteria) {
+          const empty = !['categoryIds', 'payeeIds', 'methodIds', 'tagIds', 'statuses'].some(
+            (key) => (body.criteria[key] ?? []).length > 0,
+          )
+          budget.criteria = empty ? null : body.criteria
+        }
         if (body.amountMinor !== undefined) {
           budget.allocationMinor = body.amountMinor
           values.allocated = body.amountMinor

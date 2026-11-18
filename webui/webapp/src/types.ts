@@ -178,6 +178,14 @@ export interface FileEntry {
   link: string
 }
 
+export interface BudgetCriteria {
+  categoryIds: number[]
+  payeeIds: number[]
+  methodIds: number[]
+  tagIds: number[]
+  statuses: string[]
+}
+
 export interface Budget {
   id: number
   accountId: number
@@ -193,6 +201,9 @@ export interface Budget {
   isDefault: boolean
   uuid: string | null
   allocationMinor: number | null
+  criteria: BudgetCriteria | null
+  /** The app stores a filter the web cannot express; do not save over it. */
+  criteriaUnsupported: boolean
 }
 
 export interface BudgetProgress {
@@ -215,6 +226,34 @@ export interface BudgetProgress {
   periodAllocationMinor: number | null
 }
 
+export interface BudgetBreakdownCategory {
+  categoryId: number
+  label: string | null
+  level: number
+  parentId: number | null
+  allocatedMinor: number
+  spentMinor: number
+  rolloverPreviousMinor: number
+  rolloverNextMinor: number
+}
+
+export interface BudgetBreakdown {
+  budgetId: number
+  accountId: number
+  title: string
+  currency: string
+  fractionDigits: number
+  grouping: string
+  periodYear: number | null
+  periodSecond: number | null
+  periodDescription: string
+  periodStart: string
+  periodEnd: string
+  totalAllocatedMinor: number
+  totalSpentMinor: number
+  categories: BudgetBreakdownCategory[]
+}
+
 export interface BudgetWrite {
   accountId: number
   title: string
@@ -224,6 +263,7 @@ export interface BudgetWrite {
   end?: string | null
   isDefault?: boolean
   amountMinor: number
+  criteria?: BudgetCriteria
 }
 
 export interface ReportSummary {

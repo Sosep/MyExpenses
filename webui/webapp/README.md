@@ -107,6 +107,14 @@ Como la API real, el mock devuelve `second` con **base 0** en `reports/grouped`,
 `budgets/{id}` y su historial: noviembre es `10`. La SPA guarda el mes que
 muestra como `YYYY-MM` (1–12) y lo convierte solo al llamar a la API.
 
+### Presupuestos
+
+- `budgets/{id}/breakdown` devuelve el reparto del presupuesto con una madre
+  (`Food`) y sus hijas, para ver la jerarquía y la suma agregada.
+- Los presupuestos traen `criteria`; el alta y la edición lo aceptan y lo
+  devuelven, y el editor lo muestra en la sección `Filtro`.
+- `?view=budgets&detail=1` abre el panel de detalle del primer presupuesto.
+
 ### QA rápido
 
 | Parámetro | Efecto |
@@ -124,7 +132,7 @@ muestra como `YYYY-MM` (1–12) y lo convierte solo al llamar a la API.
 | `?view=reports&reportDrill=1` | Abre el detalle del primer grupo |
 | `?view=budgets` | Presupuestos |
 | `?view=budgets&budgetMonth=-1` | Presupuestos en el mes anterior |
-| `?view=budgets&history=1` | Abre el histórico del primer presupuesto |
+| `?view=budgets&detail=1` | Abre el detalle del primer presupuesto (reparto, importe e histórico) |
 | `?view=budgets&new=1` | Alta de presupuesto |
 | `?view=budgets&edit=1` | Edita el primer presupuesto |
 | `?view=budgets&edit=1&periodOverride=1` | Prueba el total distinto de este periodo |

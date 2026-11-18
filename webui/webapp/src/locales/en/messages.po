@@ -33,6 +33,7 @@ msgstr "{0} groups · {1} total"
 #. placeholder {0}: formatMoney( progress.remainingMinor, progress.currency, progress.fractionDigits, )
 #. placeholder {0}: formatMoney( summary.remaining, summary.currency, summary.fractionDigits, )
 #. placeholder {0}: formatMoney(remaining, account?.currency ?? 'EUR', fractionDigits, true)
+#: src/components/BudgetDetailPanel.tsx
 #: src/components/Budgets.tsx
 #: src/components/TransactionEditor.tsx
 msgid "{0} left"
@@ -44,6 +45,7 @@ msgid "{0} over"
 msgstr "{0} over"
 
 #. placeholder {0}: budget.title
+#: src/components/BudgetDetailPanel.tsx
 #: src/components/Budgets.tsx
 msgid "{0} spent"
 msgstr "{0} spent"
@@ -56,6 +58,7 @@ msgid "{0} transactions"
 msgstr "{0} transactions"
 
 #. placeholder {0}: formatPercent(ratio * 100, 0)
+#: src/components/BudgetDetailPanel.tsx
 #: src/components/Budgets.tsx
 msgid "{0} used"
 msgstr "{0} used"
@@ -65,6 +68,11 @@ msgstr "{0} used"
 #~ msgid "{0}% used"
 #~ msgstr "{0}% used"
 
+#: src/components/BudgetFilterFields.tsx
+msgid "{count} filters"
+msgstr "{count} filters"
+
+#: src/components/BudgetDetailPanel.tsx
 #: src/components/Budgets.tsx
 msgid "{days} days left"
 msgstr "{days} days left"
@@ -85,6 +93,7 @@ msgstr "A new version is available."
 msgid "A single income or expense."
 msgstr "A single income or expense."
 
+#: src/components/BudgetDetailPanel.tsx
 #: src/components/BudgetEditor.tsx
 #: src/components/Budgets.tsx
 #: src/components/Shell.tsx
@@ -175,6 +184,7 @@ msgstr "Both"
 msgid "Breakdown by"
 msgstr "Breakdown by"
 
+#: src/components/BudgetDetailPanel.tsx
 #: src/components/BudgetEditor.tsx
 msgid "Budget"
 msgstr "Budget"
@@ -195,6 +205,10 @@ msgstr "Budget created."
 msgid "Budget deleted."
 msgstr "Budget deleted."
 
+#: src/components/BudgetDetailPanel.tsx
+msgid "Budget detail"
+msgstr "Budget detail"
+
 #: src/components/BudgetEditor.tsx
 msgid "Budget duplicated."
 msgstr "Budget duplicated."
@@ -204,8 +218,8 @@ msgid "Budget end"
 msgstr "Budget end"
 
 #: src/components/BudgetHistoryPanel.tsx
-msgid "Budget history"
-msgstr "Budget history"
+#~ msgid "Budget history"
+#~ msgstr "Budget history"
 
 #: src/components/BudgetEditor.tsx
 msgid "Budget note"
@@ -246,6 +260,14 @@ msgstr "Can't reach the phone. Check that My Expenses is open and on the same ne
 msgid "Cancel"
 msgstr "Cancel"
 
+#: src/components/BudgetDetailPanel.tsx
+msgid "Carried over from an earlier period"
+msgstr "Carried over from an earlier period"
+
+#: src/components/BudgetFilterFields.tsx
+msgid "Categories"
+msgstr "Categories"
+
 #: src/components/Reports.tsx
 msgid "category"
 msgstr "category"
@@ -274,7 +296,11 @@ msgstr "Clear filters"
 msgid "Cleared"
 msgstr "Cleared"
 
-#: src/components/BudgetHistoryPanel.tsx
+#: src/components/BudgetDetailPanel.tsx
+msgid "Close"
+msgstr "Close"
+
+#: src/components/BudgetDetailPanel.tsx
 #: src/components/ReportPanel.tsx
 #: src/components/TransactionPanel.tsx
 msgid "Close details"
@@ -313,6 +339,10 @@ msgstr "Could not duplicate the budget."
 msgid "Could not load more transactions."
 msgstr "Could not load more transactions."
 
+#: src/components/BudgetDetailPanel.tsx
+msgid "Could not load the breakdown."
+msgstr "Could not load the breakdown."
+
 #: src/components/Budgets.tsx
 msgid "Could not load the budgets."
 msgstr "Could not load the budgets."
@@ -325,7 +355,7 @@ msgstr "Could not load the detail."
 msgid "Could not load the files."
 msgstr "Could not load the files."
 
-#: src/components/BudgetHistoryPanel.tsx
+#: src/components/BudgetDetailPanel.tsx
 msgid "Could not load the history."
 msgstr "Could not load the history."
 
@@ -378,8 +408,8 @@ msgstr "Create a budget in the Android app. Its progress for the current period 
 msgid "Create an account in the Android app and reload this page."
 msgstr "Create an account in the Android app and reload this page."
 
+#: src/budgetUi.ts
 #: src/components/BudgetEditor.tsx
-#: src/components/Budgets.tsx
 msgid "Daily"
 msgstr "Daily"
 
@@ -394,6 +424,11 @@ msgstr "Date"
 msgid "Day"
 msgstr "Day"
 
+#: src/components/BudgetDetailPanel.tsx
+msgid "default"
+msgstr "default"
+
+#: src/components/BudgetDetailPanel.tsx
 #: src/components/BudgetEditor.tsx
 msgid "Default amount"
 msgstr "Default amount"
@@ -429,6 +464,10 @@ msgstr "Description"
 #: src/components/Transactions.tsx
 msgid "Description, payee or reference"
 msgstr "Description, payee or reference"
+
+#: src/components/Budgets.tsx
+msgid "Detail"
+msgstr "Detail"
 
 #: src/components/TransactionPanel.tsx
 msgid "Details"
@@ -468,6 +507,7 @@ msgstr "Drill-down"
 msgid "Duplicate"
 msgstr "Duplicate"
 
+#: src/components/BudgetDetailPanel.tsx
 #: src/components/BudgetEditor.tsx
 #: src/components/Budgets.tsx
 #: src/components/TransactionEditor.tsx
@@ -547,6 +587,10 @@ msgstr "Expenses"
 msgid "Files"
 msgstr "Files"
 
+#: src/components/BudgetFilterFields.tsx
+msgid "Filter"
+msgstr "Filter"
+
 #: src/components/Transactions.tsx
 msgid "Filter by category"
 msgstr "Filter by category"
@@ -562,6 +606,35 @@ msgstr "Filter by payee"
 #: src/components/Transactions.tsx
 msgid "Filter by tag"
 msgstr "Filter by tag"
+
+#: src/components/BudgetFilterFields.tsx
+msgid "Filter categories"
+msgstr "Filter categories"
+
+#: src/components/BudgetFilterFields.tsx
+msgid "Filter methods"
+msgstr "Filter methods"
+
+#: src/components/BudgetFilterFields.tsx
+msgid "Filter payees"
+msgstr "Filter payees"
+
+#: src/components/BudgetDetailPanel.tsx
+msgid "Filter set in the Android app"
+msgstr "Filter set in the Android app"
+
+#: src/components/BudgetFilterFields.tsx
+msgid "Filter status"
+msgstr "Filter status"
+
+#: src/components/BudgetFilterFields.tsx
+msgid "Filter tags"
+msgstr "Filter tags"
+
+#. placeholder {0}: parts.join(' · ')
+#: src/components/BudgetDetailPanel.tsx
+msgid "Filter: {0}"
+msgstr "Filter: {0}"
 
 #: src/components/Transactions.tsx
 msgid "Filters"
@@ -588,7 +661,6 @@ msgstr "From account"
 msgid "Group by"
 msgstr "Group by"
 
-#: src/components/Budgets.tsx
 #: src/components/Transactions.tsx
 msgid "History"
 msgstr "History"
@@ -630,7 +702,7 @@ msgstr "Its parts are deleted too."
 msgid "Language"
 msgstr "Language"
 
-#: src/components/BudgetHistoryPanel.tsx
+#: src/components/BudgetDetailPanel.tsx
 #: src/components/Dashboard.tsx
 msgid "Last 12 months"
 msgstr "Last 12 months"
@@ -666,7 +738,7 @@ msgid "Loading report…"
 msgstr "Loading report…"
 
 #: src/App.tsx
-#: src/components/BudgetHistoryPanel.tsx
+#: src/components/BudgetDetailPanel.tsx
 #: src/components/ReportPanel.tsx
 #: src/components/Transactions.tsx
 msgid "Loading…"
@@ -683,6 +755,10 @@ msgstr "method"
 msgid "Method"
 msgstr "Method"
 
+#: src/components/BudgetFilterFields.tsx
+msgid "Methods"
+msgstr "Methods"
+
 #: src/components/Files.tsx
 msgid "Modified"
 msgstr "Modified"
@@ -691,8 +767,8 @@ msgstr "Modified"
 msgid "Month"
 msgstr "Month"
 
+#: src/budgetUi.ts
 #: src/components/BudgetEditor.tsx
-#: src/components/Budgets.tsx
 msgid "Monthly"
 msgstr "Monthly"
 
@@ -766,7 +842,12 @@ msgstr "No category"
 msgid "No files yet"
 msgstr "No files yet"
 
-#: src/components/BudgetHistoryPanel.tsx
+#: src/components/BudgetDetailPanel.tsx
+#: src/components/BudgetFilterFields.tsx
+msgid "No filter: the whole account"
+msgstr "No filter: the whole account"
+
+#: src/components/BudgetDetailPanel.tsx
 msgid "No history yet."
 msgstr "No history yet."
 
@@ -810,11 +891,12 @@ msgstr "Note"
 msgid "Nothing was recorded for this month. Try another month or change the type."
 msgstr "Nothing was recorded for this month. Try another month or change the type."
 
+#: src/components/BudgetDetailPanel.tsx
 #: src/components/Budgets.tsx
 msgid "of"
 msgstr "of"
 
-#: src/components/Budgets.tsx
+#: src/budgetUi.ts
 msgid "One-time"
 msgstr "One-time"
 
@@ -835,12 +917,14 @@ msgstr "Open transaction: {0}"
 msgid "Other periods keep using the default amount."
 msgstr "Other periods keep using the default amount."
 
-#: src/components/BudgetHistoryPanel.tsx
+#: src/components/BudgetDetailPanel.tsx
 #: src/components/Budgets.tsx
 msgid "Over"
 msgstr "Over"
 
 #. placeholder {0}: formatMoney( Math.abs(progress.remainingMinor), progress.currency, progress.fractionDigits, )
+#. placeholder {0}: money(Math.abs(progress.remainingMinor))
+#: src/components/BudgetDetailPanel.tsx
 #: src/components/Budgets.tsx
 msgid "Over by {0}"
 msgstr "Over by {0}"
@@ -899,11 +983,16 @@ msgstr "payee"
 msgid "Payee"
 msgstr "Payee"
 
+#: src/components/BudgetFilterFields.tsx
+msgid "Payees"
+msgstr "Payees"
+
 #: src/components/BudgetEditor.tsx
 #: src/components/Reports.tsx
 msgid "Period"
 msgstr "Period"
 
+#: src/components/BudgetDetailPanel.tsx
 #: src/components/BudgetEditor.tsx
 msgid "Period amount"
 msgstr "Period amount"
@@ -1026,6 +1115,10 @@ msgstr "Sections"
 msgid "Select a single account to drill down"
 msgstr "Select a single account to drill down"
 
+#: src/components/BudgetDetailPanel.tsx
+msgid "Set for this period"
+msgstr "Set for this period"
+
 #: src/components/Shell.tsx
 msgid "Settings (next milestone)"
 msgstr "Settings (next milestone)"
@@ -1058,6 +1151,10 @@ msgstr "Something did not work. Try again."
 msgid "Spending by {noun}"
 msgstr "Spending by {noun}"
 
+#: src/components/BudgetDetailPanel.tsx
+msgid "Spending by category"
+msgstr "Spending by category"
+
 #: src/components/Budgets.tsx
 msgid "Spending limits per account and period"
 msgstr "Spending limits per account and period"
@@ -1075,6 +1172,7 @@ msgstr "Split transaction"
 msgid "Start"
 msgstr "Start"
 
+#: src/components/BudgetFilterFields.tsx
 #: src/components/TransactionPanel.tsx
 #: src/components/Transactions.tsx
 msgid "Status"
@@ -1097,6 +1195,7 @@ msgstr "tag"
 msgid "Tag"
 msgstr "Tag"
 
+#: src/components/BudgetFilterFields.tsx
 #: src/components/TransactionEditor.tsx
 #: src/components/TransactionPanel.tsx
 #: src/components/Transactions.tsx
@@ -1122,6 +1221,10 @@ msgstr "The transaction could not be loaded."
 #: src/components/Budgets.tsx
 msgid "There is no later period"
 msgstr "There is no later period"
+
+#: src/components/BudgetFilterFields.tsx
+msgid "This budget uses a filter the web cannot edit. Keep using the Android app for it."
+msgstr "This budget uses a filter the web cannot edit. Keep using the Android app for it."
 
 #: src/components/TransactionPanel.tsx
 msgid "This cannot be undone."
@@ -1219,6 +1322,7 @@ msgstr "Transfer"
 msgid "Transfers"
 msgstr "Transfers"
 
+#: src/components/BudgetDetailPanel.tsx
 #: src/components/Budgets.tsx
 #: src/components/Files.tsx
 msgid "Try again"
@@ -1228,6 +1332,10 @@ msgstr "Try again"
 #: src/components/Transactions.tsx
 msgid "Type"
 msgstr "Type"
+
+#: src/components/BudgetDetailPanel.tsx
+msgid "Uncategorized"
+msgstr "Uncategorized"
 
 #: src/format.ts
 msgid "Unreconciled"
@@ -1260,8 +1368,8 @@ msgstr "Week"
 msgid "Week {0} · {1}"
 msgstr "Week {0} · {1}"
 
+#: src/budgetUi.ts
 #: src/components/BudgetEditor.tsx
-#: src/components/Budgets.tsx
 msgid "Weekly"
 msgstr "Weekly"
 
@@ -1277,8 +1385,8 @@ msgstr "Wrong password."
 msgid "Year"
 msgstr "Year"
 
+#: src/budgetUi.ts
 #: src/components/BudgetEditor.tsx
-#: src/components/Budgets.tsx
 msgid "Yearly"
 msgstr "Yearly"
 

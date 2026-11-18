@@ -2,10 +2,11 @@ import { useMemo, useState } from 'react'
 import { t } from '@lingui/core/macro'
 import type { Account, Budget, BudgetProgress } from '../types'
 import { describeError, getBudgetProgress, getBudgets } from '../api'
+import { budgetState, daysLeft, groupingLabel, progressRatio } from '../budgetUi'
 import { addMonths, currentMonth, formatMoney, formatMonthKey, formatPercent } from '../format'
 import { useAsync } from '../hooks'
+import { BudgetDetailPanel } from './BudgetDetailPanel'
 import { BudgetEditor } from './BudgetEditor'
-import { BudgetHistoryPanel } from './BudgetHistoryPanel'
 import { IconChevronLeft, IconChevronRight } from './Icons'
 
 interface BudgetEntry {
@@ -19,42 +20,8 @@ interface BudgetsProps {
   onDataChanged: (message: string) => void
 }
 
-function groupingLabel(grouping: string): string {
-  switch (grouping) {
-    case 'DAY':
-      return t`Daily`
-    case 'WEEK':
-      return t`Weekly`
-    case 'MONTH':
-      return t`Monthly`
-    case 'YEAR':
-      return t`Yearly`
-    case 'NONE':
-      return t`One-time`
-    default:
-      return grouping
-  }
-}
-
 function summaryPercent(spent: number, allocated: number): number {
   return allocated > 0 ? Math.round((spent / allocated) * 100) : 0
-}
-
-function summaryState(spent: number, allocated: number): string {
-  const percent = summaryPercent(spent, allocated)
-  if (percent > 100) return 'over'
-  if (percent >= 80) return 'warn'
-  return ''
-}
-
-function progressRatio(progress: BudgetProgress): number {
-  if (progress.allocatedMinor <= 0) return progress.spentMinor > 0 ? 1 : 0
-  return Math.min(progress.spentMinor / progress.allocatedMinor, 1)
-}
-
-function daysLeft(progress: BudgetProgress): number | null {
-  if (progress.currentDay < 1 || progress.currentDay > progress.totalDays) return null
-  return progress.totalDays - progress.currentDay + 1
 }
 
 export function Budgets({
@@ -68,7 +35,7 @@ export function Budgets({
   const [month, setMonth] = useState(currentMonth())
   const current = currentMonth()
   const atCurrentMonth = month >= current
-  const [historyBudget, setHistoryBudget] = useState<Budget | null>(null)
+  const [detail, setDetail] = useState<BudgetEntry | null>(null)
   const [year, monthNumber] = month.split('-').map(Number)
   const entries = useAsync<BudgetEntry[]>(async () => {
     const budgets = await getBudgets()
@@ -218,7 +185,7 @@ export function Budgets({
               <div className="budget-summary-bar">
                 <div className="budget-bar">
                   <div
-                    className={`budget-fill ${summaryState(summary.spent, summary.allocated)}`}
+                    className={`budget-fill ${budgetState(summary.spent, summary.allocated)}`}
                     style={{
                       width: `${Math.min(
                         summary.allocated > 0 ? (summary.spent / summary.allocated) * 100 : 0,
@@ -291,7 +258,7 @@ export function Budgets({
                     aria-label={t`${budget.title} spent`}
                   >
                     <div
-                      className={`budget-fill ${summaryState(progress.spentMinor, progress.allocatedMinor)}`}
+                      className={`budget-fill ${budgetState(progress.spentMinor, progress.allocatedMinor)}`}
                       style={{ width: `${Math.round(ratio * 100)}%` }}
                     />
                   </div>
@@ -305,11 +272,11 @@ export function Budgets({
                     ) : null}
                     <button
                       type="button"
-                      className="btn ghost budget-history-btn"
-                      data-action="budget-history"
-                      onClick={() => setHistoryBudget(budget)}
+                      className="btn ghost budget-detail-btn"
+                      data-action="budget-detail"
+                      onClick={() => setDetail({ budget, progress })}
                     >
-                      {t`History`}
+                      {t`Detail`}
                     </button>
                     <button
                       type="button"
@@ -336,10 +303,15 @@ export function Budgets({
         </>
       )}
 
-      {historyBudget ? (
-        <BudgetHistoryPanel
-          budget={historyBudget}
-          onClose={() => setHistoryBudget(null)}
+      {detail ? (
+        <BudgetDetailPanel
+          budget={detail.budget}
+          progress={detail.progress}
+          onEdit={() => {
+            setDetail(null)
+            setEditor({ mode: 'edit', entry: detail })
+          }}
+          onClose={() => setDetail(null)}
         />
       ) : null}
 

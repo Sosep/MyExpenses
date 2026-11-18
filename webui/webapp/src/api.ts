@@ -4,6 +4,7 @@ import type {
   Breakdown,
   Budget,
   BudgetAllocation,
+  BudgetBreakdown,
   BudgetHistoryPoint,
   BudgetAllocationsWrite,
   BudgetProgress,
@@ -359,3 +360,14 @@ export const duplicateBudget = (id: number) =>
 
 export const getBudgetHistory = (id: number, months = 12, signal?: AbortSignal) =>
   request<BudgetHistoryPoint[]>(`/budgets/${id}/history?months=${months}`, { signal })
+
+export const getBudgetBreakdown = (
+  id: number,
+  year?: number,
+  second?: number,
+  signal?: AbortSignal,
+) => {
+  const query =
+    year !== undefined && second !== undefined ? `?year=${year}&second=${second}` : ''
+  return request<BudgetBreakdown>(`/budgets/${id}/breakdown${query}`, { signal })
+}

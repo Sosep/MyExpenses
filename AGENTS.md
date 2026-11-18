@@ -24,6 +24,19 @@ Read this before changing code. Detailed sources:
   edit; amount edits the default allocation. A period can override the total
   (`categoryId: 0`, `oneTime: true`), and duplication plus monthly/yearly
   rollover are available.
+- Budget detail: `Detalle` (a side panel) shows progress, the period amount with
+  its origin (this period / carried over / default), the 12-month history and
+  the **budget's own** spending by category from
+  `GET /budgets/{id}/breakdown` (filter + descendants, parents rolled up, split
+  parts; zero rows hidden). `Historial` no longer exists as a separate button.
+- Budget filters: `criteria` (categories, payees, methods, tags, states) is read
+  and written in the app preference `budgetFilter_<id>`, so a budget created or
+  edited from the web is scoped exactly like one from the phone. A filter the web
+  cannot express is flagged (`criteriaUnsupported`) and never rewritten.
+- Budget periods: `second` is 0-based only for `MONTH` (January = 0); `WEEK` and
+  `DAY` are 1-based, out-of-range values are a `400`, and `history` ends at the
+  current month. Budget sums aggregate **split parts** whatever the global
+  "split as total" preference says, because the category lives on the part.
 - Files: `GET /api/v1/files` lists app-directory backups and `GET /api/v1/files/{name}`
   streams one with `Content-Disposition`; the SPA downloads via fetch + blob with
   the session cookie.
@@ -154,7 +167,7 @@ npm run mock           # http://localhost:4173/app/
 QA switches: `?login=1` (clears the mock cookie), `?locale=es`,
 `?view=transactions`, `?view=transactions&filter=groceries`, `?view=reports`, `?view=reports&reportBy=Payee&reportType=Both`,
 `?view=reports&reportDrill=1`, `?view=budgets`, `?view=budgets&budgetMonth=-1`, `?view=budgets&new=1`,
-`?view=budgets&edit=1`, `?view=budgets&edit=1&periodOverride=1`, `?view=budgets&history=1`, `?view=files`,
+`?view=budgets&edit=1`, `?view=budgets&edit=1&periodOverride=1`, `?view=budgets&detail=1`, `?view=files`,
 `?panel=split`, `?panel=transfer`, `?new=1`, `?new=1&kind=transfer`,
 `?new=1&kind=split`, `?new=1&combo=1`, `?edit=simple`, `?edit=split`,
 `?edit=transfer`, `?new=1&save=1`, `?theme=dark`, `?metrics=1`.
@@ -188,5 +201,9 @@ Update the docs while the change is fresh; do not defer them to a later commit.
 - Device QA remains for the new slices (cookie, PWA, allocations/rollover,
   reports drill-down and all-account aggregation). The mock can be checked at
   390×844 to catch responsive regressions.
+- Budget detail and its filter need device checks that the mock cannot fake:
+  January and a 12-month history (the two contract fixes), a split inside a
+  budget counted once, and a budget created from the web with two categories and
+  a state showing that same filter and spend in the Android app.
 - Files are device-level: the route lives in `WebInputService` (`AppDirHelper`),
   so `ApiRoutesTest` does not cover it; verify on the phone.
