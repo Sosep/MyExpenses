@@ -1,5 +1,5 @@
 import { t } from '@lingui/core/macro'
-import type { BudgetProgress } from './types'
+import type { BudgetCriteria, BudgetProgress } from './types'
 
 /** The grouping name the API returns, in the copy the app uses. */
 export function groupingLabel(grouping: string): string {
@@ -42,4 +42,43 @@ export function budgetState(spent: number, allocated: number): string {
   if (percent > 100) return 'over'
   if (percent >= 80) return 'warn'
   return ''
+}
+
+export interface BudgetDrilldown {
+  /** The account the budget belongs to; the list must open in it. */
+  accountId: number
+  from: string
+  to: string
+  /** The clicked row; `<= 0` is the uncategorized one. */
+  categoryId: number
+  criteria: BudgetCriteria | null
+}
+
+/**
+ * The transactions link behind a breakdown row: the budget's own account, its
+ * period, the clicked branch and the criteria the list can express. The API
+ * expands the category to its subtree, so the row and the list add up to the
+ * same figure.
+ */
+export function budgetDrilldownSearch(drilldown: BudgetDrilldown): string {
+  const params = new URLSearchParams()
+  params.set('view', 'transactions')
+  // A custom range is what the transactions screen reads back from the URL.
+  params.set('preset', 'custom')
+  params.set('from', drilldown.from)
+  params.set('to', drilldown.to)
+  params.set('accountId', String(drilldown.accountId))
+  if (drilldown.categoryId <= 0) {
+    params.set('uncategorized', 'true')
+  } else {
+    params.set('categoryId', String(drilldown.categoryId))
+  }
+  const criteria = drilldown.criteria
+  if (criteria) {
+    for (const id of criteria.payeeIds) params.append('payeeId', String(id))
+    for (const id of criteria.methodIds) params.append('methodId', String(id))
+    for (const id of criteria.tagIds) params.append('tagId', String(id))
+    for (const status of criteria.statuses) params.append('status', status)
+  }
+  return `?${params.toString()}`
 }

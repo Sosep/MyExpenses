@@ -30,6 +30,28 @@ export function searchOf(url: string): string {
 }
 
 /**
+ * The account a screen wants the list to show (`?accountId=2`). A screen that
+ * sends the user somewhere else decides it, so a budget of another account or a
+ * shared link open the list it promised. Without the parameter the remembered
+ * account wins.
+ */
+export function accountFromUrl(search: string): number | null {
+  const raw = new URLSearchParams(search).get('accountId')
+  if (raw === null || raw.trim() === '') return null
+  const value = Number(raw)
+  return Number.isInteger(value) && value > 0 ? value : null
+}
+
+/** The same query with the account written, or removed when it is unknown. */
+export function searchWithAccount(search: string, accountId: number | null): string {
+  const params = new URLSearchParams(search)
+  if (accountId === null) params.delete('accountId')
+  else params.set('accountId', String(accountId))
+  const query = params.toString()
+  return query ? `?${query}` : ''
+}
+
+/**
  * Keeps a panel and the history in sync: opening pushes an entry, the browser's
  * back closes the panel, and closing it from the UI pops that entry so the two
  * never drift. Returns the close handler the panel must use.

@@ -43,7 +43,10 @@ Read this before changing code. Detailed sources:
   debt.
 - Navigation: the view lives in the URL (`?view=`), so back/forward walk the app
   and deep links open a filtered list; the transaction detail is a history entry
-  that back closes. Other panels still open from state.
+  that back closes. Other panels still open from state. The account travels as
+  `?accountId=` when a screen sends the user somewhere (the budget drill-down
+  opens the budget's own account); without it the remembered account wins, and
+  the topbar rewrites it with `replaceState` so the two never disagree.
 - Search: `q` folds case and diacritics on both sides (`Cafetería` = `cafeteria`).
 - Privacy: two topbar switches mask money as `€ ••••` (no digits in the DOM) —
   `totals` for net worth, KPIs, report and budget aggregates and the chart
@@ -92,7 +95,8 @@ Read this before changing code. Detailed sources:
   per-category spent/allocated bars. A budget's saved category filter is the
   app's own `CategoryCriterion`, so its spend already covers the whole branch;
   the detail panel sends a single `categoryId` when it opens the matching
-  transactions.
+  transactions, and on the budget's account (`accountId` in the link), not the
+  one the topbar happens to show.
 - Reports: `/reports/summary`, `/reports/breakdown` (category, payee, tag or
   method) and `/reports/transactions` for drill-down. Period presets, `All
   accounts` converted to the home currency and server-computed shares. Category breakdown
@@ -190,7 +194,8 @@ QA switches: `?login=1` (clears the mock cookie), `?locale=es`,
 `?view=transactions`, `?view=transactions&filter=groceries`,
 `?view=transactions&categoryId=1` (Food and its subcategories), `?view=reports`, `?view=reports&reportBy=Payee&reportType=Both`,
 `?view=reports&reportDrill=1`, `?view=budgets`, `?view=budgets&budgetMonth=-1`, `?view=budgets&new=1`,
-`?view=budgets&edit=1`, `?view=budgets&edit=1&periodOverride=1`, `?view=budgets&detail=1`, `?view=files`,
+`?view=budgets&edit=1`, `?view=budgets&edit=1&periodOverride=1`, `?view=budgets&detail=<id>`
+(`3` = *Fuel*, *Joint*, con la app en otra cuenta), `?view=files`,
 `?hidden=1|totals|transactions`,
 `?panel=split`, `?panel=transfer`, `?new=1`, `?new=1&kind=transfer`,
 `?new=1&kind=split`, `?new=1&combo=1`, `?edit=simple`, `?edit=split`,

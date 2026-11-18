@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef } from 'react'
 import { t } from '@lingui/core/macro'
 import type { Budget, BudgetProgress } from '../types'
 import { describeError, getBudgetBreakdown, getBudgetHistory } from '../api'
-import { daysLeft, groupingLabel, progressRatio } from '../budgetUi'
+import { budgetDrilldownSearch, daysLeft, groupingLabel, progressRatio } from '../budgetUi'
 import { useFocusTrap } from '../useFocusTrap'
 import { formatMonthShort, formatPercent, statusLabel } from '../format'
 import { useMoney } from '../privacy'
@@ -115,29 +115,22 @@ export function BudgetDetailPanel({
     return parts.length > 0 ? t`Filter: ${parts.join(' · ')}` : t`No filter: the whole account`
   }, [budget.criteria, budget.criteriaUnsupported, references.data])
 
-  /** The row links to its branch; the API expands the category to its subtree. */
+  /**
+   * The row links to its branch; the API expands the category to its subtree.
+   * The account is the budget's own, so a budget of another account does not
+   * open the list on whatever account the topbar happens to show.
+   */
   const drilldownUrl = (categoryId: number): string | null => {
     const data = breakdown.data
     if (!data) return null
-    const params = new URLSearchParams()
-    params.set('view', 'transactions')
-    // A custom range is what the transactions screen reads back from the URL.
-    params.set('preset', 'custom')
-    params.set('from', data.periodStart)
-    params.set('to', data.periodEnd)
-    if (categoryId <= 0) {
-      params.set('uncategorized', 'true')
-    } else {
-      params.append('categoryId', String(categoryId))
-    }
-    const criteria = budget.criteria
-    if (criteria) {
-      for (const id of criteria.payeeIds) params.append('payeeId', String(id))
-      for (const id of criteria.methodIds) params.append('methodId', String(id))
-      for (const id of criteria.tagIds) params.append('tagId', String(id))
-      for (const status of criteria.statuses) params.append('status', status)
-    }
-    return `${window.location.pathname}?${params.toString()}`
+    const search = budgetDrilldownSearch({
+      accountId: data.accountId ?? budget.accountId,
+      from: data.periodStart,
+      to: data.periodEnd,
+      categoryId,
+      criteria: budget.criteria,
+    })
+    return `${window.location.pathname}${search}`
   }
 
   const defaultAllocation = budget.allocationMinor

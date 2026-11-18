@@ -13,11 +13,11 @@
  *   ?login=1            show the login screen instead of bypassing auth
  *   ?view=transactions  open the transactions screen
  *   ?view=budgets       open the budgets screen
+ *   ?view=budgets&detail=3  open that budget's detail (1 is the first one)
  *   ?view=reports       open the reports screen
  *   ?panel=split        open the split transaction detail panel
  *   ?theme=dark         toggle dark mode
  *   ?hidden=1           hide totals and transaction amounts (`totals`, `transactions`)
- *   ?hidden=1           hide the totals and the transaction amounts
  *   ?hidden=totals      hide only the headline figures
  *   ?hidden=transactions hide only the amounts of the rows
  *   ?metrics=1          show scroll/row metrics in a corner badge
@@ -739,9 +739,11 @@ function serveAppIndex(response) {
                 document.querySelector('.budget-edit')?.click()
               }, 900)
             }
-            if (q.get('detail') === '1' || q.get('history') === '1') {
+            var detail = q.get('detail') || (q.get('history') === '1' ? '1' : null)
+            if (detail) {
               setTimeout(function(){
-                document.querySelector('[data-action="budget-detail"]')?.click()
+                var card = document.querySelector('[data-budget-id="' + detail + '"]')
+                card?.querySelector('[data-action="budget-detail"]')?.click()
               }, 1000)
             }
             if (q.get('periodOverride') === '1') {

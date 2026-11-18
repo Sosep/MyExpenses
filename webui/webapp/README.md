@@ -127,7 +127,10 @@ MOCK_PORT=4191 MOCK_QA_SEED=1 npm run mock
   (`Food`) y sus hijas, para ver la jerarquía y la suma agregada.
 - Los presupuestos traen `criteria`; el alta y la edición lo aceptan y lo
   devuelven, y el editor lo muestra en la sección `Filtro`.
-- `?view=budgets&detail=1` abre el panel de detalle del primer presupuesto.
+- `?view=budgets&detail=1` abre el panel de detalle del primer presupuesto, y
+  `detail=3` el del presupuesto 3 (*Fuel*, cuenta *Joint*): la app puede estar en
+  otra cuenta y, al pulsar una categoría, la lista se abre en la del presupuesto
+  (`accountId` en la URL).
 
 ### URL del producto
 
@@ -163,6 +166,7 @@ El detalle de una transacción abre una entrada de historial: atrás lo cierra.
 | `?view=budgets` | Presupuestos |
 | `?view=budgets&budgetMonth=-1` | Presupuestos en el mes anterior |
 | `?view=budgets&detail=1` | Abre el detalle del primer presupuesto (reparto, importe e histórico) |
+| `?view=budgets&detail=3` | Detalle del presupuesto 3 (*Fuel*, *Joint*) con la app en otra cuenta: al pulsar una categoría, la lista abre la cuenta del presupuesto |
 | `?view=budgets&new=1` | Alta de presupuesto |
 | `?view=budgets&edit=1` | Edita el primer presupuesto |
 | `?view=budgets&edit=1&periodOverride=1` | Prueba el total distinto de este periodo |

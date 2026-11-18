@@ -230,7 +230,7 @@ export function Budgets({
               const over = progress.remainingMinor < 0
               const days = daysLeft(progress)
               return (
-                <article key={budget.id} className="card budget-card">
+                <article key={budget.id} className="card budget-card" data-budget-id={budget.id}>
                   <header className="budget-card-head">
                     <div>
                       <h2>{budget.title}</h2>

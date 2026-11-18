@@ -1,7 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { t } from '@lingui/core/macro'
-import { readView, searchOf, useHistoryPanel, viewUrl } from './navigation'
+import {
+  accountFromUrl,
+  readView,
+  searchOf,
+  searchWithAccount,
+  useHistoryPanel,
+  viewUrl,
+} from './navigation'
 import type { Locale } from './i18n'
 import { activateLocale, initialLocale, LOCALES } from './i18n'
 import type { Account, Meta } from './types'
@@ -30,6 +37,10 @@ function initialTheme(): 'light' | 'dark' {
 }
 
 function initialAccountId(): number | null {
+  // A link that names an account wins over the one this browser remembered:
+  // that is how a budget of another account opens its own movements.
+  const fromUrl = accountFromUrl(window.location.search)
+  if (fromUrl !== null) return fromUrl
   const stored = localStorage.getItem(ACCOUNT_KEY)
   if (!stored) return null
   const parsed = Number(stored)
@@ -51,9 +62,15 @@ export default function App({ initialLocale: initial }: { initialLocale: Locale 
   const wasReady = useRef(false)
 
   // Back/forward rehydrate the view from the URL; changing the view pushes an
-  // entry so the browser's back button returns to the previous screen.
+  // entry so the browser's back button returns to the previous screen. The
+  // account travels in the URL too, so a link to another account's movements
+  // survives back, forward and a reload.
   useEffect(() => {
-    const onPopState = () => setViewState(readView(window.location.search))
+    const onPopState = () => {
+      setViewState(readView(window.location.search))
+      const fromUrl = accountFromUrl(window.location.search)
+      if (fromUrl !== null) setAccountId(fromUrl)
+    }
     window.addEventListener('popstate', onPopState)
     return () => window.removeEventListener('popstate', onPopState)
   }, [])
@@ -64,10 +81,13 @@ export default function App({ initialLocale: initial }: { initialLocale: Locale 
     setViewState(next)
   }
 
-  /** A screen asks for a URL it built (filters included): push and follow it. */
+  /** A screen asks for a URL it built (filters and account included): follow it. */
   function navigate(url: string) {
+    const search = searchOf(url)
     window.history.pushState(null, '', url)
-    setViewState(readView(searchOf(url)))
+    setViewState(readView(search))
+    const fromUrl = accountFromUrl(search)
+    if (fromUrl !== null) setAccountId(fromUrl)
   }
   const queryClient = useQueryClient()
 
@@ -134,6 +154,17 @@ export default function App({ initialLocale: initial }: { initialLocale: Locale 
     if (accountId !== null) {
       localStorage.setItem(ACCOUNT_KEY, String(accountId))
     }
+  }, [accountId])
+
+  // The account is in the URL from the moment it is known, so the topbar and a
+  // link a screen built (`?accountId=`) never disagree. `replaceState` keeps
+  // the choice out of the history: the drill-down is one entry, not two.
+  useEffect(() => {
+    if (accountId === null) return
+    const search = window.location.search
+    const next = searchWithAccount(search, accountId)
+    if (next === search) return
+    window.history.replaceState(window.history.state, '', `${window.location.pathname}${next}`)
   }, [accountId])
 
   useEffect(() => {
