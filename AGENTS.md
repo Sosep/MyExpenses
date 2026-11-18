@@ -178,6 +178,10 @@ opened and edited visually, but saving them needs the real phone API. It tests
 the SPA and the HTTP contract, not the Kotlin queries. The full guide lives in
 `webui/webapp/README.md` (section **Probar sin el móvil**).
 
+`MOCK_QA_SEED=1 npm run mock` serves six months of generated transactions
+(categories, payees, methods, tags, states, transfers and splits with their own
+parts) for volume QA; it is deterministic.
+
 For hot reload, run the mock and `VITE_API_TARGET=http://localhost:4173 npm run dev`;
 QA query switches do not apply in that mode because Vite serves the index.
 

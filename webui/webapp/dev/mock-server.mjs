@@ -429,11 +429,173 @@ const history = [
   }),
 )
 
-const transactions = [...special, ...fillers, ...history].sort((a, b) =>
+/* ---- QA seed ------------------------------------------------------------
+ * MOCK_QA_SEED=1 replaces the fixtures with six months of mixed transactions
+ * (categories, payees, methods, tags, states, transfers and splits with their
+ * own parts) so grouping, filters, reports and paging have volume. It is
+ * deterministic: the same seed gives the same data on every run.
+ */
+function buildQaSeed() {
+  const seedCategories = [
+    { id: 11, parentId: null, label: 'Health', level: 0, color: null, type: -1 },
+    { id: 12, parentId: 11, label: 'Pharmacy', level: 1, color: null, type: -1 },
+    { id: 13, parentId: 10, label: 'Subscriptions', level: 1, color: null, type: -1 },
+    { id: 14, parentId: 6, label: 'Rent', level: 1, color: null, type: -1 },
+    { id: 15, parentId: 6, label: 'Insurance', level: 1, color: null, type: -1 },
+  ]
+  const seedPayees = [
+    { id: 30, name: 'Landlord' },
+    { id: 31, name: 'Streaming' },
+    { id: 32, name: 'Dentist' },
+    { id: 33, name: 'Gym' },
+    { id: 34, name: 'Bakery' },
+    { id: 35, name: 'Petrol' },
+    { id: 36, name: 'Train Co' },
+    { id: 37, name: 'Cinema Club' },
+    { id: 38, name: 'Employer' },
+  ]
+  const seedTags = [
+    { id: 11, label: 'monthly', color: null },
+    { id: 12, label: 'work', color: null },
+  ]
+  categories.push(...seedCategories)
+  payees.push(...seedPayees)
+  tags.push(...seedTags)
+
+  const category = (id) => {
+    const row = categories.find((entry) => entry.id === id)
+    const parent = row.parentId ? categories.find((entry) => entry.id === row.parentId) : null
+    return { id: row.id, label: row.label, path: parent ? `${parent.label} > ${row.label}` : row.label }
+  }
+  const payee = (id) => {
+    const row = payees.find((entry) => entry.id === id)
+    return row ? { id: row.id, label: row.name } : null
+  }
+  const method = (id) => methods.find((entry) => entry.id === id) ?? null
+  const tag = (id) => tags.find((entry) => entry.id === id) ?? null
+
+  let nextId = 1000
+  const rows = []
+  const parts = []
+  let seed = 424242
+  const random = () => {
+    seed = (seed * 1103515245 + 12345) % 2147483648
+    return seed / 2147483648
+  }
+  const between = (min, max) => min + Math.floor(random() * (max - min + 1))
+  const pick = (list) => list[Math.floor(random() * list.length)]
+
+  const statuses = ['UNRECONCILED', 'CLEARED', 'RECONCILED']
+  const comments = [
+    'Compra semanal', 'Cafe con Ana', 'Cena fuera', 'Gasolina', 'Farmacia',
+    'Cine', 'Libro', 'Tren a Valencia', 'Factura luz', 'Supermercado',
+    'Panaderia', 'Revision coche', 'Regalo cumple', 'Peluqueria', 'Merienda',
+    'Parking centro', 'Suscripcion musica', 'Material oficina', 'Lavadora',
+    'Salida con amigos', 'Dentista', 'Ropa', 'Mercado', 'Cafeteria estacion',
+  ]
+
+  const add = (over) => {
+    nextId += 1
+    rows.push(tx({ id: nextId, ...over }))
+    return rows[rows.length - 1]
+  }
+
+  const addSplit = (monthsAgo, day, splitIndex) => {
+    const parent = add({
+      id: nextId + 1,
+      kind: 'SPLIT',
+      accountId: 1,
+      date: isoMonthsAgo(monthsAgo, day),
+      valueDate: isoMonthsAgo(monthsAgo, day),
+      payee: payee(1),
+      comment: splitIndex === 0 ? 'Compra grande' : 'Casa y ocio',
+      method: method(1),
+      tags: [tag(1)],
+      crStatus: 'CLEARED',
+    })
+    const combos = [
+      [[2, -6000], [8, -2500], [9, -1500]],
+      [[5, -4000], [10, -3000]],
+      [[2, -5000], [5, -3500], [4, -1500]],
+    ][(monthsAgo + splitIndex) % 3]
+    const splitParts = combos.map(([categoryId, amountMinor], index) => {
+      nextId += 1
+      const part = {
+        id: nextId,
+        amountMinor,
+        payee: index === 0 ? payee(1) : null,
+        category: category(categoryId),
+        tags: index === 0 ? [tag(1)] : [],
+        comment: index === 0 ? 'Comida' : index === 1 ? 'Casa' : 'Extras',
+        method: null,
+        referenceNumber: null,
+        transferPeerId: null,
+        transferAccountId: null,
+      }
+      parts.push(part)
+      return part
+    })
+    parent.amountMinor = splitParts.reduce((total, part) => total + part.amountMinor, 0)
+    parent.splitParts = splitParts
+  }
+
+  for (let monthsAgo = 5; monthsAgo >= 0; monthsAgo -= 1) {
+    const day = (value) => isoMonthsAgo(monthsAgo, Math.min(value, 28))
+
+    add({ amountMinor: -75000, date: day(1), valueDate: day(1), payee: payee(30), category: category(14), comment: 'Alquiler', method: method(1), tags: [tag(11)], crStatus: 'CLEARED' })
+    add({ amountMinor: -between(3800, 6200), date: day(5), valueDate: day(5), payee: payee(5), category: category(7), comment: 'Factura luz', method: method(1), crStatus: 'RECONCILED' })
+    add({ amountMinor: -between(990, 1590), date: day(7), valueDate: day(7), payee: payee(31), category: category(13), comment: 'Suscripcion musica', method: method(1), tags: [tag(11)], crStatus: 'CLEARED' })
+
+    for (const groceryDay of [3, 11, 19]) {
+      add({ amountMinor: -between(2800, 9500), date: day(groceryDay), valueDate: day(groceryDay), payee: pick([payee(1), payee(34)]), category: category(2), comment: pick(comments), method: method(pick([1, 2])), tags: random() < 0.5 ? [tag(1)] : [], crStatus: pick(statuses) })
+    }
+    for (const outDay of [8, 22]) {
+      add({ amountMinor: -between(1600, 5200), date: day(outDay), valueDate: day(outDay), payee: pick([payee(4), payee(20)]), category: category(5), comment: pick(comments), method: method(1), tags: random() < 0.4 ? [tag(3)] : [], crStatus: pick(statuses) })
+    }
+    add({ amountMinor: -between(1200, 3900), date: day(6), valueDate: day(6), payee: payee(36), category: category(4), comment: 'Tren', method: method(1), tags: [tag(2)], crStatus: 'CLEARED' })
+    add({ amountMinor: -between(3000, 7000), date: day(17), valueDate: day(17), payee: payee(35), category: category(4), comment: 'Gasolina', method: method(1), crStatus: 'UNRECONCILED' })
+
+    if (random() < 0.7) {
+      add({ amountMinor: -between(800, 4200), date: day(12), valueDate: day(12), payee: pick([payee(22), payee(32)]), category: category(12), comment: 'Farmacia', method: method(pick([1, 2])), crStatus: 'CLEARED' })
+    }
+    add({ amountMinor: -between(900, 2600), date: day(15), valueDate: day(15), payee: pick([payee(23), payee(37)]), category: category(10), comment: pick(comments), method: method(1), tags: random() < 0.3 ? [tag(4)] : [], crStatus: pick(statuses) })
+    add({ amountMinor: -between(1500, 4800), date: day(21), valueDate: day(21), payee: payee(33), category: category(10), comment: 'Gimnasio', method: method(1), tags: [tag(11)], crStatus: 'RECONCILED' })
+
+    // One row without category and one without payee, so "No category" and
+    // "No payee" buckets exist in the reports.
+    add({ amountMinor: -between(500, 1800), date: day(23), valueDate: day(23), payee: null, category: null, comment: 'Gasto suelto', method: method(2) })
+    add({ amountMinor: -between(600, 2200), date: day(24), valueDate: day(24), payee: payee(6), category: null, comment: 'Sin clasificar', method: null })
+
+    // A voided row: every total must ignore it.
+    add({ amountMinor: -9999, date: day(26), valueDate: day(26), payee: payee(34), category: category(2), comment: 'Anulada', method: method(1), crStatus: 'VOID' })
+
+    add({ amountMinor: between(195000, 215000), date: day(25), valueDate: day(25), payee: payee(38), category: category(3), comment: 'Nomina', method: method(1), tags: [tag(12)], crStatus: 'CLEARED' })
+    if (random() < 0.5) {
+      add({ amountMinor: between(1500, 8900), date: day(between(9, 20)), valueDate: day(between(9, 20)), payee: null, category: null, comment: 'Devolucion', method: null })
+    }
+
+    // A transfer leg: counted as transfers, never as income or expense.
+    const transferId = nextId + 1
+    add({ id: transferId, kind: 'TRANSFER', amountMinor: -between(20000, 40000), date: day(10), valueDate: day(10), comment: 'Ahorro', transferPeerId: transferId + 50000, transferAccountId: 2 })
+
+    addSplit(monthsAgo, day(13).slice(-2), 0)
+    addSplit(monthsAgo, day(27).slice(-2), 1)
+  }
+
+  return {
+    transactions: rows.sort((left, right) => right.date.localeCompare(left.date)),
+    splitParts: parts,
+  }
+}
+
+const qaSeed = process.env.MOCK_QA_SEED === '1' ? buildQaSeed() : null
+const defaultTransactions = [...special, ...fillers, ...history]
+const transactions = (qaSeed ? qaSeed.transactions : defaultTransactions).sort((a, b) =>
   b.date.localeCompare(a.date),
 )
+const splitParts = qaSeed ? qaSeed.splitParts : defaultSplitParts
 
-const splitParts = [
+const defaultSplitParts = [
   {
     id: 131,
     amountMinor: -6000,
@@ -1124,7 +1286,7 @@ createServer(async (request, response) => {
       const rows = []
       for (const item of parents) {
         if (by === 'category' && item.kind === 'SPLIT') {
-          for (const part of splitParts) {
+          for (const part of item.splitParts ?? splitParts) {
             if (part.category?.id !== groupId || !matchesType(part)) continue
             rows.push({
               ...item,
@@ -1202,7 +1364,7 @@ createServer(async (request, response) => {
       if (by === 'category') {
         for (const item of parents) {
           if (item.kind === 'SPLIT') {
-            for (const part of splitParts) {
+            for (const part of item.splitParts ?? splitParts) {
               if (!matchesType(part)) continue
               entries.push({
                 id: part.category?.id ?? 0,
@@ -1433,7 +1595,7 @@ createServer(async (request, response) => {
         const transaction = transactions[index]
         return sendJson(response, 200, {
           ...transaction,
-          splitParts: transaction.kind === 'SPLIT' ? splitParts : null,
+          splitParts: transaction.kind === 'SPLIT' ? transaction.splitParts ?? splitParts : null,
         })
       }
       if (request.method === 'PUT') {

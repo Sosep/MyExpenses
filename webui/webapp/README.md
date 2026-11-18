@@ -107,6 +107,17 @@ Como la API real, el mock devuelve `second` con **base 0** en `reports/grouped`,
 `budgets/{id}` y su historial: noviembre es `10`. La SPA guarda el mes que
 muestra como `YYYY-MM` (1–12) y lo convierte solo al llamar a la API.
 
+### Datos de volumen
+
+`MOCK_QA_SEED=1 npm run mock` sustituye los fixtures por seis meses de
+movimientos (categorías, beneficiarios, métodos, etiquetas, estados,
+transferencias y divididas con sus propias partes). Es determinista y sirve para
+probar agrupación, filtros, informes y paginación con volumen:
+
+```bash
+MOCK_PORT=4191 MOCK_QA_SEED=1 npm run mock
+```
+
 ### Presupuestos
 
 - `budgets/{id}/breakdown` devuelve el reparto del presupuesto con una madre
