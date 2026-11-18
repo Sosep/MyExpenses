@@ -87,6 +87,11 @@ Spec: `SPEC-presupuestos-detalle.md`
 
 ## Cierre
 
-- [ ] `ktlintCheck` en verde (baseline refrescada si toca).
-- [ ] `AGENTS.md` **Estado actual** y **Trabajo abierto** al día.
-- [ ] Commits por rebanada, assets incluidos, sin `node_modules`.
+- [x] `ktlintCheck` en verde (baseline refrescada si toca).
+- [x] `AGENTS.md` **Estado actual** y **Trabajo abierto** al día.
+- [x] Commits por rebanada, assets incluidos, sin `node_modules`.
+
+## Pendiente
+
+- [ ] QA en dispositivo: enero, historial de 12 meses, dividida dentro de un
+  presupuesto y filtro creado en la web visible en la app Android.

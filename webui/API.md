@@ -579,8 +579,10 @@ por defecto; responde `201` + `Location` con el nuevo `BudgetDto`.
 
 `204` si existía, `404 budget_not_found` si no.
 
-Fuera de este corte: asignación por categoría, rollover entre periodos y
-duplicación de presupuestos. Se siguen gestionando en la app Android.
+Asignaciones por categoría, total y rollover del periodo y duplicación están en
+las rutas de arriba; lo que sigue solo en la app Android es la preferencia
+"agregar neutrales" por presupuesto y los criterios compuestos (`Or`/`Not`),
+que la web detecta pero no reescribe.
 
 ### 4.6 Informes y agrupaciones
 
