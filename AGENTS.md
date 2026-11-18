@@ -37,6 +37,14 @@ Read this before changing code. Detailed sources:
   `DAY` are 1-based, out-of-range values are a `400`, and `history` ends at the
   current month. Budget sums aggregate **split parts** whatever the global
   "split as total" preference says, because the category lives on the part.
+- Accounts: read plus `GET /account-types` and `POST/PUT/DELETE /accounts`. The
+  type travels as an id (`type`) and as a name (`typeName`); deleting an account
+  removes its transactions like the app does, with `409` when it has a sealed
+  debt.
+- Navigation: the view lives in the URL (`?view=`), so back/forward walk the app
+  and deep links open a filtered list; the transaction detail is a history entry
+  that back closes. Other panels still open from state.
+- Search: `q` folds case and diacritics on both sides (`Cafetería` = `cafeteria`).
 - Files: `GET /api/v1/files` lists app-directory backups and `GET /api/v1/files/{name}`
   streams one with `Content-Disposition`; the SPA downloads via fetch + blob with
   the session cookie.

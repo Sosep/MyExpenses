@@ -8,6 +8,8 @@ export interface Filters {
   amountMin: number | null
   amountMax: number | null
   statuses: string[]
+  /** Only movements without a category (used by the budget drill-down). */
+  uncategorized: boolean
   transfer: 'any' | 'only' | 'none'
 }
 
@@ -24,6 +26,7 @@ export const NO_FILTERS: Filters = {
   amountMin: null,
   amountMax: null,
   statuses: [],
+  uncategorized: false,
   transfer: 'any',
 }
 
@@ -72,6 +75,7 @@ export function filtersFromUrl(search: string): Filters {
       .flatMap((value) => value.split(','))
       .map((value) => value.trim().toUpperCase())
       .filter((value) => STATUS_VALUES.includes(value)),
+    uncategorized: params.get('uncategorized') === 'true',
     transfer: transfer === 'true' ? 'only' : transfer === 'false' ? 'none' : 'any',
   }
 }
@@ -95,6 +99,8 @@ export function searchWithFilters(search: string, filters: Filters): string {
     else params.set(name, String(value))
   }
 
+  if (filters.uncategorized) params.set('uncategorized', 'true')
+  else params.delete('uncategorized')
   if (filters.transfer === 'any') params.delete('transfer')
   else params.set('transfer', filters.transfer === 'only' ? 'true' : 'false')
 
@@ -111,6 +117,7 @@ export function activeFilterCount(filters: Filters): number {
     filters.statuses.length +
     (filters.text ? 1 : 0) +
     (filters.amountMin !== null || filters.amountMax !== null ? 1 : 0) +
+    (filters.uncategorized ? 1 : 0) +
     (filters.transfer === 'any' ? 0 : 1)
   )
 }

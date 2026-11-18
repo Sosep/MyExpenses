@@ -126,6 +126,21 @@ MOCK_PORT=4191 MOCK_QA_SEED=1 npm run mock
   devuelven, y el editor lo muestra en la sección `Filtro`.
 - `?view=budgets&detail=1` abre el panel de detalle del primer presupuesto.
 
+### URL del producto
+
+La vista vive en la URL, así que atrás/adelante recorren la app y un enlace se
+puede compartir:
+
+| Parámetro | Efecto |
+|---|---|
+| `view` | `dashboard` (por defecto), `transactions`, `reports`, `budgets`, `files` |
+| `categoryId`, `payeeId`, `tagId`, `methodId` | filtros de la lista (repetibles) |
+| `from`, `to`, `preset=custom` | rango de fechas |
+| `grouping` | `NONE`, `DAY`, `WEEK`, `MONTH`, `YEAR` |
+| `q`, `amountMin`, `amountMax`, `status`, `transfer`, `uncategorized` | resto de filtros |
+
+El detalle de una transacción abre una entrada de historial: atrás lo cierra.
+
 ### QA rápido
 
 | Parámetro | Efecto |

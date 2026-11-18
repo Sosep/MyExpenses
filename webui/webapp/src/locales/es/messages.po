@@ -780,6 +780,10 @@ msgstr "Más opciones"
 msgid "Move money between two accounts."
 msgstr "Mueve dinero entre dos cuentas."
 
+#: src/components/BudgetDetailPanel.tsx
+msgid "Movements of {label}"
+msgstr "Movimientos de {label}"
+
 #: src/components/BudgetEditor.tsx
 msgid "Must be on or after the start."
 msgstr "Debe ser igual o posterior al inicio."
@@ -835,6 +839,7 @@ msgid "No budgets yet"
 msgstr "Todavía no hay presupuestos"
 
 #: src/components/TransactionEditor.tsx
+#: src/components/Transactions.tsx
 msgid "No category"
 msgstr "Sin categoría"
 

@@ -1483,6 +1483,18 @@ button:disabled {
   @apply mt-1 h-1;
 }
 
+.budget-cat-link {
+  @apply block rounded-[8px] text-inherit no-underline;
+}
+
+.budget-cat-link:hover .budget-cat-label {
+  @apply underline;
+}
+
+.budget-cat-link:focus-visible {
+  @apply outline-2 outline-offset-2 outline-focus;
+}
+
 /* Budget history */
 
 .budget-history {

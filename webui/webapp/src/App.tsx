@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { t } from '@lingui/core/macro'
+import { readView, searchOf, viewUrl } from './navigation'
 import type { Locale } from './i18n'
 import { activateLocale, initialLocale, LOCALES } from './i18n'
 import type { Account, Meta } from './types'
@@ -39,12 +40,32 @@ export default function App({ initialLocale: initial }: { initialLocale: Locale 
   const [meta, setMeta] = useState<Meta | null>(null)
   const [accounts, setAccounts] = useState<Account[]>([])
   const [accountId, setAccountId] = useState<number | null>(initialAccountId)
-  const [view, setView] = useState<View>('dashboard')
+  const [view, setViewState] = useState<View>(() => readView(window.location.search))
   const [theme, setTheme] = useState<'light' | 'dark'>(initialTheme)
   const [editor, setEditor] = useState<EditorState | null>(null)
   const [toast, setToast] = useState<string | null>(null)
   const [locale, setLocale] = useState<Locale>(() => initial ?? initialLocale())
   const wasReady = useRef(false)
+
+  // Back/forward rehydrate the view from the URL; changing the view pushes an
+  // entry so the browser's back button returns to the previous screen.
+  useEffect(() => {
+    const onPopState = () => setViewState(readView(window.location.search))
+    window.addEventListener('popstate', onPopState)
+    return () => window.removeEventListener('popstate', onPopState)
+  }, [])
+
+  function setView(next: View) {
+    if (next === view) return
+    window.history.pushState(null, '', viewUrl(window.location.search, next))
+    setViewState(next)
+  }
+
+  /** A screen asks for a URL it built (filters included): push and follow it. */
+  function navigate(url: string) {
+    window.history.pushState(null, '', url)
+    setViewState(readView(searchOf(url)))
+  }
   const queryClient = useQueryClient()
 
   useEffect(() => {
@@ -203,6 +224,7 @@ export default function App({ initialLocale: initial }: { initialLocale: Locale 
               accounts={accounts}
               defaultAccountId={account?.id ?? accountId ?? accounts[0]?.id ?? 0}
               onDataChanged={refreshData}
+              onNavigate={navigate}
             />
           ) : (
             <Transactions

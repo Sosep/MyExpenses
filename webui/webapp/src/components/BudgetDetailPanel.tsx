@@ -14,6 +14,8 @@ interface BudgetDetailPanelProps {
   progress: BudgetProgress
   onEdit: () => void
   onClose: () => void
+  /** Push a URL the SPA router understands (the movements of a category). */
+  onNavigate: (url: string) => void
 }
 
 /**
@@ -21,7 +23,13 @@ interface BudgetDetailPanelProps {
  * series. The figure on the card is the same one shown here; the rows of the
  * breakdown add up to their own total, never to a second one.
  */
-export function BudgetDetailPanel({ budget, progress, onEdit, onClose }: BudgetDetailPanelProps) {
+export function BudgetDetailPanel({
+  budget,
+  progress,
+  onEdit,
+  onClose,
+  onNavigate,
+}: BudgetDetailPanelProps) {
   const panelRef = useRef<HTMLElement>(null)
   useFocusTrap(panelRef)
   const breakdown = useAsync(
@@ -104,6 +112,39 @@ export function BudgetDetailPanel({ budget, progress, onEdit, onClose }: BudgetD
     return parts.length > 0 ? t`Filter: ${parts.join(' · ')}` : t`No filter: the whole account`
   }, [budget.criteria, budget.criteriaUnsupported, references.data])
 
+  /** The row and every category hanging from it, which is what the row sums. */
+  const drilldownUrl = (categoryId: number): string | null => {
+    const data = breakdown.data
+    if (!data) return null
+    const params = new URLSearchParams()
+    params.set('view', 'transactions')
+    // A custom range is what the transactions screen reads back from the URL.
+    params.set('preset', 'custom')
+    params.set('from', data.periodStart)
+    params.set('to', data.periodEnd)
+    if (categoryId <= 0) {
+      params.set('uncategorized', 'true')
+    } else {
+      const collected: number[] = []
+      const walk = (id: number) => {
+        collected.push(id)
+        for (const row of data.categories) {
+          if (row.parentId === id) walk(row.categoryId)
+        }
+      }
+      walk(categoryId)
+      for (const id of collected) params.append('categoryId', String(id))
+    }
+    const criteria = budget.criteria
+    if (criteria) {
+      for (const id of criteria.payeeIds) params.append('payeeId', String(id))
+      for (const id of criteria.methodIds) params.append('methodId', String(id))
+      for (const id of criteria.tagIds) params.append('tagId', String(id))
+      for (const status of criteria.statuses) params.append('status', status)
+    }
+    return `${window.location.pathname}?${params.toString()}`
+  }
+
   const defaultAllocation = budget.allocationMinor
   const periodAllocation = progress.periodAllocationMinor
   const inherited =
@@ -184,12 +225,12 @@ export function BudgetDetailPanel({ budget, progress, onEdit, onClose }: BudgetD
                 const percent =
                   totalSpent > 0 ? Math.round((category.spentMinor / totalSpent) * 100) : 0
                 const indent = Math.max(category.level - 1, 0) * 14
-                return (
-                  <div key={category.categoryId}>
+                const url = drilldownUrl(category.categoryId)
+                const label = category.label ?? t`Uncategorized`
+                const body = (
+                  <>
                     <div className="budget-cat-row" style={{ paddingLeft: `${indent}px` }}>
-                      <span className="budget-cat-label">
-                        {category.label ?? t`Uncategorized`}
-                      </span>
+                      <span className="budget-cat-label">{label}</span>
                       <span className="budget-cat-pct">{formatPercent(percent, 0)}</span>
                       <span className="budget-cat-amount">{money(category.spentMinor)}</span>
                     </div>
@@ -199,7 +240,23 @@ export function BudgetDetailPanel({ budget, progress, onEdit, onClose }: BudgetD
                     >
                       <div className="budget-fill" style={{ width: `${percent}%` }} />
                     </div>
-                  </div>
+                  </>
+                )
+                return url ? (
+                  <a
+                    key={category.categoryId}
+                    className="budget-cat-link"
+                    href={url}
+                    aria-label={t`Movements of ${label}`}
+                    onClick={(event) => {
+                      event.preventDefault()
+                      onNavigate(url)
+                    }}
+                  >
+                    {body}
+                  </a>
+                ) : (
+                  <div key={category.categoryId}>{body}</div>
                 )
               })}
             </section>

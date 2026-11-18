@@ -46,9 +46,11 @@ const accounts = [
   {
     id: 1,
     label: 'Everyday',
-    type: 'BANK',
+    type: '2',
+    typeName: 'BANK',
     currency: 'EUR',
     fractionDigits: 2,
+    openingBalanceMinor: 0,
     currentBalanceMinor: 421080,
     totalMinor: 421080,
     incomeMinor: 312000,
@@ -61,9 +63,11 @@ const accounts = [
   {
     id: 2,
     label: 'Joint',
-    type: 'BANK',
+    type: '2',
+    typeName: 'BANK',
     currency: 'EUR',
     fractionDigits: 2,
+    openingBalanceMinor: 0,
     currentBalanceMinor: 712055,
     totalMinor: 712055,
     incomeMinor: 180000,
@@ -76,9 +80,11 @@ const accounts = [
   {
     id: 3,
     label: 'Savings',
-    type: 'SAVINGS',
+    type: '4',
+    typeName: 'ASSET',
     currency: 'EUR',
     fractionDigits: 2,
+    openingBalanceMinor: 0,
     currentBalanceMinor: 114900,
     totalMinor: 114900,
     incomeMinor: 0,
@@ -89,6 +95,8 @@ const accounts = [
     parentId: null,
   },
 ]
+
+let nextAccountId = 10
 
 const monthName = new Intl.DateTimeFormat('en-GB', { month: 'long', year: 'numeric' }).format(
   new Date(year, month - 1, 1),
@@ -282,8 +290,8 @@ const tags = [
 ]
 
 const methods = [
-  { id: 1, label: 'Card', isNumbered: false, type: 0, accountTypes: ['BANK', 'CASH'] },
-  { id: 2, label: 'Cash', isNumbered: false, type: 0, accountTypes: ['CASH'] },
+  { id: 1, label: 'Card', isNumbered: false, type: 0, accountTypes: ['1', '2'] },
+  { id: 2, label: 'Cash', isNumbered: false, type: 0, accountTypes: ['1'] },
 ]
 
 const tx = (over) => ({
@@ -1010,6 +1018,67 @@ createServer(async (request, response) => {
     }
 
     if (path === '/api/v1/meta') return send(response, 200, JSON.stringify(meta))
+    if (path === '/api/v1/account-types') {
+      return sendJson(response, 200, [
+        { id: 1, name: 'CASH', isAsset: true, supportsReconciliation: false },
+        { id: 2, name: 'BANK', isAsset: true, supportsReconciliation: true },
+        { id: 4, name: 'ASSET', isAsset: true, supportsReconciliation: false },
+      ])
+    }
+    if (path === '/api/v1/accounts' && request.method === 'POST') {
+      const body = await readJson(request)
+      if (!body.label || !body.type || !body.currency) {
+        return sendJson(response, 422, {
+          error: 'validation_failed',
+          message: 'label, type and currency are required',
+        })
+      }
+      const typeName = { 1: 'CASH', 2: 'BANK', 4: 'ASSET' }[Number(body.type)] ?? 'BANK'
+      const account = {
+        id: nextAccountId++,
+        label: body.label,
+        type: String(body.type),
+        typeName,
+        currency: body.currency,
+        fractionDigits: 2,
+        openingBalanceMinor: body.openingBalanceMinor ?? 0,
+        currentBalanceMinor: body.openingBalanceMinor ?? 0,
+        totalMinor: body.openingBalanceMinor ?? 0,
+        incomeMinor: 0,
+        expensesMinor: 0,
+        excludeFromTotals: body.excludeFromTotals ?? false,
+        sealed: false,
+        color: body.color ?? 0,
+        parentId: null,
+      }
+      accounts.push(account)
+      return sendJson(response, 201, account, { Location: `/api/v1/accounts/${account.id}` })
+    }
+    const accountMatch = path.match(/^\/api\/v1\/accounts\/(\d+)$/)
+    if (accountMatch) {
+      const account = accounts.find((item) => item.id === Number(accountMatch[1]))
+      if (!account) {
+        return sendJson(response, 404, { error: 'account_not_found', message: 'Account not found' })
+      }
+      if (request.method === 'PUT') {
+        const body = await readJson(request)
+        account.label = body.label ?? account.label
+        if (body.openingBalanceMinor !== undefined) {
+          account.openingBalanceMinor = body.openingBalanceMinor
+          account.currentBalanceMinor = body.openingBalanceMinor
+        }
+        if (body.excludeFromTotals !== undefined) account.excludeFromTotals = body.excludeFromTotals
+        if (body.color !== undefined) account.color = body.color
+        return sendJson(response, 200, account)
+      }
+      if (request.method === 'DELETE') {
+        const index = accounts.findIndex((item) => item.id === account.id)
+        accounts.splice(index, 1)
+        response.writeHead(204, { 'Cache-Control': 'no-store' })
+        return response.end()
+      }
+      return sendJson(response, 200, account)
+    }
     if (path === '/api/v1/accounts') return send(response, 200, JSON.stringify(accounts))
     if (path === '/api/v1/categories') return send(response, 200, JSON.stringify(categories))
     if (path === '/api/v1/payees') return send(response, 200, JSON.stringify(payees))
@@ -1524,7 +1593,12 @@ createServer(async (request, response) => {
         .flatMap((value) => value.split(','))
         .map((value) => value.trim().toUpperCase())
         .filter(Boolean)
-      const text = (url.searchParams.get('q') ?? '').trim().toLowerCase()
+      const fold = (value) =>
+        String(value ?? '')
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .toLowerCase()
+      const text = fold(url.searchParams.get('q') ?? '').trim()
       const amountMin = Number(url.searchParams.get('amountMin')) || null
       const amountMax = Number(url.searchParams.get('amountMax')) || null
       const transfer = url.searchParams.get('transfer')
@@ -1545,10 +1619,9 @@ createServer(async (request, response) => {
         if (amountMin !== null && Math.abs(item.amountMinor) < amountMin) return false
         if (amountMax !== null && Math.abs(item.amountMinor) > amountMax) return false
         if (text) {
-          const haystack = [item.comment, item.payee?.label, item.referenceNumber]
-            .filter(Boolean)
-            .join(' ')
-            .toLowerCase()
+          const haystack = fold(
+            [item.comment, item.payee?.label, item.referenceNumber].filter(Boolean).join(' '),
+          )
           if (!haystack.includes(text)) return false
         }
         return true

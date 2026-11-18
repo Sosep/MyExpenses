@@ -16,7 +16,8 @@ import {
   IconSun,
 } from './Icons'
 
-export type View = 'dashboard' | 'transactions' | 'reports' | 'budgets' | 'files'
+export type { View } from '../navigation'
+import type { View } from '../navigation'
 
 interface ShellProps {
   view: View

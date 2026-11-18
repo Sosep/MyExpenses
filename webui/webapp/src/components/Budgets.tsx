@@ -18,6 +18,7 @@ interface BudgetsProps {
   accounts: Account[]
   defaultAccountId: number
   onDataChanged: (message: string) => void
+  onNavigate: (url: string) => void
 }
 
 function summaryPercent(spent: number, allocated: number): number {
@@ -28,6 +29,7 @@ export function Budgets({
   accounts,
   defaultAccountId,
   onDataChanged,
+  onNavigate,
 }: BudgetsProps) {
   const [editor, setEditor] = useState<
     { mode: 'create' } | { mode: 'edit'; entry: BudgetEntry } | null
@@ -312,6 +314,7 @@ export function Budgets({
             setEditor({ mode: 'edit', entry: detail })
           }}
           onClose={() => setDetail(null)}
+          onNavigate={onNavigate}
         />
       ) : null}
 

@@ -186,6 +186,13 @@ export function Transactions({
         })
       }
     }
+    if (filters.uncategorized) {
+      list.push({
+        key: 'uncategorized',
+        label: t`No category`,
+        clear: () => setFilters((previous) => ({ ...previous, uncategorized: false })),
+      })
+    }
     if (filters.text) {
       list.push({
         key: 'q',
@@ -297,6 +304,28 @@ export function Transactions({
     }
   }
 
+  // The detail panel is a history entry: the browser's back button closes it,
+  // and closing it from the UI pops that entry so the two never drift.
+  function openTransaction(id: number) {
+    window.history.pushState(
+      { ...(window.history.state ?? {}), transactionPanel: id },
+      '',
+      window.location.href,
+    )
+    setSelectedId(id)
+  }
+
+  function closeTransaction() {
+    if (window.history.state?.transactionPanel) window.history.back()
+    else setSelectedId(null)
+  }
+
+  useEffect(() => {
+    const onPopState = () => setSelectedId(null)
+    window.addEventListener('popstate', onPopState)
+    return () => window.removeEventListener('popstate', onPopState)
+  }, [])
+
   function toggleGroup(key: string) {
     setCollapsed((previous) => {
       const next = new Set(previous)
@@ -325,11 +354,11 @@ export function Transactions({
         data-id={transaction.id}
         tabIndex={0}
         aria-label={t`Open transaction: ${description(transaction)}`}
-        onClick={() => setSelectedId(transaction.id)}
+        onClick={() => openTransaction(transaction.id)}
         onKeyDown={(event) => {
           if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault()
-            setSelectedId(transaction.id)
+            openTransaction(transaction.id)
           }
         }}
       >
@@ -821,13 +850,13 @@ export function Transactions({
         <TransactionPanel
           id={selectedId}
           account={account}
-          onClose={() => setSelectedId(null)}
+          onClose={closeTransaction}
           onEdit={(id) => {
-            setSelectedId(null)
+            closeTransaction()
             onEditTransaction(id)
           }}
           onDeleted={() => {
-            setSelectedId(null)
+            closeTransaction()
             onDataChanged()
           }}
         />

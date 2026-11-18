@@ -21,9 +21,11 @@ const accounts: Account[] = [
   {
     id: 1,
     label: 'Everyday',
-    type: 'BANK',
+    type: '2',
+    typeName: 'BANK',
     currency: 'EUR',
     fractionDigits: 2,
+    openingBalanceMinor: 0,
     currentBalanceMinor: 421080,
     totalMinor: 421080,
     incomeMinor: 0,

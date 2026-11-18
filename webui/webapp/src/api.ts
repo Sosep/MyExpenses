@@ -212,6 +212,7 @@ export const getTransactions = (
   ] as const) {
     for (const value of values ?? []) params.append(key, String(value))
   }
+  if (filters.uncategorized) params.set('uncategorized', 'true')
   if (filters.text) params.set('q', filters.text)
   if (filters.amountMin != null) params.set('amountMin', String(filters.amountMin))
   if (filters.amountMax != null) params.set('amountMax', String(filters.amountMax))

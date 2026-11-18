@@ -132,7 +132,7 @@ function initialFormState(
 }
 
 function dateModeFor(account: Account | undefined, meta: Meta): DateMode {
-  const isCash = account?.type === 'CASH'
+  const isCash = account?.typeName === 'CASH'
   if (meta.preferences.valueDateEnabled && !isCash) return 'bookingValue'
   return meta.preferences.timeEnabled ? 'dateTime' : 'date'
 }

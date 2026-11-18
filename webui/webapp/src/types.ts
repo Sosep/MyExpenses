@@ -15,9 +15,13 @@ export interface Meta {
 export interface Account {
   id: number
   label: string
+  /** Id of the account type; matches `methods[].accountTypes`. */
   type: string
+  /** Name the app uses: CASH, BANK, CCARD, ASSET, LIABILITY. */
+  typeName: string
   currency: string
   fractionDigits: number
+  openingBalanceMinor: number
   currentBalanceMinor: number
   totalMinor: number
   incomeMinor: number
