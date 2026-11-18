@@ -126,7 +126,7 @@ export function BudgetEditor({
   const fractionDigits = account?.fractionDigits ?? 2
   const allocations = useAsync(
     () =>
-      budget && progress && budget.grouping !== 'NONE' && progress.periodYear !== null
+      budget && progress && budget.grouping !== 'NONE' && progress.periodYear != null
         ? getBudgetAllocations(budget.id, progress.periodYear, progress.periodSecond ?? undefined)
         : Promise.resolve([]),
     ['budget-allocations', budget?.id, progress?.periodYear, progress?.periodSecond],
@@ -183,7 +183,7 @@ export function BudgetEditor({
     if (Object.keys(nextErrors).length > 0 || amount === null) return
 
     let allocationPayload: { categoryId: number; amountMinor: number | null }[] | null = null
-    if (mode === 'edit' && budget && progress && progress.periodYear !== null) {
+    if (mode === 'edit' && budget && progress && progress.periodYear != null) {
       const rows = allocations.data ?? []
       allocationPayload = []
       for (const row of rows) {
@@ -203,7 +203,7 @@ export function BudgetEditor({
 
     let periodOverride: { categoryId: number; amountMinor: number | null; oneTime?: boolean } | null =
       null
-    if (mode === 'edit' && budget && progress && progress.periodYear !== null) {
+    if (mode === 'edit' && budget && progress && progress.periodYear != null) {
       if (customPeriod) {
         const parsedPeriod =
           periodAmount.trim() === '' ? null : parseAmountMinor(periodAmount, fractionDigits)
@@ -213,7 +213,7 @@ export function BudgetEditor({
           return
         }
         periodOverride = { categoryId: 0, amountMinor: parsedPeriod, oneTime: true }
-      } else if (progress.periodAllocationMinor !== null) {
+      } else if (progress.periodAllocationMinor != null) {
         periodOverride = { categoryId: 0, amountMinor: null }
       }
     }
@@ -257,8 +257,8 @@ export function BudgetEditor({
         if (
           allocationPayload &&
           progress &&
-          progress.periodYear !== null &&
-          progress.periodSecond !== null
+          progress.periodYear != null &&
+          progress.periodSecond != null
         ) {
           await updateBudgetAllocations(budget.id, {
             year: progress.periodYear,
@@ -418,7 +418,7 @@ export function BudgetEditor({
             {errors.amount ? <span className="field-error">{errors.amount}</span> : null}
           </label>
 
-          {mode === 'edit' && budget && progress && progress.periodYear !== null ? (
+          {mode === 'edit' && budget && progress && progress.periodYear != null ? (
             <div className="field">
               <label className="check-row">
                 <input

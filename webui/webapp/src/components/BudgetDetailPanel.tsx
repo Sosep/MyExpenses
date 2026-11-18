@@ -242,7 +242,7 @@ export function BudgetDetailPanel({ budget, progress, onEdit, onClose }: BudgetD
                 const scale =
                   historyMax > 0 ? Math.max(point.allocatedMinor, point.spentMinor) / historyMax : 0
                 const label =
-                  point.periodYear !== null && point.periodSecond !== null
+                  point.periodYear != null && point.periodSecond != null
                     ? `${formatMonthShort(point.periodYear, point.periodSecond)} ${String(
                         point.periodYear,
                       ).slice(2)}`
