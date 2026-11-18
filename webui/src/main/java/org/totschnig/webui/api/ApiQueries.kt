@@ -411,14 +411,22 @@ private fun Repository.queryGroupedBreakdown(
     val wholeTransactions = by != "category"
     val (baseSelection, args) =
         reportSelection(accountId, from, to, type, wholeTransactions, alias)
-    val selection = if (by == "category") "$baseSelection AND $KEY_CATID > 0" else baseSelection
+    // A split parent holds the total while its parts hold the categories, so the
+    // parent must stay out. Uncategorized rows (catid null or 0) must stay in:
+    // dropping them made the category report total disagree with the summary.
+    val selection = if (by == "category") {
+        "$baseSelection AND $KEY_CATID IS NOT $SPLIT_CATID"
+    } else {
+        baseSelection
+    }
     val projection: Array<String>
     val groupBy: String
     when (by) {
         "category" -> {
             projection = arrayOf(
                 "$KEY_CATID AS group_id",
-                "coalesce($KEY_PATH, 'Category ' || $KEY_CATID) AS group_label",
+                "CASE WHEN $KEY_CATID IS NULL OR $KEY_CATID <= 0 THEN 'No category' " +
+                    "ELSE coalesce($KEY_PATH, 'Category ' || $KEY_CATID) END AS group_label",
                 "sum($amountColumn) AS amount_minor",
                 "count(*) AS transaction_count"
             )
@@ -636,12 +644,15 @@ private fun transactionSelection(
         )
         repeat(3) { args.add(needle) }
     }
+    // The left side is an expression, so it has no column affinity: a text-bound
+    // parameter would compare by storage class (every integer is greater than
+    // any text), making >= always false and <= always true. Cast the value.
     filters.amountMin?.let {
-        clauses.add("abs($KEY_AMOUNT) >= ?")
+        clauses.add("abs($KEY_AMOUNT) >= CAST(? AS INTEGER)")
         args.add(it.toString())
     }
     filters.amountMax?.let {
-        clauses.add("abs($KEY_AMOUNT) <= ?")
+        clauses.add("abs($KEY_AMOUNT) <= CAST(? AS INTEGER)")
         args.add(it.toString())
     }
     if (filters.statuses.isNotEmpty()) {
