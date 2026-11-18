@@ -33,6 +33,9 @@ módulo `:webui`). Interfaz y sistema visual: [`DESIGN.md`](./DESIGN.md).
   lectura cuando aporta).
 - Errores HTTP: `400` petición malformada, `401` no autenticado, `404` no existe,
   `409` conflicto de estado, `422` validación, `500` error interno.
+- **Los campos nulos se omiten** del JSON (`parentId`, `start`, `end`,
+  `periodAllocationMinor`, `criteria`…): un cliente debe tratar "ausente" y
+  `null` igual, y no asumir que la clave existe.
 - Cuerpo de error:
 
 ```json

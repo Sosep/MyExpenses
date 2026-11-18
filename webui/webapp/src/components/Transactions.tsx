@@ -23,6 +23,7 @@ import {
   statusLabel,
 } from '../format'
 import { t } from '@lingui/core/macro'
+import { useHistoryPanel } from '../navigation'
 import { useAsync } from '../hooks'
 import { MultiPicker } from './MultiPicker'
 import { NO_FILTERS, filtersFromUrl, searchWithFilters } from '../filters'
@@ -140,7 +141,7 @@ export function Transactions({
       getMethods(),
     ])
     return { categories, payees, tags, methods }
-  }, ['transaction-references'])
+  }, ['references'])
   const paths = useMemo(
     () => categoryPathMap(references.data?.categories ?? []),
     [references.data?.categories],
@@ -304,27 +305,10 @@ export function Transactions({
     }
   }
 
-  // The detail panel is a history entry: the browser's back button closes it,
-  // and closing it from the UI pops that entry so the two never drift.
-  function openTransaction(id: number) {
-    window.history.pushState(
-      { ...(window.history.state ?? {}), transactionPanel: id },
-      '',
-      window.location.href,
-    )
-    setSelectedId(id)
-  }
-
-  function closeTransaction() {
-    if (window.history.state?.transactionPanel) window.history.back()
-    else setSelectedId(null)
-  }
-
-  useEffect(() => {
-    const onPopState = () => setSelectedId(null)
-    window.addEventListener('popstate', onPopState)
-    return () => window.removeEventListener('popstate', onPopState)
-  }, [])
+  // The detail panel is a history entry: back closes it and closing it from the
+  // UI pops that entry.
+  const closeTransaction = useHistoryPanel(selectedId !== null, () => setSelectedId(null))
+  const openTransaction = (id: number) => setSelectedId(id)
 
   function toggleGroup(key: string) {
     setCollapsed((previous) => {

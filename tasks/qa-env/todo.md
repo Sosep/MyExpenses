@@ -51,8 +51,8 @@ existe; se resuelve con [`SPEC-cuentas-escritura.md`](../SPEC-cuentas-escritura.
 - [x] `versionName` 4.1.5 / versionCode 893.
 - [x] Vistas y detalle de transacción con historial (`SPEC-navegacion-historial`).
 - [x] Enlace del presupuesto a Transacciones (`SPEC-presupuesto-movimientos`, opción B).
-- [ ] Panel de alta de cuenta en la SPA (la API ya está).
-- [ ] Resto de paneles en la URL: detalle de presupuesto, editores, drill-down de
-      informes y confirmaciones; hoy se abren desde estado.
-- [ ] Unificar la caché de maestros: Transacciones usa `['transaction-references']`
-      y presupuestos `['references']`; hoy se piden dos veces.
+- [x] Panel de alta de cuenta en la SPA (botón `+` del topbar).
+- [x] Editor de transacción y drill-down de informes en el historial.
+- [ ] Detalle y editor de presupuesto en el historial: siguen abriéndose desde
+      estado.
+- [x] Caché de maestros unificada en la clave `['references']`.

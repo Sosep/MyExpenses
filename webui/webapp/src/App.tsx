@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { t } from '@lingui/core/macro'
-import { readView, searchOf, viewUrl } from './navigation'
+import { readView, searchOf, useHistoryPanel, viewUrl } from './navigation'
 import type { Locale } from './i18n'
 import { activateLocale, initialLocale, LOCALES } from './i18n'
 import type { Account, Meta } from './types'
 import { ApiError, describeError, getAccounts, getMeta, login, logout, UNAUTHORIZED_EVENT } from './api'
+import { AccountEditor } from './components/AccountEditor'
 import { Budgets } from './components/Budgets'
 import { Dashboard } from './components/Dashboard'
 import { Files } from './components/Files'
@@ -43,6 +44,7 @@ export default function App({ initialLocale: initial }: { initialLocale: Locale 
   const [view, setViewState] = useState<View>(() => readView(window.location.search))
   const [theme, setTheme] = useState<'light' | 'dark'>(initialTheme)
   const [editor, setEditor] = useState<EditorState | null>(null)
+  const [accountEditor, setAccountEditor] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
   const [locale, setLocale] = useState<Locale>(() => initial ?? initialLocale())
   const wasReady = useRef(false)
@@ -75,6 +77,9 @@ export default function App({ initialLocale: initial }: { initialLocale: Locale 
   useEffect(() => {
     wasReady.current = status === 'ready'
   }, [status])
+
+  // Called before the early returns so the hook order never changes.
+  const closeEditor = useHistoryPanel(editor !== null, () => setEditor(null))
 
   useEffect(() => {
     const onUnauthorized = () => {
@@ -193,6 +198,7 @@ export default function App({ initialLocale: initial }: { initialLocale: Locale 
         accounts={accounts}
         accountId={accountId}
         onAccount={setAccountId}
+        onNewAccount={() => setAccountEditor(true)}
         theme={theme}
         onTheme={() => setTheme((current) => (current === 'dark' ? 'light' : 'dark'))}
         locale={locale}
@@ -241,6 +247,20 @@ export default function App({ initialLocale: initial }: { initialLocale: Locale 
           </div>
         )}
       </Shell>
+      {accountEditor ? (
+        <AccountEditor
+          currencies={[
+            ...new Set([...(meta ? [meta.homeCurrency] : []), ...accounts.map((item) => item.currency)]),
+          ]}
+          defaultCurrency={account?.currency ?? meta?.homeCurrency ?? 'EUR'}
+          onClose={() => setAccountEditor(false)}
+          onSaved={(created) => {
+            setAccountEditor(false)
+            setAccountId(created.id)
+            refreshData(t`Account created.`)
+          }}
+        />
+      ) : null}
       {(view === 'dashboard' || view === 'transactions') && accounts.length > 0 ? (
         <button
           type="button"
@@ -258,9 +278,9 @@ export default function App({ initialLocale: initial }: { initialLocale: Locale 
           accounts={accounts}
           defaultAccountId={account?.id ?? accountId ?? accounts[0]?.id ?? 0}
           meta={meta}
-          onClose={() => setEditor(null)}
+          onClose={closeEditor}
           onSaved={() => {
-            setEditor(null)
+            closeEditor()
             refreshData(t`Transaction saved.`)
           }}
         />

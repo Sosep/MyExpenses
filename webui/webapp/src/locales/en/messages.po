@@ -110,6 +110,22 @@ msgstr "Account and period type are fixed after creation. Rollover is available 
 #~ msgid "Account and period type are fixed after creation. Rollover stays in the Android app."
 #~ msgstr "Account and period type are fixed after creation. Rollover stays in the Android app."
 
+#: src/App.tsx
+msgid "Account created."
+msgstr "Account created."
+
+#: src/components/AccountEditor.tsx
+msgid "Account currency"
+msgstr "Account currency"
+
+#: src/components/AccountEditor.tsx
+msgid "Account name"
+msgstr "Account name"
+
+#: src/components/AccountEditor.tsx
+msgid "Account type"
+msgstr "Account type"
+
 #: src/components/Files.tsx
 msgid "Actions"
 msgstr "Actions"
@@ -254,6 +270,7 @@ msgstr "Budgets with different currencies or periods are shown separately."
 msgid "Can't reach the phone. Check that My Expenses is open and on the same network."
 msgstr "Can't reach the phone. Check that My Expenses is open and on the same network."
 
+#: src/components/AccountEditor.tsx
 #: src/components/BudgetEditor.tsx
 #: src/components/TransactionEditor.tsx
 #: src/components/TransactionPanel.tsx
@@ -306,6 +323,7 @@ msgstr "Close"
 msgid "Close details"
 msgstr "Close details"
 
+#: src/components/AccountEditor.tsx
 #: src/components/BudgetEditor.tsx
 #: src/components/TransactionEditor.tsx
 msgid "Close editor"
@@ -318,6 +336,10 @@ msgstr "Collapse period"
 #: src/App.tsx
 msgid "Connecting to My Expenses…"
 msgstr "Connecting to My Expenses…"
+
+#: src/components/AccountEditor.tsx
+msgid "Could not create the account."
+msgstr "Could not create the account."
 
 #: src/components/BudgetEditor.tsx
 msgid "Could not delete the budget."
@@ -396,6 +418,10 @@ msgstr "Could not save the transfer."
 msgid "Could not sign in"
 msgstr "Could not sign in"
 
+#: src/components/AccountEditor.tsx
+msgid "Create"
+msgstr "Create"
+
 #: src/components/Files.tsx
 msgid "Create a backup or export in the Android app. The file will show up here and can be downloaded to this computer."
 msgstr "Create a backup or export in the Android app. The file will show up here and can be downloaded to this computer."
@@ -407,6 +433,10 @@ msgstr "Create a budget in the Android app. Its progress for the current period 
 #: src/App.tsx
 msgid "Create an account in the Android app and reload this page."
 msgstr "Create an account in the Android app and reload this page."
+
+#: src/components/AccountEditor.tsx
+msgid "Currency"
+msgstr "Currency"
 
 #: src/budgetUi.ts
 #: src/components/BudgetEditor.tsx
@@ -551,6 +581,7 @@ msgstr "Enter a valid amount for this period."
 msgid "Enter an amount greater than zero."
 msgstr "Enter an amount greater than zero."
 
+#: src/components/AccountEditor.tsx
 #: src/components/BudgetEditor.tsx
 msgid "Enter an amount."
 msgstr "Enter an amount."
@@ -566,6 +597,10 @@ msgstr "Enter the total"
 #: src/components/TransactionEditor.tsx
 msgid "Enter the total amount."
 msgstr "Enter the total amount."
+
+#: src/components/AccountEditor.tsx
+msgid "Exclude from totals"
+msgstr "Exclude from totals"
 
 #: src/components/Transactions.tsx
 msgid "Expand period"
@@ -788,6 +823,7 @@ msgstr "Movements of {label}"
 msgid "Must be on or after the start."
 msgstr "Must be on or after the start."
 
+#: src/components/AccountEditor.tsx
 #: src/components/Files.tsx
 msgid "Name"
 msgstr "Name"
@@ -800,10 +836,16 @@ msgstr "Net"
 msgid "Net worth"
 msgstr "Net worth"
 
+#: src/components/AccountEditor.tsx
 #: src/components/BudgetEditor.tsx
 #: src/components/TransactionEditor.tsx
 msgid "New"
 msgstr "New"
+
+#: src/components/AccountEditor.tsx
+#: src/components/Shell.tsx
+msgid "New account"
+msgstr "New account"
 
 #: src/components/BudgetEditor.tsx
 #: src/components/Budgets.tsx
@@ -917,6 +959,10 @@ msgstr "Only transfers"
 #: src/components/Transactions.tsx
 msgid "Open transaction: {0}"
 msgstr "Open transaction: {0}"
+
+#: src/components/AccountEditor.tsx
+msgid "Opening balance"
+msgstr "Opening balance"
 
 #: src/components/BudgetEditor.tsx
 msgid "Other periods keep using the default amount."
@@ -1061,6 +1107,7 @@ msgstr "Remove part"
 msgid "Reports"
 msgstr "Reports"
 
+#: src/components/AccountEditor.tsx
 #: src/components/BudgetEditor.tsx
 #: src/components/TransactionEditor.tsx
 msgid "Required."
@@ -1099,6 +1146,7 @@ msgstr "Saved"
 msgid "saved this month"
 msgstr "saved this month"
 
+#: src/components/AccountEditor.tsx
 #: src/components/BudgetEditor.tsx
 #: src/components/TransactionEditor.tsx
 msgid "Saving…"
@@ -1333,6 +1381,7 @@ msgstr "Transfers"
 msgid "Try again"
 msgstr "Try again"
 
+#: src/components/AccountEditor.tsx
 #: src/components/TransactionEditor.tsx
 #: src/components/Transactions.tsx
 msgid "Type"

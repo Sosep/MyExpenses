@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { t } from '@lingui/core/macro'
+import { useHistoryPanel } from '../navigation'
 import type { Account, BreakdownItem } from '../types'
 import { describeError, getBreakdown, getReportSummary } from '../api'
 import {
@@ -67,6 +68,7 @@ export function Reports({ account, accounts }: ReportsProps) {
   const [rangeMode, setRangeMode] = useState<RangeMode>('month')
   const [allAccounts, setAllAccounts] = useState(false)
   const [selected, setSelected] = useState<BreakdownItem | null>(null)
+  const closeSelected = useHistoryPanel(selected !== null, () => setSelected(null))
   const reportAccountId = allAccounts ? 0 : account.id
   const year = Number(month.slice(0, 4))
   const range =
@@ -321,7 +323,7 @@ export function Reports({ account, accounts }: ReportsProps) {
           from={range.from}
           to={range.to}
           item={selected}
-          onClose={() => setSelected(null)}
+          onClose={closeSelected}
         />
       ) : null}
     </>

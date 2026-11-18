@@ -213,9 +213,10 @@ Update the docs while the change is fresh; do not defer them to a later commit.
 - Device QA remains for the new slices (cookie, PWA, allocations/rollover,
   reports drill-down and all-account aggregation). The mock can be checked at
   390×844 to catch responsive regressions.
-- Accounts can be created from the API but not yet from the SPA, and only the
-  transaction detail is a history entry: the rest of the panels still open from
-  state, so back leaves the screen instead of closing them.
+- A panel in a URL entry is generic (`useHistoryPanel`): the transaction
+  detail, the transaction editor and the report drill-down use it. The budget
+  detail/editor still open from state, so back leaves the screen instead of
+  closing them.
 - Budget detail and its filter need device checks that the mock cannot fake:
   January and a 12-month history (the two contract fixes), a split inside a
   budget counted once, and a budget created from the web with two categories and

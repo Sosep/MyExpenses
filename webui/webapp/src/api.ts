@@ -3,6 +3,7 @@ import type {
   Account,
   Breakdown,
   Budget,
+  AccountTypeEntry,
   BudgetAllocation,
   BudgetBreakdown,
   BudgetHistoryPoint,
@@ -157,6 +158,20 @@ export function logout(): void {
 }
 
 export const getMeta = (signal?: AbortSignal) => request<Meta>('/meta', { signal })
+
+export const getAccountTypes = (signal?: AbortSignal) =>
+  request<AccountTypeEntry[]>('/account-types', { signal })
+
+export interface AccountWrite {
+  label: string
+  type: string
+  currency: string
+  openingBalanceMinor?: number
+  excludeFromTotals?: boolean
+}
+
+export const createAccount = (payload: AccountWrite) =>
+  request<Account>('/accounts', { method: 'POST', body: payload })
 
 export const getAccounts = (signal?: AbortSignal) => request<Account[]>('/accounts', { signal })
 

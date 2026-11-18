@@ -110,6 +110,22 @@ msgstr "La cuenta y el tipo de periodo no se pueden cambiar después de crear el
 #~ msgid "Account and period type are fixed after creation. Rollover stays in the Android app."
 #~ msgstr "La cuenta y el tipo de periodo no se pueden cambiar después de crear el presupuesto. El rollover sigue en la app Android."
 
+#: src/App.tsx
+msgid "Account created."
+msgstr "Cuenta creada."
+
+#: src/components/AccountEditor.tsx
+msgid "Account currency"
+msgstr "Divisa de la cuenta"
+
+#: src/components/AccountEditor.tsx
+msgid "Account name"
+msgstr "Nombre de la cuenta"
+
+#: src/components/AccountEditor.tsx
+msgid "Account type"
+msgstr "Tipo de cuenta"
+
 #: src/components/Files.tsx
 msgid "Actions"
 msgstr "Acciones"
@@ -254,6 +270,7 @@ msgstr "Los presupuestos con divisas o periodos distintos se muestran por separa
 msgid "Can't reach the phone. Check that My Expenses is open and on the same network."
 msgstr "No se puede acceder al móvil. Comprueba que My Expenses está abierto y en la misma red."
 
+#: src/components/AccountEditor.tsx
 #: src/components/BudgetEditor.tsx
 #: src/components/TransactionEditor.tsx
 #: src/components/TransactionPanel.tsx
@@ -306,6 +323,7 @@ msgstr "Cerrar"
 msgid "Close details"
 msgstr "Cerrar detalles"
 
+#: src/components/AccountEditor.tsx
 #: src/components/BudgetEditor.tsx
 #: src/components/TransactionEditor.tsx
 msgid "Close editor"
@@ -318,6 +336,10 @@ msgstr "Plegar periodo"
 #: src/App.tsx
 msgid "Connecting to My Expenses…"
 msgstr "Conectando con My Expenses…"
+
+#: src/components/AccountEditor.tsx
+msgid "Could not create the account."
+msgstr "No se pudo crear la cuenta."
 
 #: src/components/BudgetEditor.tsx
 msgid "Could not delete the budget."
@@ -396,6 +418,10 @@ msgstr "No se pudo guardar la transferencia."
 msgid "Could not sign in"
 msgstr "No se pudo iniciar sesión"
 
+#: src/components/AccountEditor.tsx
+msgid "Create"
+msgstr "Crear"
+
 #: src/components/Files.tsx
 msgid "Create a backup or export in the Android app. The file will show up here and can be downloaded to this computer."
 msgstr "Crea una copia de seguridad o exportación en la app Android. El fichero aparecerá aquí y podrás descargarlo a este ordenador."
@@ -407,6 +433,10 @@ msgstr "Crea un presupuesto en la app Android. Su progreso del periodo actual ap
 #: src/App.tsx
 msgid "Create an account in the Android app and reload this page."
 msgstr "Crea una cuenta en la app Android y recarga esta página."
+
+#: src/components/AccountEditor.tsx
+msgid "Currency"
+msgstr "Divisa"
 
 #: src/budgetUi.ts
 #: src/components/BudgetEditor.tsx
@@ -551,6 +581,7 @@ msgstr "Introduce un importe válido para este periodo."
 msgid "Enter an amount greater than zero."
 msgstr "Introduce un importe mayor que cero."
 
+#: src/components/AccountEditor.tsx
 #: src/components/BudgetEditor.tsx
 msgid "Enter an amount."
 msgstr "Introduce un importe."
@@ -566,6 +597,10 @@ msgstr "Introduce el total"
 #: src/components/TransactionEditor.tsx
 msgid "Enter the total amount."
 msgstr "Introduce el importe total."
+
+#: src/components/AccountEditor.tsx
+msgid "Exclude from totals"
+msgstr "Excluir de los totales"
 
 #: src/components/Transactions.tsx
 msgid "Expand period"
@@ -788,6 +823,7 @@ msgstr "Movimientos de {label}"
 msgid "Must be on or after the start."
 msgstr "Debe ser igual o posterior al inicio."
 
+#: src/components/AccountEditor.tsx
 #: src/components/Files.tsx
 msgid "Name"
 msgstr "Nombre"
@@ -800,10 +836,16 @@ msgstr "Neto"
 msgid "Net worth"
 msgstr "Patrimonio"
 
+#: src/components/AccountEditor.tsx
 #: src/components/BudgetEditor.tsx
 #: src/components/TransactionEditor.tsx
 msgid "New"
 msgstr "Nuevo"
+
+#: src/components/AccountEditor.tsx
+#: src/components/Shell.tsx
+msgid "New account"
+msgstr "Nueva cuenta"
 
 #: src/components/BudgetEditor.tsx
 #: src/components/Budgets.tsx
@@ -917,6 +959,10 @@ msgstr "Solo transferencias"
 #: src/components/Transactions.tsx
 msgid "Open transaction: {0}"
 msgstr "Abrir transacción: {0}"
+
+#: src/components/AccountEditor.tsx
+msgid "Opening balance"
+msgstr "Saldo de apertura"
 
 #: src/components/BudgetEditor.tsx
 msgid "Other periods keep using the default amount."
@@ -1061,6 +1107,7 @@ msgstr "Eliminar parte"
 msgid "Reports"
 msgstr "Informes"
 
+#: src/components/AccountEditor.tsx
 #: src/components/BudgetEditor.tsx
 #: src/components/TransactionEditor.tsx
 msgid "Required."
@@ -1099,6 +1146,7 @@ msgstr "Ahorrado"
 msgid "saved this month"
 msgstr "ahorrado este mes"
 
+#: src/components/AccountEditor.tsx
 #: src/components/BudgetEditor.tsx
 #: src/components/TransactionEditor.tsx
 msgid "Saving…"
@@ -1333,6 +1381,7 @@ msgstr "Transferencias"
 msgid "Try again"
 msgstr "Reintentar"
 
+#: src/components/AccountEditor.tsx
 #: src/components/TransactionEditor.tsx
 #: src/components/Transactions.tsx
 msgid "Type"

@@ -25,6 +25,7 @@ interface ShellProps {
   accounts: Account[]
   accountId: number | null
   onAccount: (id: number) => void
+  onNewAccount: () => void
   theme: 'light' | 'dark'
   onTheme: () => void
   locale: Locale
@@ -41,6 +42,7 @@ export function Shell({
   accounts,
   accountId,
   onAccount,
+  onNewAccount,
   theme,
   onTheme,
   locale,
@@ -85,6 +87,17 @@ export function Shell({
                 ))}
               </select>
             </label>
+          ) : null}
+          {view === 'dashboard' || view === 'transactions' || view === 'reports' ? (
+            <button
+              type="button"
+              className="icon-btn"
+              onClick={onNewAccount}
+              aria-label={t`New account`}
+              title={t`New account`}
+            >
+              +
+            </button>
           ) : null}
           <div className="top-inline">
             <label className="account-picker locale-picker">

@@ -65,6 +65,7 @@ describe('accessibility', () => {
         accounts={accounts}
         accountId={1}
         onAccount={() => {}}
+            onNewAccount={() => {}}
         theme="light"
         onTheme={() => {}}
         locale="es"

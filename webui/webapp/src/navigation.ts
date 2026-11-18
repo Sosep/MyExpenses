@@ -1,3 +1,5 @@
+import { useCallback, useEffect, useRef } from 'react'
+
 /**
  * The view lives in the URL (`?view=transactions`) so the browser's back button
  * walks the app instead of leaving it, deep links open a screen directly and a
@@ -25,4 +27,27 @@ export function viewUrl(search: string, view: View): string {
 /** Absolute URL the router can push, from a `/app/?…` string built elsewhere. */
 export function searchOf(url: string): string {
   return new URL(url, window.location.origin).search
+}
+
+/**
+ * Keeps a panel and the history in sync: opening pushes an entry, the browser's
+ * back closes the panel, and closing it from the UI pops that entry so the two
+ * never drift. Returns the close handler the panel must use.
+ */
+export function useHistoryPanel(open: boolean, close: () => void): () => void {
+  const closeRef = useRef(close)
+  closeRef.current = close
+
+  useEffect(() => {
+    if (!open) return
+    window.history.pushState({ panel: true }, '', window.location.href)
+    const onPopState = () => closeRef.current()
+    window.addEventListener('popstate', onPopState)
+    return () => window.removeEventListener('popstate', onPopState)
+  }, [open])
+
+  return useCallback(() => {
+    if (window.history.state?.panel) window.history.back()
+    else closeRef.current()
+  }, [])
 }

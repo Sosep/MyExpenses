@@ -12,6 +12,13 @@ export interface Meta {
   }
 }
 
+export interface AccountTypeEntry {
+  id: number
+  name: string
+  isAsset: boolean
+  supportsReconciliation: boolean
+}
+
 export interface Account {
   id: number
   label: string
