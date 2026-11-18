@@ -590,7 +590,6 @@ export function Transactions({
               }))
             }
           />
-          <span className="hint">{t`Includes subcategories`}</span>
         </label>
         <label className="field">
           <span className="field-label">{t`Payee`}</span>

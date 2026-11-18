@@ -717,7 +717,6 @@ msgid "In this month"
 msgstr "In this month"
 
 #: src/components/BudgetFilterFields.tsx
-#: src/components/Transactions.tsx
 msgid "Includes subcategories"
 msgstr "Includes subcategories"
 
