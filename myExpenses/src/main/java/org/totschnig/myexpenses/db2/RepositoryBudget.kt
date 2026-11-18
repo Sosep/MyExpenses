@@ -34,6 +34,7 @@ import org.totschnig.myexpenses.provider.DatabaseConstants.thisYearOfWeekStart
 import org.totschnig.myexpenses.provider.DatabaseConstants.week
 import org.totschnig.myexpenses.provider.DatabaseConstants.yearOfMonthStart
 import org.totschnig.myexpenses.provider.DatabaseConstants.yearOfWeekStart
+import org.totschnig.myexpenses.provider.SplitStrategy
 import org.totschnig.myexpenses.provider.TransactionProvider
 import org.totschnig.myexpenses.provider.TransactionProvider.BUDGETS_URI
 import org.totschnig.myexpenses.provider.TransactionProvider.BUDGET_ALLOCATIONS_URI
@@ -81,6 +82,22 @@ fun budgetAllocationQueryUri(
     second: String?,
 ): Uri = BaseTransactionProvider.budgetAllocationQueryUri(budgetId, year, second)
 
+/**
+ * A budget's filter lives in the app preferences, not in the database. The web
+ * API reads it through this helper so both surfaces share one source and one
+ * serialization format.
+ */
+suspend fun Repository.budgetCriteria(budgetId: Long): Criterion? =
+    FilterPersistence(dataStore, prefNameForCriteria(budgetId)).getValue()
+
+/**
+ * Stores the budget filter in the same preference the app reads. `null` removes
+ * it, which leaves the budget covering the whole account.
+ */
+suspend fun Repository.saveBudgetCriteria(budgetId: Long, criterion: Criterion?) {
+    FilterPersistence(dataStore, prefNameForCriteria(budgetId)).persist(criterion)
+}
+
 suspend fun Repository.sumLoaderForBudget(
     budget: Budget,
     aggregateNeutral: Boolean,
@@ -93,6 +110,15 @@ suspend fun Repository.sumLoaderForBudget(
     sumBuilder.appendQueryParameter(
         TransactionProvider.QUERY_PARAMETER_AGGREGATE_NEUTRAL,
         aggregateNeutral.toString()
+    )
+    // A budget is defined over categories, and the category of a split lives on
+    // the parts. With the "split as total" preference the query aggregates the
+    // parent rows, which carry no category: the criterion cannot match them and
+    // the whole split silently disappears from the budget. Budgets therefore
+    // always aggregate parts, whatever the global preference says.
+    sumBuilder.appendQueryParameter(
+        TransactionProvider.QUERY_PARAMETER_SPLIT_STRATEGY,
+        SplitStrategy.PARTS.name
     )
     val filterPersistence =
         FilterPersistence(dataStore, prefNameForCriteria(budget.id))

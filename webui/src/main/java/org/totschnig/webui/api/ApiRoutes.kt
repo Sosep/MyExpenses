@@ -172,16 +172,19 @@ class ApiRoutes(
             }
             get("/budgets/{id}/allocations") {
                 val id = call.requirePathId()
-                val year = call.intParamOrNull("year")
-                val second = call.intParamOrNull("second")
-                if ((year == null) != (second == null)) {
-                    throw ApiException(
-                        HttpStatusCode.BadRequest,
-                        "invalid_period",
-                        "year and second must be sent together"
+                val period = call.budgetPeriod(dataSource, id)
+                call.respond(dataSource.budgetAllocations(id, period?.first, period?.second))
+            }
+            get("/budgets/{id}/breakdown") {
+                val id = call.requirePathId()
+                val period = call.budgetPeriod(dataSource, id)
+                val breakdown = dataSource.budgetBreakdown(id, period?.first, period?.second)
+                    ?: throw ApiException(
+                        HttpStatusCode.NotFound,
+                        "budget_not_found",
+                        "Budget not found"
                     )
-                }
-                call.respond(dataSource.budgetAllocations(id, year, second))
+                call.respond(breakdown)
             }
             put("/budgets/{id}/allocations") {
                 val id = call.requirePathId()
@@ -194,25 +197,8 @@ class ApiRoutes(
             }
             get("/budgets/{id}") {
                 val id = call.requirePathId()
-                val yearRaw = call.parameters["year"]
-                val secondRaw = call.parameters["second"]
-                if ((yearRaw == null) != (secondRaw == null)) {
-                    throw ApiException(
-                        HttpStatusCode.BadRequest,
-                        "invalid_period",
-                        "year and second must be sent together"
-                    )
-                }
-                val year = call.intParamOrNull("year")
-                val second = call.intParamOrNull("second")
-                if ((year != null && year < 1) || (second != null && second < 1)) {
-                    throw ApiException(
-                        HttpStatusCode.BadRequest,
-                        "invalid_period",
-                        "year and second must be positive"
-                    )
-                }
-                val progress = dataSource.budgetProgress(id, year, second)
+                val period = call.budgetPeriod(dataSource, id)
+                val progress = dataSource.budgetProgress(id, period?.first, period?.second)
                     ?: throw ApiException(
                         HttpStatusCode.NotFound,
                         "budget_not_found",
@@ -474,6 +460,58 @@ private fun ApplicationCall.intParam(name: String, default: Int): Int {
             "invalid_$name",
             "Query parameter '$name' must be an integer"
         )
+}
+
+/**
+ * Reads `year`/`second` for a budget and validates that the second is a real
+ * index for its grouping. `MONTH` is 0-based (January = 0); `WEEK` and `DAY`
+ * follow the app's `Grouping.minValue` and are 1-based. Without this check an
+ * out-of-range index reached the provider and ended as a 500.
+ *
+ * The grouping comes from the budget list, so the route answers 400 before the
+ * datasource tries to build the period. An unknown budget skips the check and
+ * falls through to the usual 404.
+ */
+private suspend fun ApplicationCall.budgetPeriod(
+    dataSource: WebApiDataSource,
+    budgetId: Long
+): Pair<Int, Int>? {
+    val yearRaw = parameters["year"]
+    val secondRaw = parameters["second"]
+    if ((yearRaw == null) != (secondRaw == null)) {
+        throw ApiException(
+            HttpStatusCode.BadRequest,
+            "invalid_period",
+            "year and second must be sent together"
+        )
+    }
+    val year = intParamOrNull("year") ?: return null
+    val second = intParamOrNull("second") ?: return null
+    if (year < 1) {
+        throw ApiException(
+            HttpStatusCode.BadRequest,
+            "invalid_period",
+            "year must be positive"
+        )
+    }
+    val grouping = dataSource.budgets().firstOrNull { it.id == budgetId }?.grouping
+    if (grouping != null) {
+        val range = when (grouping) {
+            "MONTH" -> 0..11
+            "WEEK" -> 1..53
+            "DAY" -> 1..366
+            "YEAR" -> 0..11
+            else -> null
+        }
+        if (range == null || second !in range) {
+            throw ApiException(
+                HttpStatusCode.BadRequest,
+                "invalid_period",
+                "second is out of range for a $grouping budget"
+            )
+        }
+    }
+    return year to second
 }
 
 private fun ApplicationCall.dateParam(name: String): LocalDate? {

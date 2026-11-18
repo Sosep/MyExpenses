@@ -62,6 +62,7 @@ import org.totschnig.myexpenses.provider.TABLE_TRANSACTIONS_TAGS
 import org.totschnig.myexpenses.provider.TransactionProvider
 import org.totschnig.myexpenses.provider.TransactionProvider.QUERY_PARAMETER_GROUP_BY
 import org.totschnig.myexpenses.provider.VIEW_EXTENDED
+import org.totschnig.myexpenses.provider.filter.Criterion
 import org.totschnig.myexpenses.provider.getBoolean
 import org.totschnig.myexpenses.provider.getInt
 import org.totschnig.myexpenses.provider.getIntIfExists
@@ -181,7 +182,8 @@ internal fun Repository.queryBudgetAllocations(
     year: Int?,
     second: Int?,
     from: LocalDate,
-    to: LocalDate
+    to: LocalDate,
+    criteria: Criterion? = null
 ): List<BudgetAllocationDto> {
     val builder = TransactionProvider.CATEGORIES_URI.buildUpon()
         .appendQueryParameter(TransactionProvider.QUERY_PARAMETER_HIERARCHICAL, "1")
@@ -202,8 +204,17 @@ internal fun Repository.queryBudgetAllocations(
         KEY_BUDGET_ROLLOVER_PREVIOUS,
         KEY_BUDGET_ROLLOVER_NEXT
     )
-    val (selection, args) = dateSelection(from, to)
-    return contentResolver.query(uri, projection, selection, args, null)
+    val (dateClause, dateArgs) = dateSelection(from, to)
+    // The budget criteria are applied to the transaction CTE, exactly as
+    // `sumLoaderForBudget` does, so the per-category spend belongs to the
+    // budget and not to the whole account. `getSelectionArgs(true)` mirrors the
+    // duplicated placeholders of `getSelectionForParts`.
+    val clauses = listOfNotNull(dateClause, criteria?.getSelectionForParts())
+    val args = listOfNotNull(
+        dateArgs?.toList(),
+        criteria?.getSelectionArgs(true)?.toList()
+    ).flatten().toTypedArray()
+    return contentResolver.query(uri, projection, clauses.joinToString(" AND "), args, null)
         ?.useAndMapToList { cursor ->
             BudgetAllocationDto(
                 categoryId = cursor.getLong(KEY_ROWID),

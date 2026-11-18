@@ -227,7 +227,24 @@ data class BudgetDto(
     val accountName: String?,
     val isDefault: Boolean,
     val uuid: String?,
-    val allocationMinor: Long?
+    val allocationMinor: Long?,
+    val criteria: BudgetCriteriaDto? = null,
+    /**
+     * True when the filter stored by the app cannot be expressed with
+     * [BudgetCriteriaDto] (composite criteria, or a dimension the web does not
+     * offer). Clients must not save over it.
+     */
+    val criteriaUnsupported: Boolean = false
+)
+
+/** Categories, payees, methods, tags and states a budget is limited to. */
+@Keep
+data class BudgetCriteriaDto(
+    val categoryIds: List<Long> = emptyList(),
+    val payeeIds: List<Long> = emptyList(),
+    val methodIds: List<Long> = emptyList(),
+    val tagIds: List<Long> = emptyList(),
+    val statuses: List<String> = emptyList()
 )
 
 @Keep
@@ -252,6 +269,36 @@ data class BudgetProgressDto(
 )
 
 @Keep
+data class BudgetBreakdownDto(
+    val budgetId: Long,
+    val accountId: Long,
+    val title: String,
+    val currency: String,
+    val fractionDigits: Int,
+    val grouping: String,
+    val periodYear: Int?,
+    val periodSecond: Int?,
+    val periodDescription: String,
+    val periodStart: String,
+    val periodEnd: String,
+    val totalAllocatedMinor: Long,
+    val totalSpentMinor: Long,
+    val categories: List<BudgetBreakdownCategoryDto>
+)
+
+@Keep
+data class BudgetBreakdownCategoryDto(
+    val categoryId: Long,
+    val label: String?,
+    val level: Int,
+    val parentId: Long?,
+    val allocatedMinor: Long,
+    val spentMinor: Long,
+    val rolloverPreviousMinor: Long,
+    val rolloverNextMinor: Long
+)
+
+@Keep
 data class BudgetWriteDto(
     val accountId: Long? = null,
     val title: String? = null,
@@ -260,7 +307,11 @@ data class BudgetWriteDto(
     val start: String? = null,
     val end: String? = null,
     val isDefault: Boolean? = null,
-    val amountMinor: Long? = null
+    val amountMinor: Long? = null,
+    /**
+     * Omitted: the stored filter is kept. An empty object clears it.
+     */
+    val criteria: BudgetCriteriaDto? = null
 )
 
 @Keep

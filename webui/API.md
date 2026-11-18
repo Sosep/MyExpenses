@@ -355,6 +355,7 @@ separado; el editor de transferencias no usa `payee` para elegir la cuenta.
 |---|---|---|
 | GET | `/budgets` | Lista con configuración |
 | GET | `/budgets/{id}/history?months=12` | Serie de asignado/gastado por periodo |
+| GET | `/budgets/{id}/breakdown?year&second` | Reparto del gasto por categoría del presupuesto |
 | GET | `/budgets/{id}?year&second` | Progreso del periodo (gastado, asignado, restante) |
 | POST/PUT/DELETE | `/budgets[/{id}]` | CRUD |
 
@@ -374,9 +375,33 @@ separado; el editor de transferencias no usa `payee` para elegir la cuenta.
   "end": null,
   "accountName": "Everyday",
   "isDefault": false,
-  "uuid": "…"
+  "uuid": "…",
+  "criteria": {
+    "categoryIds": [2, 5],
+    "payeeIds": [],
+    "methodIds": [],
+    "tagIds": [],
+    "statuses": ["CLEARED"]
+  },
+  "criteriaUnsupported": false
 }
 ```
+
+- `criteria` es el filtro guardado del presupuesto: **AND entre dimensiones, OR
+  dentro de cada lista**. Lista vacía = sin restricción en esa dimensión; todo
+  vacío = la cuenta completa. `statuses` usa `CrStatus` (`UNRECONCILED`,
+  `CLEARED`, `RECONCILED`, `VOID`).
+- `criteriaUnsupported: true` significa que la app guardó un criterio que la web
+  no puede expresar (compuesto, o una dimensión que no ofrece). El cliente no
+  debe guardar por encima: se edita en la app Android.
+- El filtro **no está en la base de datos**: vive en las preferencias de la app
+  (`budgetFilter_<id>`) como JSON del criterio. La API lee y escribe esa misma
+  clave, así que un cambio aquí se ve en el móvil sin tocar la app.
+- `POST /budgets` y `PUT /budgets/{id}` aceptan `criteria` con la misma forma.
+  Omitirlo conserva el guardado; enviarlo con todas las listas vacías lo borra.
+  Ids inexistentes o estados desconocidos: `422 validation_failed` con `fields`.
+- `POST /budgets/{id}/duplicate` copia el filtro a la copia y
+  `DELETE /budgets/{id}` borra la preferencia.
 
 `BudgetProgressDto` (periodo actual si se omite `year`/`second`):
 
@@ -406,10 +431,12 @@ separado; el editor de transferencias no usa `payee` para elegir la cuenta.
 - El servidor reutiliza `loadBudgetProgress` y `sumLoaderForBudget`; el cliente no
   suma transacciones.
 - `year` y `second` van juntos; si falta uno, `400 invalid_period`. `second` es el
-  **índice del periodo con base 0 dentro de la agrupación**: `MONTH` 0–11 (enero = 0,
-  noviembre = 10), `WEEK` 0–6, `DAY` 0–365, `YEAR` 0–11 (mes) y `NONE` 0. El cliente
-  convierte el mes que muestra (`YYYY-MM`, 1–12) a este índice al llamar; el servidor
-  no lo desplaza.
+  **índice del periodo dentro de la agrupación**, con la misma base que la app:
+  `MONTH` **0–11** (enero = 0, noviembre = 10), `WEEK` 1–53, `DAY` 1–366,
+  `YEAR` 0–11 (mes). Un presupuesto `NONE` tiene fechas fijas y no admite
+  `year`/`second`. Fuera de rango o negativo: `400 invalid_period`, nunca `500`.
+  El cliente convierte el mes que muestra (`YYYY-MM`, 1–12) a este índice al
+  llamar; el servidor no lo desplaza.
 - `GET /budgets/{id}` devuelve el progreso, no la configuración; la configuración
   viene en la lista. Un id desconocido es `404 budget_not_found`.
 - Los presupuestos de cuentas y divisas distintas se devuelven en la misma lista;
@@ -486,11 +513,62 @@ presupuestos `NONE` (`422 unsupported_grouping`).
 - `BudgetProgressDto.periodAllocationMinor` es el importe específico del periodo
   o `null` si se está usando el valor por defecto.
 
+#### GET /budgets/{id}/breakdown?year&second
+
+Reparto del gasto del presupuesto entre **sus** categorías, para la vista de
+detalle. No sustituye a `/allocations`: esta última devuelve el árbol completo de
+la cuenta para el editor.
+
+```json
+{
+  "budgetId": 18,
+  "accountId": 1,
+  "title": "2 - Supermercado",
+  "currency": "EUR",
+  "fractionDigits": 2,
+  "grouping": "MONTH",
+  "periodYear": 2026,
+  "periodSecond": 10,
+  "periodDescription": "noviembre de 2026",
+  "periodStart": "2026-11-01",
+  "periodEnd": "2026-11-30",
+  "totalAllocatedMinor": 36000,
+  "totalSpentMinor": 15123,
+  "categories": [
+    {
+      "categoryId": 33,
+      "label": "Supermercado",
+      "level": 2,
+      "parentId": 25,
+      "allocatedMinor": 0,
+      "spentMinor": 13224,
+      "rolloverPreviousMinor": 0,
+      "rolloverNextMinor": 0
+    }
+  ]
+}
+```
+
+- Solo aparecen las categorías del filtro guardado del presupuesto **y sus
+  descendientes** con gasto. Un padre que no está en el filtro no se devuelve
+  aunque una hija sí lo esté.
+- En una fila con descendientes, `spentMinor` es su gasto propio **más** el de
+  las hijas. `totalSpentMinor` suma solo hojas, así que nada se cuenta dos veces;
+  se cumple `sum(hojas) = totalSpentMinor`.
+- El gasto usa las **partes** de las transacciones divididas (la categoría vive
+  en la parte), nunca el importe del padre: una parte fuera del filtro no entra.
+- Una fila con `categoryId: 0` y `label: null` es el gasto del presupuesto que
+  ninguna categoría recoge (transacciones sin categoría); el cliente la rotula.
+- `year`/`second` siguen la misma regla que el progreso; `NONE` los omite. Un id
+  desconocido es `404 budget_not_found`.
+
 #### GET /budgets/{id}/history?months=12
 
-Serie de hasta 24 periodos mensuales (por defecto 12), del más antiguo al actual:
-`periodYear`, `periodSecond`, `periodDescription`, `allocatedMinor`, `spentMinor`,
-`remainingMinor`. Para presupuestos no mensuales devuelve solo el periodo actual.
+Serie de hasta 24 periodos mensuales (`months`, por defecto 12; un valor menor que
+1 se trata como 1), **del más antiguo al actual**, que va al final:
+`periodYear`, `periodSecond` (0–11, noviembre = 10), `periodDescription`,
+`allocatedMinor`, `spentMinor`, `remainingMinor`. Para presupuestos no mensuales
+devuelve solo el periodo actual. Un id desconocido es `404 budget_not_found`.
 
 #### POST /budgets/{id}/duplicate
 

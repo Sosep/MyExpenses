@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.StateFlow
 import org.totschnig.myexpenses.db2.Repository
 import org.totschnig.myexpenses.db2.RepositoryTransaction
 import org.totschnig.myexpenses.db2.budgetAllocation
+import org.totschnig.myexpenses.db2.budgetCriteria
 import org.totschnig.myexpenses.db2.createTransaction
 import org.totschnig.myexpenses.db2.deleteBudget
 import org.totschnig.myexpenses.db2.entities.Transaction
@@ -23,6 +24,7 @@ import org.totschnig.myexpenses.db2.loadBudget
 import org.totschnig.myexpenses.db2.loadBudgetProgress
 import org.totschnig.myexpenses.db2.loadTransaction
 import org.totschnig.myexpenses.db2.saveBudget
+import org.totschnig.myexpenses.db2.saveBudgetCriteria
 import org.totschnig.myexpenses.db2.updateTransaction
 import org.totschnig.myexpenses.model.CrStatus
 import org.totschnig.myexpenses.model.CurrencyContext
@@ -48,6 +50,13 @@ import org.totschnig.myexpenses.provider.TransactionProvider.CATEGORIES_URI
 import org.totschnig.myexpenses.provider.TransactionProvider.METHODS_URI
 import org.totschnig.myexpenses.provider.TransactionProvider.PAYEES_URI
 import org.totschnig.myexpenses.provider.TransactionProvider.TAGS_URI
+import org.totschnig.myexpenses.provider.filter.AndCriterion
+import org.totschnig.myexpenses.provider.filter.CategoryCriterion
+import org.totschnig.myexpenses.provider.filter.CrStatusCriterion
+import org.totschnig.myexpenses.provider.filter.Criterion
+import org.totschnig.myexpenses.provider.filter.MethodCriterion
+import org.totschnig.myexpenses.provider.filter.PayeeCriterion
+import org.totschnig.myexpenses.provider.filter.TagCriterion
 import org.totschnig.myexpenses.util.epoch2ZonedDateTime
 import org.totschnig.myexpenses.util.toEpoch
 import org.totschnig.myexpenses.viewmodel.data.Budget
@@ -82,7 +91,7 @@ class AndroidWebApiDataSource(
 
     override fun methods() = repository.queryMethods()
 
-    override fun budgets(): List<BudgetDto> =
+    override suspend fun budgets(): List<BudgetDto> =
         repository.contentResolver.query(
             BUDGETS_URI,
             null,
@@ -92,7 +101,7 @@ class AndroidWebApiDataSource(
         )?.use { cursor ->
             buildList {
                 while (cursor.moveToNext()) {
-                    add(repository.budgetCreatorFunction(cursor).toDto())
+                    add(repository.budgetCreatorFunction(cursor).toDtoWithCriteria(repository))
                 }
             }
         }.orEmpty()
@@ -797,7 +806,7 @@ class AndroidWebApiDataSource(
         )
     }
 
-    override fun createBudget(body: BudgetWriteDto): BudgetDto {
+    override suspend fun createBudget(body: BudgetWriteDto): BudgetDto {
         val accountId = body.accountId.requirePositive("accountId")
         validateAccount(accountId)
         val title = body.title?.trim().orEmpty()
@@ -857,10 +866,25 @@ class AndroidWebApiDataSource(
                 "Could not create the budget"
             )
         }
-        return repository.loadBudget(id)!!.toDto()
+        body.criteria?.let { criteria ->
+            validateBudgetCriteria(criteria)
+            try {
+                repository.saveBudgetCriteria(id, criteria.toCriterion())
+            } catch (cause: Exception) {
+                // The budget is already stored; without its filter it would
+                // silently cover the whole account, so undo the insert.
+                repository.deleteBudget(id)
+                throw ApiException(
+                    HttpStatusCode.InternalServerError,
+                    "save_failed",
+                    "Could not save the budget filter"
+                )
+            }
+        }
+        return repository.loadBudget(id)!!.toDtoWithCriteria(repository)
     }
 
-    override fun updateBudget(id: Long, body: BudgetWriteDto): BudgetDto {
+    override suspend fun updateBudget(id: Long, body: BudgetWriteDto): BudgetDto {
         val existing = repository.loadBudget(id) ?: throw ApiException(
             HttpStatusCode.NotFound,
             "budget_not_found",
@@ -920,7 +944,11 @@ class AndroidWebApiDataSource(
             }
             updateDefaultAllocation(id, amount)
         }
-        return repository.loadBudget(id)!!.toDto()
+        body.criteria?.let { criteria ->
+            validateBudgetCriteria(criteria)
+            repository.saveBudgetCriteria(id, criteria.toCriterion())
+        }
+        return repository.loadBudget(id)!!.toDtoWithCriteria(repository)
     }
 
     override suspend fun budgetAllocations(
@@ -942,6 +970,96 @@ class AndroidWebApiDataSource(
             second = progress.groupInfo.second,
             from = progress.groupInfo.duration.start,
             to = progress.groupInfo.duration.end
+        )
+    }
+
+    override suspend fun budgetBreakdown(
+        id: Long,
+        year: Int?,
+        second: Int?
+    ): BudgetBreakdownDto? {
+        val budget = repository.loadBudget(id) ?: return null
+        val progress = repository.loadBudgetProgress(
+            id,
+            if (year != null && second != null) year to second else null
+        ) ?: return null
+        val period = progress.groupInfo
+        val duration = period.duration
+        val criteria = repository.budgetCriteria(id)
+        val rows = repository.queryBudgetAllocations(
+            budgetId = id,
+            year = period.year,
+            second = period.second,
+            from = duration.start,
+            to = duration.end,
+            criteria = criteria
+        )
+        val parentById = rows.associate { it.categoryId to it.parentId }
+        val roots = criteria?.categoryRoots()
+        // Only the categories the budget covers and their descendants: a parent
+        // that is not in the filter is not part of this budget, even when one of
+        // its children is.
+        val included = if (roots == null) {
+            rows
+        } else {
+            rows.filter { row ->
+                row.categoryId in roots ||
+                    ancestorsOf(parentById, row.categoryId).any { it in roots }
+            }
+        }
+        // A parent's figure is its own spend plus the spend of the included
+        // children; the total counts leaves only, so nothing is summed twice.
+        val totals = included.associate { it.categoryId to it.spentMinor }.toMutableMap()
+        included.forEach { row ->
+            ancestorsOf(parentById, row.categoryId).forEach { ancestor ->
+                totals[ancestor]?.let { totals[ancestor] = it + row.spentMinor }
+            }
+        }
+        val leavesSpent = included
+            .filter { row -> included.none { it.parentId == row.categoryId } }
+            .sumOf { it.spentMinor }
+        val categories = included.map { row ->
+            BudgetBreakdownCategoryDto(
+                categoryId = row.categoryId,
+                label = row.label,
+                level = row.level,
+                parentId = row.parentId,
+                allocatedMinor = row.allocatedMinor,
+                spentMinor = totals.getValue(row.categoryId),
+                rolloverPreviousMinor = row.rolloverPreviousMinor,
+                rolloverNextMinor = row.rolloverNextMinor
+            )
+        }.toMutableList()
+        // Spend that no category can carry (transactions without a category)
+        // gets its own bucket so the rows always add up to the total.
+        val unaccounted = progress.spent - leavesSpent
+        if (unaccounted > 0) {
+            categories += BudgetBreakdownCategoryDto(
+                categoryId = 0,
+                label = null,
+                level = 1,
+                parentId = null,
+                allocatedMinor = 0,
+                spentMinor = unaccounted,
+                rolloverPreviousMinor = 0,
+                rolloverNextMinor = 0
+            )
+        }
+        return BudgetBreakdownDto(
+            budgetId = budget.id,
+            accountId = budget.accountId,
+            title = progress.title,
+            currency = progress.currency,
+            fractionDigits = currencyContext[progress.currency].fractionDigits,
+            grouping = budget.grouping.name,
+            periodYear = period.year,
+            periodSecond = period.second,
+            periodDescription = period.description,
+            periodStart = duration.start.toString(),
+            periodEnd = duration.end.toString(),
+            totalAllocatedMinor = progress.allocated,
+            totalSpentMinor = maxOf(progress.spent, leavesSpent),
+            categories = categories
         )
     }
 
@@ -968,7 +1086,10 @@ class AndroidWebApiDataSource(
         val count = months.coerceIn(1, 24)
         return (count - 1 downTo 0).mapNotNull { offset ->
             val date = now.minusMonths(offset.toLong())
-            repository.loadBudgetProgress(id, date.year to date.monthValue)?.let { progress ->
+            // The provider numbers months 0-11 (November = 10). Passing
+            // monthValue as-is shifted the series one month and blew up on
+            // December, which became the invalid index 12.
+            repository.loadBudgetProgress(id, date.year to (date.monthValue - 1))?.let { progress ->
                 BudgetHistoryPointDto(
                     periodYear = progress.groupInfo.year,
                     periodSecond = progress.groupInfo.second,
@@ -1149,7 +1270,7 @@ class AndroidWebApiDataSource(
             else -> throw IllegalArgumentException("Unsupported grouping $grouping")
         }
 
-    override fun duplicateBudget(id: Long): BudgetDto {
+    override suspend fun duplicateBudget(id: Long): BudgetDto {
         val existing = repository.loadBudget(id) ?: throw ApiException(
             HttpStatusCode.NotFound,
             "budget_not_found",
@@ -1173,10 +1294,17 @@ class AndroidWebApiDataSource(
                 "Could not duplicate the budget"
             )
         }
-        return repository.loadBudget(newId)!!.toDto()
+        repository.budgetCriteria(id)?.let { criteria ->
+            repository.saveBudgetCriteria(newId, criteria)
+        }
+        return repository.loadBudget(newId)!!.toDtoWithCriteria(repository)
     }
 
-    override fun deleteBudget(id: Long): Boolean = repository.deleteBudget(id) == 1
+    override suspend fun deleteBudget(id: Long): Boolean {
+        val deleted = repository.deleteBudget(id) == 1
+        if (deleted) repository.saveBudgetCriteria(id, null)
+        return deleted
+    }
 
     private fun updateDefaultAllocation(budgetId: Long, amount: Long) {
         val values = ContentValues().apply { put(KEY_BUDGET, amount) }
@@ -1200,7 +1328,61 @@ class AndroidWebApiDataSource(
         }
     }
 
-    private fun Budget.toDto() = BudgetDto(
+    /**
+     * Reads the filter the app keeps in its preferences and returns it next to
+     * the budget. A filter the web cannot express is flagged, never rewritten.
+     */
+    private suspend fun Budget.toDtoWithCriteria(repository: Repository): BudgetDto {
+        val criterion = repository.budgetCriteria(id)
+        val supported = criterion?.toBudgetCriteria()
+        return toDto(
+            criteria = supported,
+            criteriaUnsupported = criterion != null && supported == null
+        )
+    }
+
+    private fun validateBudgetCriteria(criteria: BudgetCriteriaDto) {
+        val fields = mutableMapOf<String, String>()
+        if (criteria.categoryIds.isNotEmpty() &&
+            !repository.queryCategories().map { it.id }.containsAll(criteria.categoryIds)
+        ) {
+            fields["categoryIds"] = "Unknown category"
+        }
+        if (criteria.payeeIds.isNotEmpty() &&
+            !repository.queryPayees().map { it.id }.containsAll(criteria.payeeIds)
+        ) {
+            fields["payeeIds"] = "Unknown payee"
+        }
+        if (criteria.methodIds.isNotEmpty() &&
+            !repository.queryMethods().map { it.id }.containsAll(criteria.methodIds)
+        ) {
+            fields["methodIds"] = "Unknown method"
+        }
+        if (criteria.tagIds.isNotEmpty() &&
+            !repository.queryTags().map { it.id }.containsAll(criteria.tagIds)
+        ) {
+            fields["tagIds"] = "Unknown tag"
+        }
+        val unknownStatuses = criteria.statuses.filterNot { status ->
+            CrStatus.entries.any { it.name == status }
+        }
+        if (unknownStatuses.isNotEmpty()) {
+            fields["statuses"] = "Unknown status: ${unknownStatuses.joinToString()}"
+        }
+        if (fields.isNotEmpty()) {
+            throw ApiException(
+                HttpStatusCode.UnprocessableEntity,
+                "validation_failed",
+                "Invalid budget filter",
+                fields
+            )
+        }
+    }
+
+    private fun Budget.toDto(
+        criteria: BudgetCriteriaDto? = null,
+        criteriaUnsupported: Boolean = false
+    ) = BudgetDto(
         id = id,
         accountId = accountId,
         title = title,
@@ -1214,7 +1396,9 @@ class AndroidWebApiDataSource(
         accountName = accountName,
         isDefault = default,
         uuid = uuid,
-        allocationMinor = repository.budgetAllocation(id, null, null)
+        allocationMinor = repository.budgetAllocation(id, null, null),
+        criteria = criteria,
+        criteriaUnsupported = criteriaUnsupported
     )
 
     private fun loadTransactionDto(id: Long): TransactionDto {
@@ -1413,5 +1597,103 @@ private fun parseTime(value: String, field: String): LocalTime = try {
         "invalid_$field",
         "$field must be HH:mm",
         mapOf(field to "Expected HH:mm")
+    )
+}
+
+/**
+ * Walks a category's ancestors from its parent upwards. Cycles cannot happen in
+ * the category tree, and the web API never writes categories.
+ */
+private fun ancestorsOf(parentById: Map<Long, Long?>, categoryId: Long): List<Long> {
+    val ancestors = mutableListOf<Long>()
+    var parent = parentById[categoryId]
+    while (parent != null) {
+        ancestors += parent
+        parent = parentById[parent]
+    }
+    return ancestors
+}
+
+/**
+ * The categories a budget is defined over. The Android editor stores one
+ * [CategoryCriterion] inside a conjunction; anything else (no filter, or a
+ * composite the web does not build) is treated as "every category".
+ */
+private fun Criterion.categoryRoots(): List<Long>? = when (this) {
+    is CategoryCriterion -> values
+    is AndCriterion -> criteria.filterIsInstance<CategoryCriterion>().firstOrNull()?.values
+    else -> null
+}
+
+/**
+ * Builds the criterion the app understands from the DTO. An empty filter is
+ * `null`, which removes the preference: a budget without a filter covers the
+ * whole account, exactly like before.
+ */
+private fun BudgetCriteriaDto.toCriterion(): Criterion? {
+    val parts = buildList {
+        if (categoryIds.isNotEmpty()) add(CategoryCriterion("", categoryIds))
+        if (payeeIds.isNotEmpty()) add(PayeeCriterion("", payeeIds))
+        if (methodIds.isNotEmpty()) add(MethodCriterion("", methodIds))
+        if (tagIds.isNotEmpty()) add(TagCriterion("", tagIds))
+        if (statuses.isNotEmpty()) {
+            add(CrStatusCriterion(statuses.map { CrStatus.valueOf(it) }))
+        }
+    }
+    return when (parts.size) {
+        0 -> null
+        1 -> parts.first()
+        else -> AndCriterion(parts.toSet())
+    }
+}
+
+/**
+ * Reads a stored criterion back into the DTO. Returns null when the criterion
+ * cannot be represented (composite, a dimension the web does not offer, or a
+ * "no value" criterion): the caller flags it and refuses to save over it.
+ */
+private fun Criterion.toBudgetCriteria(): BudgetCriteriaDto? {
+    val parts = if (this is AndCriterion) criteria else setOf(this)
+    var categories: List<Long>? = null
+    var payees: List<Long>? = null
+    var methods: List<Long>? = null
+    var tags: List<Long>? = null
+    var statuses: List<String>? = null
+    for (part in parts) {
+        when (part) {
+            is CategoryCriterion -> {
+                if (categories != null || part.values.isEmpty()) return null
+                categories = part.values
+            }
+
+            is PayeeCriterion -> {
+                if (payees != null || part.values.isEmpty()) return null
+                payees = part.values
+            }
+
+            is MethodCriterion -> {
+                if (methods != null || part.values.isEmpty()) return null
+                methods = part.values
+            }
+
+            is TagCriterion -> {
+                if (tags != null || part.values.isEmpty()) return null
+                tags = part.values
+            }
+
+            is CrStatusCriterion -> {
+                if (statuses != null || part.values.isEmpty()) return null
+                statuses = part.values.map { it.name }
+            }
+
+            else -> return null
+        }
+    }
+    return BudgetCriteriaDto(
+        categoryIds = categories.orEmpty(),
+        payeeIds = payees.orEmpty(),
+        methodIds = methods.orEmpty(),
+        tagIds = tags.orEmpty(),
+        statuses = statuses.orEmpty()
     )
 }

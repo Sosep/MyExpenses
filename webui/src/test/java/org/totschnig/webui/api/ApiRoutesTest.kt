@@ -221,9 +221,19 @@ class ApiRoutesTest {
     }
 
     @Test
+    fun `budgets expose their filter`() = testApplication {
+        installRoutes(FakeDataSource())
+        val response = client.get("/api/v1/budgets")
+        assertEquals(HttpStatusCode.OK, response.status)
+        val body = response.bodyAsText()
+        assertTrue(body.contains("\"categoryIds\":[2,5]"))
+        assertTrue(body.contains("\"statuses\":[\"CLEARED\"]"))
+    }
+
+    @Test
     fun `budget progress returns period totals`() = testApplication {
         installRoutes(FakeDataSource())
-        val response = client.get("/api/v1/budgets/1?year=2026&second=11")
+        val response = client.get("/api/v1/budgets/1?year=2026&second=10")
         assertEquals(HttpStatusCode.OK, response.status)
         val body = response.bodyAsText()
         assertTrue(body.contains("\"allocatedMinor\":40000"))
@@ -233,11 +243,55 @@ class ApiRoutesTest {
     }
 
     @Test
+    fun `budget progress accepts January as index zero`() = testApplication {
+        installRoutes(FakeDataSource())
+        val response = client.get("/api/v1/budgets/1?year=2026&second=0")
+        assertEquals(HttpStatusCode.OK, response.status)
+    }
+
+    @Test
+    fun `budget progress with an out of range month is a 400`() = testApplication {
+        installRoutes(FakeDataSource())
+        val response = client.get("/api/v1/budgets/1?year=2026&second=12")
+        assertEquals(HttpStatusCode.BadRequest, response.status)
+        assertTrue(response.bodyAsText().contains("invalid_period"))
+    }
+
+    @Test
+    fun `budget progress with a negative month is a 400`() = testApplication {
+        installRoutes(FakeDataSource())
+        val response = client.get("/api/v1/budgets/1?year=2026&second=-1")
+        assertEquals(HttpStatusCode.BadRequest, response.status)
+        assertTrue(response.bodyAsText().contains("invalid_period"))
+    }
+
+    @Test
     fun `half a budget period is a 400`() = testApplication {
         installRoutes(FakeDataSource())
         val response = client.get("/api/v1/budgets/1?year=2026")
         assertEquals(HttpStatusCode.BadRequest, response.status)
         assertTrue(response.bodyAsText().contains("invalid_period"))
+    }
+
+    @Test
+    fun `budget breakdown returns the budget categories`() = testApplication {
+        installRoutes(FakeDataSource())
+        val response = client.get("/api/v1/budgets/1/breakdown?year=2026&second=10")
+        assertEquals(HttpStatusCode.OK, response.status)
+        val body = response.bodyAsText()
+        assertTrue(body.contains("\"totalSpentMinor\":15123"))
+        assertTrue(body.contains("\"totalAllocatedMinor\":36000"))
+        assertTrue(body.contains("Supermercado"))
+        assertTrue(body.contains("\"categoryId\":33"))
+        assertTrue(body.contains("\"parentId\":25"))
+    }
+
+    @Test
+    fun `budget breakdown of an unknown id is a 404`() = testApplication {
+        installRoutes(FakeDataSource())
+        val response = client.get("/api/v1/budgets/99/breakdown?year=2026&second=10")
+        assertEquals(HttpStatusCode.NotFound, response.status)
+        assertTrue(response.bodyAsText().contains("budget_not_found"))
     }
 
     @Test
@@ -364,7 +418,7 @@ class ApiRoutesTest {
     @Test
     fun `budget allocations are returned`() = testApplication {
         installRoutes(FakeDataSource())
-        val response = client.get("/api/v1/budgets/1/allocations?year=2026&second=11")
+        val response = client.get("/api/v1/budgets/1/allocations?year=2026&second=10")
         assertEquals(HttpStatusCode.OK, response.status)
         val body = response.bodyAsText()
         assertTrue(body.contains("Groceries"))
@@ -379,7 +433,7 @@ class ApiRoutesTest {
         val response = client.put("/api/v1/budgets/1/allocations") {
             contentType(ContentType.Application.Json)
             setBody(
-                """{"year":2026,"second":11,"allocations":[{"categoryId":2,"amountMinor":35000},{"categoryId":0,"amountMinor":45000,"oneTime":true}],"rollover":[{"categoryId":2,"amountMinor":5000}]}"""
+                """{"year":2026,"second":10,"allocations":[{"categoryId":2,"amountMinor":35000},{"categoryId":0,"amountMinor":45000,"oneTime":true}],"rollover":[{"categoryId":2,"amountMinor":5000}]}"""
             )
         }
         assertEquals(HttpStatusCode.OK, response.status)
@@ -634,7 +688,7 @@ private class FakeDataSource : WebApiDataSource {
         return budgetAllocations(id, body.year, body.second)
     }
 
-    override fun createBudget(body: BudgetWriteDto): BudgetDto {
+    override suspend fun createBudget(body: BudgetWriteDto): BudgetDto {
         if (body.grouping !in setOf("DAY", "WEEK", "MONTH", "YEAR", "NONE")) {
             throw ApiException(
                 HttpStatusCode.UnprocessableEntity,
@@ -650,10 +704,10 @@ private class FakeDataSource : WebApiDataSource {
             )
         }
         savedBudget = body
-        return sampleBudget()
+        return sampleBudget().copy(criteria = body.criteria)
     }
 
-    override fun duplicateBudget(id: Long): BudgetDto {
+    override suspend fun duplicateBudget(id: Long): BudgetDto {
         if (id != 1L) {
             throw ApiException(
                 HttpStatusCode.NotFound,
@@ -664,7 +718,7 @@ private class FakeDataSource : WebApiDataSource {
         return sampleBudget().copy(id = 2, title = "Groceries (copy)")
     }
 
-    override fun updateBudget(id: Long, body: BudgetWriteDto): BudgetDto {
+    override suspend fun updateBudget(id: Long, body: BudgetWriteDto): BudgetDto {
         if (id != 1L) {
             throw ApiException(
                 HttpStatusCode.NotFound,
@@ -673,10 +727,10 @@ private class FakeDataSource : WebApiDataSource {
             )
         }
         savedBudget = body
-        return sampleBudget()
+        return sampleBudget().copy(criteria = body.criteria)
     }
 
-    override fun deleteBudget(id: Long) = id == 1L
+    override suspend fun deleteBudget(id: Long) = id == 1L
 
     override fun summary(accountId: Long, from: LocalDate, to: LocalDate) =
         ReportSummaryDto(
@@ -723,10 +777,13 @@ private class FakeDataSource : WebApiDataSource {
         offset: Int
     ) = PageDto(items = listOf(sample), total = 1, limit = limit, offset = offset)
 
-    override fun budgets() = listOf(sampleBudget())
+    override suspend fun budgets() = listOf(sampleBudget())
 
     override suspend fun budgetProgress(id: Long, year: Int?, second: Int?) =
         if (id == 1L) sampleBudgetProgress() else null
+
+    override suspend fun budgetBreakdown(id: Long, year: Int?, second: Int?) =
+        if (id == 1L) sampleBudgetBreakdown() else null
 
     override fun createTransaction(body: TransactionWriteDto): TransactionDto {
         created = body
@@ -888,7 +945,8 @@ private fun sampleBudget() = BudgetDto(
     accountName = "Everyday",
     isDefault = false,
     uuid = "budget-uuid",
-    allocationMinor = 40000
+    allocationMinor = 40000,
+    criteria = BudgetCriteriaDto(categoryIds = listOf(2, 5), statuses = listOf("CLEARED"))
 )
 
 private fun sampleBudgetProgress() = BudgetProgressDto(
@@ -899,7 +957,7 @@ private fun sampleBudgetProgress() = BudgetProgressDto(
     fractionDigits = 2,
     grouping = "MONTH",
     periodYear = 2026,
-    periodSecond = 11,
+    periodSecond = 10,
     periodStart = "2026-11-01",
     periodEnd = "2026-11-30",
     periodDescription = "November 2026",
@@ -908,4 +966,42 @@ private fun sampleBudgetProgress() = BudgetProgressDto(
     remainingMinor = 8800,
     totalDays = 30,
     currentDay = 17
+)
+
+private fun sampleBudgetBreakdown() = BudgetBreakdownDto(
+    budgetId = 1,
+    accountId = 1,
+    title = "Groceries",
+    currency = "EUR",
+    fractionDigits = 2,
+    grouping = "MONTH",
+    periodYear = 2026,
+    periodSecond = 10,
+    periodDescription = "November 2026",
+    periodStart = "2026-11-01",
+    periodEnd = "2026-11-30",
+    totalAllocatedMinor = 36000,
+    totalSpentMinor = 15123,
+    categories = listOf(
+        BudgetBreakdownCategoryDto(
+            categoryId = 33,
+            label = "Supermercado",
+            level = 2,
+            parentId = 25,
+            allocatedMinor = 0,
+            spentMinor = 13224,
+            rolloverPreviousMinor = 0,
+            rolloverNextMinor = 0
+        ),
+        BudgetBreakdownCategoryDto(
+            categoryId = 169,
+            label = "Utiles",
+            level = 1,
+            parentId = null,
+            allocatedMinor = 0,
+            spentMinor = 1899,
+            rolloverPreviousMinor = 0,
+            rolloverNextMinor = 0
+        )
+    )
 )

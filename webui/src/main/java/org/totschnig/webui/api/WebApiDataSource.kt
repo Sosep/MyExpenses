@@ -48,18 +48,19 @@ interface WebApiDataSource {
         limit: Int,
         offset: Int
     ): PageDto<TransactionDto>
-    fun budgets(): List<BudgetDto>
+    suspend fun budgets(): List<BudgetDto>
     suspend fun budgetProgress(id: Long, year: Int?, second: Int?): BudgetProgressDto?
     suspend fun budgetAllocations(id: Long, year: Int?, second: Int?): List<BudgetAllocationDto>
+    suspend fun budgetBreakdown(id: Long, year: Int?, second: Int?): BudgetBreakdownDto?
     suspend fun budgetHistory(id: Long, months: Int): List<BudgetHistoryPointDto>
     suspend fun updateBudgetAllocations(
         id: Long,
         body: BudgetAllocationsWriteDto
     ): List<BudgetAllocationDto>
-    fun createBudget(body: BudgetWriteDto): BudgetDto
-    fun updateBudget(id: Long, body: BudgetWriteDto): BudgetDto
-    fun duplicateBudget(id: Long): BudgetDto
-    fun deleteBudget(id: Long): Boolean
+    suspend fun createBudget(body: BudgetWriteDto): BudgetDto
+    suspend fun updateBudget(id: Long, body: BudgetWriteDto): BudgetDto
+    suspend fun duplicateBudget(id: Long): BudgetDto
+    suspend fun deleteBudget(id: Long): Boolean
     fun createTransaction(body: TransactionWriteDto): TransactionDto
     fun updateTransaction(id: Long, body: TransactionWriteDto): TransactionDto
     fun createTransfer(body: TransferWriteDto): TransactionDto
