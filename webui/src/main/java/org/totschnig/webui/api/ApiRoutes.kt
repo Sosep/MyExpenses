@@ -28,6 +28,42 @@ class ApiRoutes(
             get("/accounts") {
                 call.respond(dataSource.accounts())
             }
+            get("/account-types") {
+                call.respond(dataSource.accountTypes())
+            }
+            post("/accounts") {
+                val created = dataSource.createAccount(call.receive<AccountWriteDto>())
+                call.response.headers.append(
+                    HttpHeaders.Location,
+                    "/api/v1/accounts/${created.id}"
+                )
+                call.respond(HttpStatusCode.Created, created)
+            }
+            put("/accounts/{id}") {
+                val id = call.requirePathId()
+                call.respond(dataSource.updateAccount(id, call.receive<AccountWriteDto>()))
+            }
+            delete("/accounts/{id}") {
+                val id = call.requirePathId()
+                if (!dataSource.deleteAccount(id)) {
+                    throw ApiException(
+                        HttpStatusCode.NotFound,
+                        "account_not_found",
+                        "Account not found"
+                    )
+                }
+                call.respond(HttpStatusCode.NoContent)
+            }
+            get("/accounts/{id}") {
+                val id = call.requirePathId()
+                val account = dataSource.account(id)
+                    ?: throw ApiException(
+                        HttpStatusCode.NotFound,
+                        "account_not_found",
+                        "Account not found"
+                    )
+                call.respond(account)
+            }
             get("/categories") {
                 call.respond(dataSource.categories())
             }
@@ -42,8 +78,24 @@ class ApiRoutes(
             }
             get("/transactions") {
                 val accountId = call.requireLong("accountId")
-                val limit = call.intParam("limit", 50).coerceIn(1, 500)
-                val offset = call.intParam("offset", 0).coerceAtLeast(0)
+                val limit = call.intParamOrNull("limit")?.also {
+                    if (it !in 1..500) {
+                        throw ApiException(
+                            HttpStatusCode.BadRequest,
+                            "invalid_limit",
+                            "Query parameter 'limit' must be between 1 and 500"
+                        )
+                    }
+                } ?: 50
+                val offset = call.intParamOrNull("offset")?.also {
+                    if (it < 0) {
+                        throw ApiException(
+                            HttpStatusCode.BadRequest,
+                            "invalid_offset",
+                            "Query parameter 'offset' must be zero or positive"
+                        )
+                    }
+                } ?: 0
                 val type = call.parameters["type"]
                     ?.takeIf { it.isNotBlank() && it != "both" }
                 if (type != null && type !in setOf("income", "expense")) {
@@ -398,6 +450,26 @@ private fun ApplicationCall.transactionFilters(): TransactionQueryFilters {
             "amountMin must be less than or equal to amountMax"
         )
     }
+    val uncategorized = parameters["uncategorized"]?.let {
+        when (it.lowercase(Locale.ROOT)) {
+            "true", "1" -> true
+
+            "false", "0" -> false
+
+            else -> throw ApiException(
+                HttpStatusCode.BadRequest,
+                "invalid_uncategorized",
+                "Query parameter 'uncategorized' must be true or false"
+            )
+        }
+    } ?: false
+    if (uncategorized && idsParam("categoryId").isNotEmpty()) {
+        throw ApiException(
+            HttpStatusCode.BadRequest,
+            "invalid_filter",
+            "uncategorized cannot be combined with categoryId"
+        )
+    }
     val transfer = parameters["transfer"]?.let {
         when (it.lowercase(Locale.ROOT)) {
             "true", "1" -> true
@@ -420,6 +492,7 @@ private fun ApplicationCall.transactionFilters(): TransactionQueryFilters {
         amountMin = amountMin?.let { abs(it) },
         amountMax = amountMax?.let { abs(it) },
         statuses = statuses,
+        uncategorized = uncategorized,
         transfer = transfer
     )
 }

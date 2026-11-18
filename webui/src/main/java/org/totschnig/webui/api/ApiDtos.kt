@@ -29,9 +29,13 @@ data class PreferencesDto(
 data class AccountDto(
     val id: Long,
     val label: String,
+    /** Id of the account type, used to match `methods[].accountTypes`. */
     val type: String,
+    /** The account type name the app uses: CASH, BANK, CCARD, ASSET, LIABILITY. */
+    val typeName: String,
     val currency: String,
     val fractionDigits: Int,
+    val openingBalanceMinor: Long,
     val currentBalanceMinor: Long,
     val totalMinor: Long,
     val incomeMinor: Long,
@@ -40,6 +44,27 @@ data class AccountDto(
     val sealed: Boolean,
     val color: Int,
     val parentId: Long?
+)
+
+/** Account type as the app knows it. `name` is CASH, BANK, ... without underscores. */
+@Keep
+data class AccountTypeDto(
+    val id: Long,
+    val name: String,
+    val isAsset: Boolean,
+    val supportsReconciliation: Boolean
+)
+
+@Keep
+data class AccountWriteDto(
+    val label: String? = null,
+    /** Id of the account type, from `GET /account-types`. */
+    val type: String? = null,
+    val currency: String? = null,
+    val openingBalanceMinor: Long? = null,
+    val excludeFromTotals: Boolean? = null,
+    val color: Int? = null,
+    val parentId: Long? = null
 )
 
 @Keep

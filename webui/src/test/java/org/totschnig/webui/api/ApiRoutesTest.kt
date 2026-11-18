@@ -211,6 +211,60 @@ class ApiRoutesTest {
     }
 
     @Test
+    fun `account by id returns the same shape`() = testApplication {
+        installRoutes(FakeDataSource())
+        val response = client.get("/api/v1/accounts/1")
+        assertEquals(HttpStatusCode.OK, response.status)
+        val body = response.bodyAsText()
+        assertTrue(body.contains("\"typeName\":\"BANK\""))
+        assertTrue(body.contains("\"openingBalanceMinor\":0"))
+    }
+
+    @Test
+    fun `unknown account is a 404`() = testApplication {
+        installRoutes(FakeDataSource())
+        val response = client.get("/api/v1/accounts/99")
+        assertEquals(HttpStatusCode.NotFound, response.status)
+        assertTrue(response.bodyAsText().contains("account_not_found"))
+    }
+
+    @Test
+    fun `account types are listed`() = testApplication {
+        installRoutes(FakeDataSource())
+        val response = client.get("/api/v1/account-types")
+        assertEquals(HttpStatusCode.OK, response.status)
+        assertTrue(response.bodyAsText().contains("\"name\":\"BANK\""))
+    }
+
+    @Test
+    fun `create account returns 201 and location`() = testApplication {
+        installRoutes(FakeDataSource())
+        val response = client.post("/api/v1/accounts") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"label":"Test","type":"2","currency":"EUR","openingBalanceMinor":0}""")
+        }
+        assertEquals(HttpStatusCode.Created, response.status)
+        assertEquals("/api/v1/accounts/1", response.headers[HttpHeaders.Location])
+        assertTrue(response.bodyAsText().contains("\"label\":\"Test\""))
+    }
+
+    @Test
+    fun `delete account returns 204 and unknown id 404`() = testApplication {
+        installRoutes(FakeDataSource())
+        assertEquals(HttpStatusCode.NoContent, client.delete("/api/v1/accounts/1").status)
+        assertEquals(HttpStatusCode.NotFound, client.delete("/api/v1/accounts/99").status)
+    }
+
+    @Test
+    fun `paging outside the contract is a 400`() = testApplication {
+        installRoutes(FakeDataSource())
+        for (query in listOf("limit=0", "limit=501", "offset=-1")) {
+            val response = client.get("/api/v1/transactions?accountId=1&$query")
+            assertEquals(query, HttpStatusCode.BadRequest, response.status)
+        }
+    }
+
+    @Test
     fun `budgets are returned as json`() = testApplication {
         installRoutes(FakeDataSource())
         val response = client.get("/api/v1/budgets")
@@ -582,13 +636,29 @@ private class FakeDataSource : WebApiDataSource {
         preferences = PreferencesDto(timeEnabled = false, valueDateEnabled = false)
     )
 
+    override suspend fun account(id: Long) = accounts().firstOrNull { it.id == id }
+
+    override fun accountTypes() = listOf(
+        AccountTypeDto(id = 1, name = "CASH", isAsset = true, supportsReconciliation = false),
+        AccountTypeDto(id = 2, name = "BANK", isAsset = true, supportsReconciliation = true)
+    )
+
+    override suspend fun createAccount(body: AccountWriteDto) = sampleAccount(body.label ?: "New")
+
+    override suspend fun updateAccount(id: Long, body: AccountWriteDto) =
+        sampleAccount(body.label ?: "Everyday")
+
+    override suspend fun deleteAccount(id: Long) = id == 1L
+
     override fun accounts() = listOf(
         AccountDto(
             id = 1,
             label = "Everyday",
-            type = "BANK",
+            type = "2",
+            typeName = "BANK",
             currency = "EUR",
             fractionDigits = 2,
+            openingBalanceMinor = 0,
             currentBalanceMinor = 10000,
             totalMinor = 10000,
             incomeMinor = 5000,
@@ -929,6 +999,24 @@ private fun sampleSplit() = TransactionDto(
             transferAccountId = null
         )
     )
+)
+
+private fun sampleAccount(label: String = "Everyday") = AccountDto(
+    id = 1,
+    label = label,
+    type = "2",
+    typeName = "BANK",
+    currency = "EUR",
+    fractionDigits = 2,
+    openingBalanceMinor = 0,
+    currentBalanceMinor = 10000,
+    totalMinor = 10000,
+    incomeMinor = 5000,
+    expensesMinor = -1000,
+    excludeFromTotals = false,
+    sealed = false,
+    color = 0,
+    parentId = null
 )
 
 private fun sampleBudget() = BudgetDto(

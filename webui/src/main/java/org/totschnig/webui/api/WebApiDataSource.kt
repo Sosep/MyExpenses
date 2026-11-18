@@ -10,6 +10,11 @@ import java.time.LocalDate
 interface WebApiDataSource {
     fun meta(): MetaDto
     fun accounts(): List<AccountDto>
+    suspend fun account(id: Long): AccountDto?
+    fun accountTypes(): List<AccountTypeDto>
+    suspend fun createAccount(body: AccountWriteDto): AccountDto
+    suspend fun updateAccount(id: Long, body: AccountWriteDto): AccountDto
+    suspend fun deleteAccount(id: Long): Boolean
     fun categories(): List<CategoryDto>
     fun payees(): List<PayeeDto>
     fun tags(): List<TagDto>
@@ -80,11 +85,13 @@ data class TransactionQueryFilters(
     val amountMin: Long? = null,
     val amountMax: Long? = null,
     val statuses: List<String> = emptyList(),
+    /** Only movements without a category. */
+    val uncategorized: Boolean = false,
     /** null: any; false: only non-transfers; true: only transfers. */
     val transfer: Boolean? = null
 ) {
     val isEmpty: Boolean
         get() = categoryIds.isEmpty() && payeeIds.isEmpty() && tagIds.isEmpty() &&
             methodIds.isEmpty() && text.isNullOrBlank() && amountMin == null &&
-            amountMax == null && statuses.isEmpty() && transfer == null
+            amountMax == null && statuses.isEmpty() && !uncategorized && transfer == null
 }

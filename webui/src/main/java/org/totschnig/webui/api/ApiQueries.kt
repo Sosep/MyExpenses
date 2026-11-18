@@ -9,6 +9,7 @@ import kotlin.math.abs
 import org.totschnig.myexpenses.db2.Repository
 import org.totschnig.myexpenses.db2.entities.Transaction
 import org.totschnig.myexpenses.db2.getCurrencyUnitForAccount
+import org.totschnig.myexpenses.model.AccountType
 import org.totschnig.myexpenses.model.CrStatus
 import org.totschnig.myexpenses.model.CurrencyContext
 import org.totschnig.myexpenses.model.CurrencyUnit
@@ -17,6 +18,7 @@ import org.totschnig.myexpenses.provider.BaseTransactionProvider
 import org.totschnig.myexpenses.provider.CTE_SEARCH
 import org.totschnig.myexpenses.provider.DataBaseAccount
 import org.totschnig.myexpenses.provider.KEY_ACCOUNTID
+import org.totschnig.myexpenses.provider.KEY_ACCOUNT_TYPE_LABEL
 import org.totschnig.myexpenses.provider.KEY_ACCOUNT_TYPE_LIST
 import org.totschnig.myexpenses.provider.KEY_AMOUNT
 import org.totschnig.myexpenses.provider.KEY_BUDGET
@@ -38,6 +40,7 @@ import org.totschnig.myexpenses.provider.KEY_LABEL
 import org.totschnig.myexpenses.provider.KEY_LEVEL
 import org.totschnig.myexpenses.provider.KEY_METHODID
 import org.totschnig.myexpenses.provider.KEY_METHOD_LABEL
+import org.totschnig.myexpenses.provider.KEY_OPENING_BALANCE
 import org.totschnig.myexpenses.provider.KEY_PARENTID
 import org.totschnig.myexpenses.provider.KEY_PATH
 import org.totschnig.myexpenses.provider.KEY_PAYEEID
@@ -55,6 +58,7 @@ import org.totschnig.myexpenses.provider.KEY_TOTAL
 import org.totschnig.myexpenses.provider.KEY_TRANSACTIONID
 import org.totschnig.myexpenses.provider.KEY_TRANSFER_ACCOUNT
 import org.totschnig.myexpenses.provider.KEY_TYPE
+import org.totschnig.myexpenses.provider.KEY_TYPE_SORT_KEY
 import org.totschnig.myexpenses.provider.KEY_YEAR
 import org.totschnig.myexpenses.provider.SPLIT_CATID
 import org.totschnig.myexpenses.provider.TABLE_TRANSACTIONS
@@ -86,10 +90,15 @@ internal fun Repository.queryAccounts(currencyContext: CurrencyContext): List<Ac
     return contentResolver.query(uri, null, "$KEY_SEALED = 0", null, null)
         ?.useAndMapToList { cursor ->
             val currency = cursor.getString(KEY_CURRENCY)
+            val rawType = cursor.getStringOrNull(KEY_ACCOUNT_TYPE_LABEL).orEmpty()
             AccountDto(
                 id = cursor.getLong(KEY_ROWID),
                 label = cursor.getString(KEY_LABEL),
                 type = cursor.getStringOrNull(KEY_TYPE).orEmpty(),
+                // Reserved names travel with their underscores stripped, so the
+                // SPA can say CASH instead of _CASH_; custom names stay as-is.
+                typeName = rawType.removeSurrounding("_"),
+                openingBalanceMinor = cursor.getLongIfExistsOr0(KEY_OPENING_BALANCE),
                 currency = currency,
                 fractionDigits = fractionDigits.getOrPut(currency) {
                     runCatching { currencyContext[currency].fractionDigits }.getOrDefault(2)
@@ -105,6 +114,23 @@ internal fun Repository.queryAccounts(currencyContext: CurrencyContext): List<Ac
             )
         } ?: emptyList()
 }
+
+internal fun Repository.queryAccountTypes(): List<AccountTypeDto> =
+    contentResolver.query(
+        TransactionProvider.ACCOUNT_TYPES_URI,
+        null,
+        null,
+        null,
+        "$KEY_TYPE_SORT_KEY DESC"
+    )?.useAndMapToList { cursor ->
+        val type = AccountType.fromCursor(cursor)
+        AccountTypeDto(
+            id = type.id,
+            name = type.nameForSyncLegacy,
+            isAsset = type.isAsset,
+            supportsReconciliation = type.supportsReconciliation
+        )
+    } ?: emptyList()
 
 internal fun Repository.queryCategories(): List<CategoryDto> {
     val uri = TransactionProvider.CATEGORIES_URI.buildUpon()
@@ -644,11 +670,14 @@ private fun transactionSelection(
         filters.tagIds.forEach { args.add(it.toString()) }
     }
     filters.text?.trim()?.takeIf { it.isNotEmpty() }?.let { text ->
-        val needle = "%$text%"
+        // Accent-insensitive: both sides are folded (lowercase and diacritics
+        // stripped) because SQLite's NOCASE only folds ASCII and Latin-1 text is
+        // what people type. The needle travels as a bound argument.
+        val needle = "%${unaccented(text)}%"
         clauses.add(
-            "(coalesce($KEY_COMMENT, '') LIKE ? COLLATE NOCASE OR " +
-                "coalesce($KEY_PAYEE_NAME, '') LIKE ? COLLATE NOCASE OR " +
-                "coalesce($KEY_REFERENCE_NUMBER, '') LIKE ? COLLATE NOCASE)"
+            "(${unaccentedColumn(KEY_COMMENT)} LIKE ? OR " +
+                "${unaccentedColumn(KEY_PAYEE_NAME)} LIKE ? OR " +
+                "${unaccentedColumn(KEY_REFERENCE_NUMBER)} LIKE ?)"
         )
         repeat(3) { args.add(needle) }
     }
@@ -663,6 +692,9 @@ private fun transactionSelection(
         clauses.add("abs($KEY_AMOUNT) <= CAST(? AS INTEGER)")
         args.add(it.toString())
     }
+    if (filters.uncategorized) {
+        clauses.add("$KEY_CATID IS NULL")
+    }
     if (filters.statuses.isNotEmpty()) {
         clauses.add("$KEY_CR_STATUS IN (${filters.statuses.joinToString(",") { "?" }})")
         filters.statuses.forEach { args.add(it) }
@@ -673,6 +705,25 @@ private fun transactionSelection(
         null -> Unit
     }
     return clauses.joinToString(" AND ") to args.takeIf { it.isNotEmpty() }?.toTypedArray()
+}
+
+private const val ACCENTED = "áéíóúüñçÁÉÍÓÚÜÑÇàèìòùÀÈÌÒÙäöÄÖ"
+private const val PLAIN = "aeiouuncaelouAEIOUUNCAEIOUaoAO"
+
+/** Lowercased and without diacritics, character by character (same length). */
+private fun unaccented(value: String): String =
+    value.lowercase().map { char ->
+        val index = ACCENTED.indexOf(char)
+        if (index >= 0) PLAIN[index] else char
+    }.joinToString("")
+
+/** A text column folded the same way, so LIKE can compare both sides. */
+private fun unaccentedColumn(column: String): String {
+    var expression = "lower(coalesce($column, ''))"
+    ACCENTED.forEachIndexed { index, char ->
+        expression = "replace($expression, '$char', '${PLAIN[index]}')"
+    }
+    return expression
 }
 
 private fun dateSelection(from: LocalDate, to: LocalDate): Pair<String, Array<String>?> {

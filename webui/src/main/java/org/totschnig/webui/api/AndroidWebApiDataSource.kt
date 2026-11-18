@@ -16,32 +16,45 @@ import org.totschnig.myexpenses.db2.Repository
 import org.totschnig.myexpenses.db2.RepositoryTransaction
 import org.totschnig.myexpenses.db2.budgetAllocation
 import org.totschnig.myexpenses.db2.budgetCriteria
+import org.totschnig.myexpenses.db2.createAccount
 import org.totschnig.myexpenses.db2.createTransaction
+import org.totschnig.myexpenses.db2.deleteAccount
 import org.totschnig.myexpenses.db2.deleteBudget
 import org.totschnig.myexpenses.db2.entities.Transaction
 import org.totschnig.myexpenses.db2.getCurrencyUnitForAccount
+import org.totschnig.myexpenses.db2.loadAccountType
 import org.totschnig.myexpenses.db2.loadBudget
 import org.totschnig.myexpenses.db2.loadBudgetProgress
 import org.totschnig.myexpenses.db2.loadTransaction
 import org.totschnig.myexpenses.db2.saveBudget
 import org.totschnig.myexpenses.db2.saveBudgetCriteria
+import org.totschnig.myexpenses.db2.updateAccount
 import org.totschnig.myexpenses.db2.updateTransaction
 import org.totschnig.myexpenses.model.CrStatus
 import org.totschnig.myexpenses.model.CurrencyContext
 import org.totschnig.myexpenses.model.Grouping
 import org.totschnig.myexpenses.model.generateUuid
+import org.totschnig.myexpenses.model2.Account as AccountModel
 import org.totschnig.myexpenses.preference.PrefHandler
 import org.totschnig.myexpenses.preference.PrefKey
 import org.totschnig.myexpenses.provider.BaseTransactionProvider.Companion.budgetAllocationUri
+import org.totschnig.myexpenses.provider.KEY_ACCOUNTID
 import org.totschnig.myexpenses.provider.KEY_BUDGET
 import org.totschnig.myexpenses.provider.KEY_BUDGETID
 import org.totschnig.myexpenses.provider.KEY_BUDGET_ROLLOVER_NEXT
 import org.totschnig.myexpenses.provider.KEY_BUDGET_ROLLOVER_PREVIOUS
 import org.totschnig.myexpenses.provider.KEY_CATID
+import org.totschnig.myexpenses.provider.KEY_COLOR
+import org.totschnig.myexpenses.provider.KEY_CURRENCY
+import org.totschnig.myexpenses.provider.KEY_EXCLUDE_FROM_TOTALS
+import org.totschnig.myexpenses.provider.KEY_LABEL
 import org.totschnig.myexpenses.provider.KEY_ONE_TIME
+import org.totschnig.myexpenses.provider.KEY_OPENING_BALANCE
+import org.totschnig.myexpenses.provider.KEY_PARENTID
 import org.totschnig.myexpenses.provider.KEY_ROWID
 import org.totschnig.myexpenses.provider.KEY_SECOND_GROUP
 import org.totschnig.myexpenses.provider.KEY_TITLE
+import org.totschnig.myexpenses.provider.KEY_TYPE
 import org.totschnig.myexpenses.provider.KEY_YEAR
 import org.totschnig.myexpenses.provider.SPLIT_CATID
 import org.totschnig.myexpenses.provider.TransactionProvider.BUDGETS_URI
@@ -50,6 +63,7 @@ import org.totschnig.myexpenses.provider.TransactionProvider.CATEGORIES_URI
 import org.totschnig.myexpenses.provider.TransactionProvider.METHODS_URI
 import org.totschnig.myexpenses.provider.TransactionProvider.PAYEES_URI
 import org.totschnig.myexpenses.provider.TransactionProvider.TAGS_URI
+import org.totschnig.myexpenses.provider.TransactionProvider.TRANSACTIONS_URI
 import org.totschnig.myexpenses.provider.filter.AndCriterion
 import org.totschnig.myexpenses.provider.filter.CategoryCriterion
 import org.totschnig.myexpenses.provider.filter.CrStatusCriterion
@@ -82,6 +96,141 @@ class AndroidWebApiDataSource(
     )
 
     override fun accounts() = repository.queryAccounts(currencyContext)
+
+    override suspend fun account(id: Long) = accounts().firstOrNull { it.id == id }
+
+    override fun accountTypes() = repository.queryAccountTypes()
+
+    override suspend fun createAccount(body: AccountWriteDto): AccountDto {
+        val account = budgetAccountValues(body)
+        val created = repository.createAccount(account)
+        return account(created.id) ?: throw ApiException(
+            HttpStatusCode.InternalServerError,
+            "save_failed",
+            "Could not create the account"
+        )
+    }
+
+    override suspend fun updateAccount(id: Long, body: AccountWriteDto): AccountDto {
+        val existing = account(id) ?: throw ApiException(
+            HttpStatusCode.NotFound,
+            "account_not_found",
+            "Account not found"
+        )
+        val values = ContentValues()
+        body.label?.trim()?.takeIf { it.isNotBlank() }?.let { values.put(KEY_LABEL, it) }
+        body.openingBalanceMinor?.let { values.put(KEY_OPENING_BALANCE, it) }
+        body.excludeFromTotals?.let { values.put(KEY_EXCLUDE_FROM_TOTALS, it) }
+        body.color?.let { values.put(KEY_COLOR, it) }
+        val hasTransactions = accountHasTransactions(id)
+        if (body.type != null && body.type != existing.type) {
+            if (hasTransactions) {
+                throw ApiException(
+                    HttpStatusCode.UnprocessableEntity,
+                    "unsupported_account_change",
+                    "The type of an account with transactions cannot change"
+                )
+            }
+            values.put(KEY_TYPE, parseAccountTypeId(body.type))
+        }
+        if (body.currency != null && body.currency != existing.currency) {
+            if (hasTransactions) {
+                throw ApiException(
+                    HttpStatusCode.UnprocessableEntity,
+                    "unsupported_account_change",
+                    "The currency of an account with transactions cannot change"
+                )
+            }
+            requireCurrency(body.currency)
+            values.put(KEY_CURRENCY, body.currency)
+        }
+        if (values.size() > 0) {
+            repository.updateAccount(id) { putAll(values) }
+        }
+        return account(id)!!
+    }
+
+    override suspend fun deleteAccount(id: Long): Boolean {
+        val existing = account(id) ?: return false
+        if (existing.sealed) {
+            throw ApiException(
+                HttpStatusCode.Conflict,
+                "account_sealed",
+                "Accounts with a sealed debt cannot be deleted"
+            )
+        }
+        repository.deleteAccount(id)
+        return true
+    }
+
+    private fun budgetAccountValues(body: AccountWriteDto): AccountModel {
+        val label = body.label?.trim().orEmpty()
+        if (label.isBlank()) {
+            throw ApiException(
+                HttpStatusCode.UnprocessableEntity,
+                "validation_failed",
+                "Missing label",
+                mapOf("label" to "Required")
+            )
+        }
+        val currency = requireCurrency(body.currency)
+        val type = repository.loadAccountType(parseAccountTypeId(body.type))
+        return AccountModel(
+            label = label,
+            currency = currency,
+            type = type,
+            openingBalance = body.openingBalanceMinor ?: 0,
+            excludeFromTotals = body.excludeFromTotals ?: false,
+            color = body.color ?: AccountModel.DEFAULT_COLOR
+        )
+    }
+
+    private fun parseAccountTypeId(raw: String?): Long {
+        val id = raw?.toLongOrNull()?.takeIf { it > 0 } ?: throw ApiException(
+            HttpStatusCode.UnprocessableEntity,
+            "validation_failed",
+            "Missing type",
+            mapOf("type" to "Required")
+        )
+        return try {
+            repository.loadAccountType(id).id
+        } catch (_: Exception) {
+            throw ApiException(
+                HttpStatusCode.UnprocessableEntity,
+                "validation_failed",
+                "Unknown account type",
+                mapOf("type" to "Unknown")
+            )
+        }
+    }
+
+    private fun requireCurrency(currency: String?): String {
+        val code = currency?.takeIf { it.isNotBlank() } ?: throw ApiException(
+            HttpStatusCode.UnprocessableEntity,
+            "validation_failed",
+            "Missing currency",
+            mapOf("currency" to "Required")
+        )
+        return try {
+            currencyContext[code].code
+        } catch (_: Exception) {
+            throw ApiException(
+                HttpStatusCode.UnprocessableEntity,
+                "validation_failed",
+                "Unknown currency",
+                mapOf("currency" to "Unknown")
+            )
+        }
+    }
+
+    private fun accountHasTransactions(accountId: Long): Boolean =
+        repository.contentResolver.query(
+            TRANSACTIONS_URI,
+            arrayOf("count(*)"),
+            "$KEY_ACCOUNTID = ? AND $KEY_PARENTID IS NULL",
+            arrayOf(accountId.toString()),
+            null
+        )?.use { if (it.moveToFirst()) it.getLong(0) > 0 else false } ?: false
 
     override fun categories() = repository.queryCategories()
 

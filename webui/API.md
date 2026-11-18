@@ -43,7 +43,9 @@ módulo `:webui`). Interfaz y sistema visual: [`DESIGN.md`](./DESIGN.md).
 }
 ```
 
-- Paginación: `limit` (por defecto 50, máximo 500) y `offset`. Respuesta:
+- Paginación: `limit` (por defecto 50, entre 1 y 500) y `offset` (cero o
+  positivo). Fuera de rango: `400 invalid_limit` / `400 invalid_offset`, sin
+  recortar en silencio. Respuesta:
 
 ```json
 { "items": [ ... ], "total": 1234, "limit": 50, "offset": 0 }
@@ -130,7 +132,8 @@ divisa; el cliente formatea con eso, no con un valor fijo.
   {
     "id": 1,
     "label": "Cuenta corriente",
-    "type": "BANK",
+    "type": "2",
+    "typeName": "BANK",
     "currency": "EUR",
     "openingBalanceMinor": 0,
     "currentBalanceMinor": 123456,
@@ -145,7 +148,49 @@ divisa; el cliente formatea con eso, no con un valor fijo.
 ]
 ```
 
-`GET /accounts/{id}` — mismo objeto.
+`GET /accounts/{id}` — mismo objeto; id desconocido, `404 account_not_found`.
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| GET | `/account-types` | Tipos de cuenta disponibles |
+| POST | `/accounts` | Alta de cuenta |
+| PUT | `/accounts/{id}` | Edición |
+| DELETE | `/accounts/{id}` | Borrado con sus movimientos |
+
+`POST /accounts` (`201` + `Location`):
+
+```json
+{
+  "label": "Cuenta de pruebas",
+  "type": "2",
+  "currency": "EUR",
+  "openingBalanceMinor": 0,
+  "excludeFromTotals": false,
+  "color": null
+}
+```
+
+- `label`, `type` (id de `/account-types`) y `currency` son obligatorios; una
+  divisa o un tipo desconocidos son `422 validation_failed` con `fields`.
+- La cuenta nace sin movimientos y con el saldo de apertura indicado.
+- `PUT` cambia etiqueta, saldo de apertura, `excludeFromTotals` y color. Tipo y
+  divisa solo se pueden cambiar mientras la cuenta **no** tenga movimientos;
+  si los tiene, `422 unsupported_account_change`.
+- `DELETE` borra la cuenta **y sus movimientos**, como la app (el provider
+  actualiza las parejas de transferencia). Con una deuda sellada responde
+  `409 account_sealed`. El cliente pide confirmación; el servidor no.
+
+`GET /account-types`:
+
+```json
+[{ "id": 1, "name": "CASH", "isAsset": true, "supportsReconciliation": false }]
+```
+
+- `type` es el **id** del tipo de cuenta y es lo que se compara con
+  `methods[].accountTypes` (también ids). `typeName` es el nombre que usa la app
+  (`CASH`, `BANK`, `CCARD`, `ASSET`, `LIABILITY`); los nombres internos
+  (`_CASH_`) viajan sin guiones bajos, y un tipo propio conserva su nombre.
+- `openingBalanceMinor` es el saldo de apertura, separado del saldo actual.
 
 Cuenta virtual para el dashboard: `GET /accounts?includeAggregate=true` añade un
 elemento con `id: "all"` (en la app son IDs negativos) y saldos convertidos a la
@@ -213,7 +258,8 @@ Todos opcionales, combinados con **AND**; dentro de una dimensión, OR.
 | `type` | `income`, `expense` o `both` |
 | `categoryId` | repetible (`?categoryId=1&categoryId=2`); una dividida entra si alguna parte la tiene |
 | `payeeId`, `tagId`, `methodId` | repetibles; `tagId` coincide con cualquiera de las etiquetas |
-| `q` | texto en comentario, nombre del beneficiario y referencia, sin distinguir mayúsculas (los acentos dependen de FTS, fuera de este corte); máximo 200 caracteres |
+| `q` | texto en comentario, nombre del beneficiario y referencia; no distingue mayúsculas **ni acentos** (las dos caras se pliegan); máximo 200 caracteres |
+| `uncategorized` | `true` limita a movimientos sin categoría; no se puede combinar con `categoryId` (`400 invalid_filter`) |
 | `amountMin`, `amountMax` | importe absoluto en unidades menores, ambos inclusive |
 | `status` | repetible; `UNRECONCILED`, `CLEARED`, `RECONCILED`, `VOID` |
 | `transfer` | `true` solo transferencias, `false` excluye las transferencias; ausente = todas |
