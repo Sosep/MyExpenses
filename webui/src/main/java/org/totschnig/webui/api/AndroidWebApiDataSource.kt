@@ -123,6 +123,7 @@ class AndroidWebApiDataSource(
         body.openingBalanceMinor?.let { values.put(KEY_OPENING_BALANCE, it) }
         body.excludeFromTotals?.let { values.put(KEY_EXCLUDE_FROM_TOTALS, it) }
         body.color?.let { values.put(KEY_COLOR, it) }
+        rejectAccountHierarchy(body)
         val hasTransactions = accountHasTransactions(id)
         if (body.type != null && body.type != existing.type) {
             if (hasTransactions) {
@@ -165,6 +166,7 @@ class AndroidWebApiDataSource(
     }
 
     private fun budgetAccountValues(body: AccountWriteDto): AccountModel {
+        rejectAccountHierarchy(body)
         val label = body.label?.trim().orEmpty()
         if (label.isBlank()) {
             throw ApiException(
@@ -220,6 +222,18 @@ class AndroidWebApiDataSource(
                 "validation_failed",
                 "Unknown currency",
                 mapOf("currency" to "Unknown")
+            )
+        }
+    }
+
+    /** Sub-accounts exist in the app; the web editor does not offer them yet. */
+    private fun rejectAccountHierarchy(body: AccountWriteDto) {
+        if (body.parentId != null) {
+            throw ApiException(
+                HttpStatusCode.UnprocessableEntity,
+                "unsupported_account_hierarchy",
+                "Sub-accounts are not supported from the web yet",
+                mapOf("parentId" to "Not supported")
             )
         }
     }

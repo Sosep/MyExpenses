@@ -1,6 +1,7 @@
 # Spec: cuentas-escritura — crear, editar y borrar cuentas por HTTP — V1
 
 Status: API implementada (18-nov-2026); falta el panel de alta en la SPA.
+`parentId` responde `422 unsupported_account_hierarchy` en vez de ignorarse.
 Scope: rutas de escritura de `/accounts`, el repositorio de cuentas y la SPA
 (selector y editor de cuentas). Sin cambios de esquema.
 Depende de [`SPEC-api-contrato.md`](./SPEC-api-contrato.md) (nombres de tipo).

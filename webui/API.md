@@ -176,6 +176,9 @@ divisa; el cliente formatea con eso, no con un valor fijo.
 - `PUT` cambia etiqueta, saldo de apertura, `excludeFromTotals` y color. Tipo y
   divisa solo se pueden cambiar mientras la cuenta **no** tenga movimientos;
   si los tiene, `422 unsupported_account_change`.
+- `parentId` no se admite todavía desde la web: enviarlo es
+  `422 unsupported_account_hierarchy` (las subcuentas se siguen creando en la
+  app), en vez de aceptarlo y descartarlo en silencio.
 - `DELETE` borra la cuenta **y sus movimientos**, como la app (el provider
   actualiza las parejas de transferencia). Con una deuda sellada responde
   `409 account_sealed`. El cliente pide confirmación; el servidor no.
