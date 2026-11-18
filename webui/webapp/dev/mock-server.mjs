@@ -689,14 +689,16 @@ function serveAppIndex(response) {
         } else {
           document.cookie = 'myexpenses_session=mock; path=/'
         }
-        if (q.get('locale')) localStorage.setItem('myexpenses.locale', q.get('locale'))
-        localStorage.setItem('myexpenses.theme', q.get('theme') === 'dark' ? 'dark' : 'light')
-        var hidden = q.get('hidden')
-        localStorage.setItem('myexpenses.hideTotals', hidden === '1' || hidden === 'totals' ? '1' : '0')
-        localStorage.setItem('myexpenses.hideTransactions', hidden === '1' || hidden === 'transactions' ? '1' : '0')
-        var hidden = q.get('hidden')
-        localStorage.setItem('myexpenses.hideTotals', hidden === '1' || hidden === 'totals' ? '1' : '0')
-        localStorage.setItem('myexpenses.hideTransactions', hidden === '1' || hidden === 'transactions' ? '1' : '0')
+        // A QA switch only touches what it names. Without the parameter the
+        // browser keeps the theme, language and privacy switches the user
+        // picked, so a plain reload proves that they survive.
+        if (q.has('locale')) localStorage.setItem('myexpenses.locale', q.get('locale'))
+        if (q.has('theme')) localStorage.setItem('myexpenses.theme', q.get('theme') === 'dark' ? 'dark' : 'light')
+        if (q.has('hidden')) {
+          var hidden = q.get('hidden')
+          localStorage.setItem('myexpenses.hideTotals', hidden === '1' || hidden === 'totals' ? '1' : '0')
+          localStorage.setItem('myexpenses.hideTransactions', hidden === '1' || hidden === 'transactions' ? '1' : '0')
+        }
         window.addEventListener('load', function(){
           if (q.get('view') === 'reports') {
             setTimeout(function(){ document.querySelector('button[data-view="reports"]')?.click() }, 250)

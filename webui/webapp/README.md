@@ -37,6 +37,10 @@ presupuestos e informes.
 - Privacidad: dos botones en la barra superior (ojo = totales, filas = importes
   de transacciones) que sustituyen cada cifra por `€ ••••`; cada uno recuerda su
   estado en `localStorage` y los editores abiertos se siguen leyendo.
+- Preferencias del navegador: el tema, el idioma, la cuenta, la agrupación, la
+  privacidad y las selecciones de cada pantalla (mes y controles de informes,
+  mes de presupuestos y filtro ingreso/gasto) se guardan en `localStorage` y
+  sobreviven a una recarga, también en la PWA.
 - Datos de servidor con TanStack Query: caché compartida y refresco por
   invalidación tras cada escritura.
 - Geist Sans empaquetada (`@fontsource/geist-sans`), sin depender de la red.
@@ -177,11 +181,16 @@ El detalle de una transacción abre una entrada de historial: atrás lo cierra.
 | `?new=1&combo=1` | Abre el alta y filtra beneficiarios escribiendo `Ren` |
 | `?edit=simple` / `?edit=split` / `?edit=transfer` | Abre esa transacción en su editor |
 | `?new=1&save=1` | Crea una transacción simple de prueba |
-| `?theme=dark` | Tema oscuro |
-| `?hidden=1` | Tapa totales e importes de transacciones |
+| `?theme=dark` | Tema oscuro (`?theme=light` vuelve al claro) |
+| `?hidden=1` | Tapa totales e importes de transacciones (`?hidden=0` los muestra) |
 | `?hidden=totals` | Tapa solo patrimonio, KPIs y agregados |
 | `?hidden=transactions` | Tapa solo los importes de las filas |
 | `?metrics=1` | Badge con `scrollHeight`/`clientHeight` y filas |
+
+Los parámetros de tema, idioma y privacidad **solo escriben cuando aparecen**:
+una recarga sin parámetros conserva lo que el usuario eligió. El resto de
+selecciones (informes, mes de presupuestos, filtro ingreso/gasto) también se
+recuerdan en `localStorage`, así que se comprueban recargando sin parámetros.
 
 ### Viewport móvil
 

@@ -1,8 +1,15 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { t } from '@lingui/core/macro'
 import { useHistoryPanel } from '../navigation'
 import type { Account, BreakdownItem } from '../types'
 import { describeError, getBreakdown, getReportSummary } from '../api'
+import {
+  readReportPreferences,
+  rememberReportPreferences,
+  type ReportBreakdown as By,
+  type ReportRange as RangeMode,
+  type ReportType as Type,
+} from '../preferences'
 import {
   addMonths,
   currentMonth,
@@ -21,12 +28,8 @@ interface ReportsProps {
   accounts: Account[]
 }
 
-type By = 'category' | 'payee' | 'tag' | 'method'
-type RangeMode = 'month' | 'last3' | 'year'
-type Type = 'expense' | 'income' | 'both'
-
-const BY_OPTIONS = ['category', 'payee', 'tag', 'method'] as const
-const TYPE_OPTIONS = ['expense', 'income', 'both'] as const
+const BY_OPTIONS: readonly By[] = ['category', 'payee', 'tag', 'method']
+const TYPE_OPTIONS: readonly Type[] = ['expense', 'income', 'both']
 
 function byLabel(by: By): string {
   if (by === 'category') return t`Category`
@@ -63,12 +66,19 @@ function titleFor(by: By, type: Type): string {
 
 export function Reports({ account, accounts }: ReportsProps) {
   const reportMoney = useMoney('totals')
-  const [month, setMonth] = useState(currentMonth())
-  const [by, setBy] = useState<By>('category')
-  const [type, setType] = useState<Type>('expense')
-  const [rangeMode, setRangeMode] = useState<RangeMode>('month')
-  const [allAccounts, setAllAccounts] = useState(false)
+  // The controls are remembered between visits: a reload (or reopening the PWA)
+  // shows the same month, range, breakdown and type the user left.
+  const [initial] = useState(() => readReportPreferences(currentMonth()))
+  const [month, setMonth] = useState(initial.month)
+  const [by, setBy] = useState<By>(initial.breakdown)
+  const [type, setType] = useState<Type>(initial.type)
+  const [rangeMode, setRangeMode] = useState<RangeMode>(initial.range)
+  const [allAccounts, setAllAccounts] = useState(initial.allAccounts)
   const [selected, setSelected] = useState<BreakdownItem | null>(null)
+
+  useEffect(() => {
+    rememberReportPreferences({ month, range: rangeMode, breakdown: by, type, allAccounts })
+  }, [month, rangeMode, by, type, allAccounts])
   const closeSelected = useHistoryPanel(selected !== null, () => setSelected(null))
   const reportAccountId = allAccounts ? 0 : account.id
   const year = Number(month.slice(0, 4))

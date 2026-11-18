@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useHistoryPanel } from '../navigation'
 import { t } from '@lingui/core/macro'
 import type { Account, Budget, BudgetProgress } from '../types'
 import { describeError, getBudgetProgress, getBudgets } from '../api'
+import { readBudgetMonth, rememberBudgetMonth } from '../preferences'
 import { budgetState, daysLeft, groupingLabel, progressRatio } from '../budgetUi'
 import { addMonths, currentMonth, formatMonthKey, formatPercent } from '../format'
 import { Money, useMoney } from '../privacy'
@@ -41,7 +42,12 @@ export function Budgets({
   const closePanel = useHistoryPanel(panel !== null, () => setPanel(null))
   const summaryMoney = useMoney('totals')
   const cardMoney = useMoney('transactions')
-  const [month, setMonth] = useState(currentMonth())
+  // The month the user was looking at survives a reload, like the other
+  // screen-level selections.
+  const [month, setMonth] = useState(() => readBudgetMonth(currentMonth()))
+  useEffect(() => {
+    rememberBudgetMonth(month)
+  }, [month])
   const current = currentMonth()
   const atCurrentMonth = month >= current
   const [year, monthNumber] = month.split('-').map(Number)

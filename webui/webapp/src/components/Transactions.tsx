@@ -29,6 +29,11 @@ import { MultiPicker } from './MultiPicker'
 import { NO_FILTERS, filtersFromUrl, searchWithFilters } from '../filters'
 import type { Filters, Grouping, RangePreset, RangeState } from '../filters'
 import {
+  readTransactionType,
+  rememberTransactionType,
+  type TransactionType,
+} from '../preferences'
+import {
   activeFilterCount as countFilters,
   searchWithViewState,
   groupingFromUrl,
@@ -43,8 +48,6 @@ interface TransactionsProps {
   onEditTransaction: (id: number) => void
   onDataChanged: () => void
 }
-
-type TypeFilter = 'all' | 'income' | 'expense'
 
 function description(transaction: Transaction): string {
   if (transaction.payee?.label) return transaction.payee.label
@@ -109,7 +112,7 @@ export function Transactions({
     groupingFromUrl(window.location.search),
   )
   const [range, setRange] = useState<RangeState>(() => rangeFromUrl(window.location.search))
-  const [type, setType] = useState<TypeFilter>('all')
+  const [type, setType] = useState<TransactionType>(readTransactionType)
   const [filters, setFilters] = useState<Filters>(() => filtersFromUrl(window.location.search))
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [extra, setExtra] = useState<Transaction[]>([])
@@ -133,6 +136,12 @@ export function Transactions({
       `${window.location.pathname}${searchWithViewState(withFilters, grouping, range)}`,
     )
   }, [filters, grouping, range])
+
+  // The type switch is not a filter of the API contract, so it is remembered
+  // locally instead of written to the URL.
+  useEffect(() => {
+    rememberTransactionType(type)
+  }, [type])
 
   const references = useAsync(async () => {
     const [categories, payees, tags, methods] = await Promise.all([

@@ -55,6 +55,12 @@ Read this before changing code. Detailed sources:
   lives in `localStorage`, never goes to the server, and open editors stay
   readable. Amounts render through `Money`/`useMoney` in `webui/webapp/src/privacy.tsx`;
   `formatMoney` and `maskedMoney` are in `format.ts`.
+- Remembered selections: theme, language, account, grouping, the privacy
+  switches and the screen choices (report month/range/breakdown/type/all
+  accounts, budget month, transaction type) live in `localStorage`, so a reload
+  or a PWA restart reopens where the user left it. Every read validates the
+  value; the screen keys are in `webui/webapp/src/preferences.ts`. Mock QA
+  switches only write when their parameter is present.
 - Files: `GET /api/v1/files` lists app-directory backups and `GET /api/v1/files/{name}`
   streams one with `Content-Disposition`; the SPA downloads via fetch + blob with
   the session cookie.
