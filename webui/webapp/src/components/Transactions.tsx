@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import type { Account, Group, Transaction } from '../types'
 import {
   describeError,
@@ -235,9 +235,14 @@ export function Transactions({
     () => getGrouped(account.id, grouping, window_.from ?? '1970-01-01', window_.to ?? '2999-12-31'),
     ['transaction-groups', account.id, grouping, window_.from, window_.to],
   )
+  // Grouped views pool every transaction of the window in one page (up to the
+  // API maximum) so each period header has rows under it. With 50 rows only the
+  // newest months had content and the older headers were empty accordions that
+  // clicked but did nothing.
+  const pageSize = grouping === 'NONE' ? 50 : 500
   const page = useAsync(
-    () => getTransactions(account.id, window_.from, window_.to, apiType, 50, 0, filters),
-    ['transaction-page', account.id, window_.from, window_.to, apiType, filtersKey],
+    () => getTransactions(account.id, window_.from, window_.to, apiType, pageSize, 0, filters),
+    ['transaction-page', account.id, window_.from, window_.to, apiType, filtersKey, pageSize],
   )
 
   useEffect(() => {
@@ -280,7 +285,7 @@ export function Transactions({
         window_.from,
         window_.to,
         apiType,
-        50,
+        pageSize,
         items.length,
         filters,
       )
@@ -707,7 +712,7 @@ export function Transactions({
                     const rows = buckets.rows.get(group.firstDate) ?? []
                     const transfers = group.transfersMinor
                     return (
-                      <>
+                      <Fragment key={group.firstDate}>
                         <tr
                           key={`group-${group.firstDate}`}
                           className={`group-row ${isCollapsed ? 'collapsed' : ''}`}
@@ -762,7 +767,7 @@ export function Transactions({
                           </td>
                         </tr>
                         {!isCollapsed ? rows.map(renderRow) : null}
-                      </>
+                      </Fragment>
                     )
                   })}
                   {buckets.orphans.map(renderRow)}
