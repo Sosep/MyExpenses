@@ -2,10 +2,27 @@
 <SmellBaseline>
   <ManuallySuppressedIssues/>
   <CurrentIssues>
+    <ID>CyclomaticComplexMethod:AndroidWebApiDataSource.kt:AndroidWebApiDataSource$override suspend fun updateBudgetAllocations: List&lt;BudgetAllocationDto&gt;</ID>
+    <ID>CyclomaticComplexMethod:AndroidWebApiDataSource.kt:private fun Criterion.toBudgetCriteria: BudgetCriteriaDto?</ID>
+    <ID>CyclomaticComplexMethod:ApiQueries.kt:private fun transactionSelection: Pair&lt;String, Array&lt;String&gt;?&gt;</ID>
+    <ID>CyclomaticComplexMethod:ApiRoutes.kt:ApiRoutes$fun register</ID>
+    <ID>CyclomaticComplexMethod:ApiRoutes.kt:private fun ApplicationCall.transactionFilters: TransactionQueryFilters</ID>
     <ID>CyclomaticComplexMethod:WebInputService.kt:WebInputService$override fun onStartCommand: Int</ID>
-    <ID>CyclomaticComplexMethod:WebInputService.kt:WebInputService$private fun Route.serve</ID>
+    <ID>LargeClass:AndroidWebApiDataSource.kt:AndroidWebApiDataSource : WebApiDataSource</ID>
+    <ID>LongMethod:AndroidWebApiDataSource.kt:AndroidWebApiDataSource$override fun createSplit: TransactionDto</ID>
+    <ID>LongMethod:AndroidWebApiDataSource.kt:AndroidWebApiDataSource$override fun updateSplit: TransactionDto</ID>
+    <ID>LongMethod:AndroidWebApiDataSource.kt:AndroidWebApiDataSource$override fun updateTransfer: TransactionDto</ID>
+    <ID>LongMethod:AndroidWebApiDataSource.kt:AndroidWebApiDataSource$override suspend fun budgetBreakdown: BudgetBreakdownDto?</ID>
+    <ID>LongMethod:AndroidWebApiDataSource.kt:AndroidWebApiDataSource$override suspend fun createBudget: BudgetDto</ID>
+    <ID>LongMethod:AndroidWebApiDataSource.kt:AndroidWebApiDataSource$override suspend fun updateBudget: BudgetDto</ID>
+    <ID>LongMethod:AndroidWebApiDataSource.kt:AndroidWebApiDataSource$override suspend fun updateBudgetAllocations: List&lt;BudgetAllocationDto&gt;</ID>
+    <ID>LongMethod:ApiQueries.kt:private fun transactionSelection: Pair&lt;String, Array&lt;String&gt;?&gt;</ID>
+    <ID>LongMethod:ApiRoutes.kt:ApiRoutes$fun register</ID>
+    <ID>LongMethod:ApiRoutes.kt:private fun ApplicationCall.transactionFilters: TransactionQueryFilters</ID>
     <ID>LongMethod:WebInputService.kt:WebInputService$override fun onStartCommand: Int</ID>
-    <ID>LongMethod:WebInputService.kt:WebInputService$private fun Route.serve</ID>
+    <ID>MagicNumber:AndroidWebApiDataSource.kt:AndroidWebApiDataSource$12</ID>
+    <ID>MagicNumber:ApiQueries.kt:3</ID>
+    <ID>MagicNumber:ApiRoutes.kt:200</ID>
     <ID>MagicNumber:Certificates.kt:0x0500</ID>
     <ID>MagicNumber:Certificates.kt:0x10</ID>
     <ID>MagicNumber:Certificates.kt:0x17</ID>
@@ -24,13 +41,44 @@
     <ID>MagicNumber:Certificates.kt:6</ID>
     <ID>MagicNumber:Certificates.kt:7</ID>
     <ID>MagicNumber:Certificates.kt:8</ID>
+    <ID>MagicNumber:LoginThrottle.kt:LoginThrottle$1000</ID>
+    <ID>MagicNumber:LoginThrottle.kt:LoginThrottle$4</ID>
+    <ID>MagicNumber:SessionStore.kt:SessionStore$7</ID>
     <ID>MagicNumber:WebInputService.kt:WebInputService$9000</ID>
     <ID>MagicNumber:WebInputService.kt:WebInputService$9050</ID>
+    <ID>MatchingDeclarationName:SessionAuth.kt:SessionAuthenticationProvider : AuthenticationProvider</ID>
+    <ID>MaxLineLength:ApiRoutesTest.kt:ApiRoutesTest$"""{"accountId":1,"amountMinor":-10000,"date":"2026-11-17","parts":[{"amountMinor":-10000,"categoryId":2}]}"""</ID>
+    <ID>MaxLineLength:ApiRoutesTest.kt:ApiRoutesTest$"""{"accountId":1,"amountMinor":-10000,"date":"2026-11-17","parts":[{"amountMinor":-9000,"categoryId":2}]}"""</ID>
+    <ID>MaxLineLength:ApiRoutesTest.kt:ApiRoutesTest$"""{"year":2026,"second":10,"allocations":[{"categoryId":2,"amountMinor":35000},{"categoryId":0,"amountMinor":45000,"oneTime":true}],"rollover":[{"categoryId":2,"amountMinor":5000}]}"""</ID>
     <ID>NewLineAtEndOfFile:TransactionDTO.kt:org.totschnig.webui.TransactionDTO.kt</ID>
-    <ID>NewLineAtEndOfFile:WebInputService.kt:org.totschnig.webui.WebInputService.kt</ID>
     <ID>NewLineAtEndOfFile:WebUiComponent.kt:org.totschnig.webui.WebUiComponent.kt</ID>
+    <ID>ReturnCount:AndroidWebApiDataSource.kt:AndroidWebApiDataSource$override suspend fun budgetBreakdown: BudgetBreakdownDto?</ID>
+    <ID>ReturnCount:AndroidWebApiDataSource.kt:AndroidWebApiDataSource$override suspend fun budgetHistory: List&lt;BudgetHistoryPointDto&gt;</ID>
+    <ID>ReturnCount:AndroidWebApiDataSource.kt:AndroidWebApiDataSource$override suspend fun budgetProgress: BudgetProgressDto?</ID>
+    <ID>ReturnCount:AndroidWebApiDataSource.kt:private fun Criterion.toBudgetCriteria: BudgetCriteriaDto?</ID>
+    <ID>ReturnCount:ApiMappers.kt:private fun Transaction.categoryRef: CategoryRef?</ID>
+    <ID>ReturnCount:ApiRoutes.kt:private suspend fun ApplicationCall.budgetPeriod: Pair&lt;Int, Int&gt;?</ID>
+    <ID>ReturnCount:LoginThrottle.kt:LoginThrottle$@Synchronized fun retryAfterSeconds: Long?</ID>
+    <ID>ReturnCount:SessionStore.kt:SessionStore$fun isValid: Boolean</ID>
     <ID>ReturnCount:WebInputService.kt:WebInputService$override fun onStartCommand: Int</ID>
+    <ID>SwallowedException:AndroidWebApiDataSource.kt:AndroidWebApiDataSource$cause: Exception</ID>
+    <ID>ThrowsCount:AndroidWebApiDataSource.kt:AndroidWebApiDataSource$override fun updateSplit: TransactionDto</ID>
+    <ID>ThrowsCount:AndroidWebApiDataSource.kt:AndroidWebApiDataSource$override suspend fun createBudget: BudgetDto</ID>
+    <ID>ThrowsCount:AndroidWebApiDataSource.kt:AndroidWebApiDataSource$override suspend fun updateAccount: AccountDto</ID>
+    <ID>ThrowsCount:AndroidWebApiDataSource.kt:AndroidWebApiDataSource$override suspend fun updateBudget: BudgetDto</ID>
+    <ID>ThrowsCount:AndroidWebApiDataSource.kt:AndroidWebApiDataSource$override suspend fun updateBudgetAllocations: List&lt;BudgetAllocationDto&gt;</ID>
+    <ID>ThrowsCount:AndroidWebApiDataSource.kt:private fun Long?.requireNonZero: Long</ID>
+    <ID>ThrowsCount:AndroidWebApiDataSource.kt:private fun budgetDuration: Pair&lt;LocalDate?, LocalDate?&gt;</ID>
+    <ID>ThrowsCount:ApiRoutes.kt:ApiRoutes$fun register</ID>
+    <ID>ThrowsCount:ApiRoutes.kt:private fun ApplicationCall.transactionFilters: TransactionQueryFilters</ID>
+    <ID>ThrowsCount:ApiRoutes.kt:private suspend fun ApplicationCall.budgetPeriod: Pair&lt;Int, Int&gt;?</ID>
+    <ID>ThrowsCount:WebInputService.kt:WebInputService$override fun onStartCommand: Int</ID>
+    <ID>TooGenericExceptionCaught:AndroidWebApiDataSource.kt:AndroidWebApiDataSource$cause: Exception</ID>
+    <ID>TooManyFunctions:AndroidWebApiDataSource.kt:AndroidWebApiDataSource : WebApiDataSource</ID>
+    <ID>TooManyFunctions:AndroidWebApiDataSource.kt:org.totschnig.webui.api.AndroidWebApiDataSource.kt</ID>
+    <ID>TooManyFunctions:ApiQueries.kt:org.totschnig.webui.api.ApiQueries.kt</ID>
     <ID>TooManyFunctions:Certificates.kt:org.totschnig.webui.Certificates.kt</ID>
+    <ID>TooManyFunctions:WebApiDataSource.kt:WebApiDataSource</ID>
     <ID>TooManyFunctions:WebInputService.kt:WebInputService : LifecycleServiceIWebInputService</ID>
   </CurrentIssues>
 </SmellBaseline>

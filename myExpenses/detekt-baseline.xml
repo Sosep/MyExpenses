@@ -679,7 +679,6 @@
     <ID>MaxLineLength:AccountList.kt:if (grouping == AccountGrouping.CURRENCY) it.effectiveBalance else it.equivalentEffectiveBalance</ID>
     <ID>MaxLineLength:AccountMetaData.kt:AccountMetaData.Companion$exchangeRate = if (homeCurrency != null &amp;&amp; homeCurrency != accountCurrency) account.exchangeRate else null</ID>
     <ID>MaxLineLength:AccountMetaData.kt:AccountMetaData.Companion$exchangeRateOtherCurrency = if (homeCurrency != null &amp;&amp; homeCurrency != accountCurrency) homeCurrency else null</ID>
-    <ID>MaxLineLength:AccountSumTest.kt:AccountSumTest$hasLong(KEY_CURRENT_BALANCE, openingBalance + income1 + income2 - expense1 - expense2 + transferP - transferN)</ID>
     <ID>MaxLineLength:AccountType.kt:AccountType.Companion$val ASSET = AccountType(name = PREDEFINED_NAME_ASSET, isAsset = true, supportsReconciliation = true, sortKey = -1)</ID>
     <ID>MaxLineLength:AccountType.kt:AccountType.Companion$val CCARD = AccountType(name = PREDEFINED_NAME_CCARD, isAsset = false, supportsReconciliation = true, sortKey = 0)</ID>
     <ID>MaxLineLength:AccountWidgetConfigurationFragment.kt:AccountWidgetConfigurationFragment$(list.map { it.label } + getString(R.string.budget_filter_all_accounts)).toTypedArray()</ID>
@@ -835,10 +834,7 @@
     <ID>MaxLineLength:DbConstants.kt:KEY_SUM_INCOME -&gt; "(SELECT $sumExpression FROM $CTE_TRANSACTION_AMOUNTS WHERE $KEY_TYPE = $FLAG_INCOME) AS $KEY_SUM_INCOME"</ID>
     <ID>MaxLineLength:DbConstants.kt:append(" LEFT JOIN $TABLE_PLAN_INSTANCE_STATUS ON $tableName.$KEY_ROWID = $TABLE_PLAN_INSTANCE_STATUS.$KEY_TRANSACTIONID")</ID>
     <ID>MaxLineLength:DbConstants.kt:append(" SELECT $tableName.*, Tree.$KEY_PATH, Tree.$KEY_ICON, Tree.$KEY_TYPE, $TABLE_PAYEES.$KEY_PAYEE_NAME, $TABLE_PAYEES.$KEY_SHORT_NAME, $TABLE_METHODS.$KEY_LABEL AS $KEY_METHOD_LABEL, $TABLE_METHODS.$KEY_ICON AS $KEY_METHOD_ICON")</ID>
-    <ID>MaxLineLength:DbConstants.kt:append(" WHERE $WHERE_NOT_SPLIT AND ${if (withFilter) WHERE_NOT_ARCHIVE else WHERE_NOT_ARCHIVED} AND $selection")</ID>
-    <ID>MaxLineLength:DbConstants.kt:append(" WHERE $WHERE_NOT_SPLIT AND ($KEY_PARENTID = $archiveId OR (SELECT $KEY_PARENTID FROM $TABLE_TRANSACTIONS parents WHERE $KEY_ROWID = $VIEW_WITH_ACCOUNT.$KEY_PARENTID) = $archiveId))")</ID>
     <ID>MaxLineLength:DbConstants.kt:append("$aggregateFunction(CASE WHEN effective_type = $FLAG_TRANSFER THEN $KEY_DISPLAY_AMOUNT ELSE 0 END) AS $KEY_SUM_TRANSFERS,")</ID>
-    <ID>MaxLineLength:DbConstants.kt:append(",count(CASE WHEN $KEY_CATID &gt; 0 AND $WHERE_NOT_VOID AND effective_type != $FLAG_TRANSFER THEN 1 ELSE null END) as $KEY_MAPPED_CATEGORIES")</ID>
     <ID>MaxLineLength:DbConstants.kt:else -&gt; if (breakdownByAccount) "$KEY_YEAR, $KEY_SECOND_GROUP, $KEY_ACCOUNTID" else "$KEY_YEAR, $KEY_SECOND_GROUP"</ID>
     <ID>MaxLineLength:Debt.kt:amount = if (showEquivalentAmount.value) transaction.equivalentAmount else transaction.amount</ID>
     <ID>MaxLineLength:DebtActivity.kt:DebtActivity$(supportFragmentManager.findFragmentByTag(PartiesList.DIALOG_DEBT_DETAILS) as? DebtDetailsDialogFragment)?.dismiss()</ID>
@@ -1164,7 +1160,6 @@
     <ID>NewLineAtEndOfFile:AccountMetaDataDialogFragment.kt:org.totschnig.myexpenses.dialog.AccountMetaDataDialogFragment.kt</ID>
     <ID>NewLineAtEndOfFile:AccountMinimal.kt:org.totschnig.myexpenses.viewmodel.data.AccountMinimal.kt</ID>
     <ID>NewLineAtEndOfFile:AccountRemovedReceiver.kt:org.totschnig.myexpenses.service.AccountRemovedReceiver.kt</ID>
-    <ID>NewLineAtEndOfFile:AccountSumTest.kt:org.totschnig.myexpenses.provider.AccountSumTest.kt</ID>
     <ID>NewLineAtEndOfFile:AccountTest.kt:org.totschnig.myexpenses.repository.AccountTest.kt</ID>
     <ID>NewLineAtEndOfFile:AccountType.kt:org.totschnig.myexpenses.model.AccountType.kt</ID>
     <ID>NewLineAtEndOfFile:AccountWidget.kt:org.totschnig.myexpenses.widget.AccountWidget.kt</ID>
@@ -1242,7 +1237,6 @@
     <ID>NewLineAtEndOfFile:CategoryTreeTest.kt:org.totschnig.myexpenses.provider.CategoryTreeTest.kt</ID>
     <ID>NewLineAtEndOfFile:CategoryTreeTest.kt:org.totschnig.myexpenses.viewmodel.data.CategoryTreeTest.kt</ID>
     <ID>NewLineAtEndOfFile:CategoryViewModelTest.kt:org.totschnig.myexpenses.viewmodel.CategoryViewModelTest.kt</ID>
-    <ID>NewLineAtEndOfFile:ChangeLogGenerator.kt:org.totschnig.myexpenses.changelog.ChangeLogGenerator.kt</ID>
     <ID>NewLineAtEndOfFile:ChangeLogTriggers.kt:org.totschnig.myexpenses.provider.ChangeLogTriggers.kt</ID>
     <ID>NewLineAtEndOfFile:ChangeSet.kt:org.totschnig.myexpenses.sync.json.ChangeSet.kt</ID>
     <ID>NewLineAtEndOfFile:CircularInitials.kt:org.totschnig.myexpenses.compose.CircularInitials.kt</ID>
@@ -1360,7 +1354,6 @@
     <ID>NewLineAtEndOfFile:FullAccount.kt:org.totschnig.myexpenses.viewmodel.data.FullAccount.kt</ID>
     <ID>NewLineAtEndOfFile:GrisbiImportHelper.kt:org.totschnig.myexpenses.task.GrisbiImportHelper.kt</ID>
     <ID>NewLineAtEndOfFile:GrisbiSourcesDialogFragment.kt:org.totschnig.myexpenses.dialog.GrisbiSourcesDialogFragment.kt</ID>
-    <ID>NewLineAtEndOfFile:GroupQueryTest.kt:org.totschnig.myexpenses.repository.GroupQueryTest.kt</ID>
     <ID>NewLineAtEndOfFile:GroupedSpinnerAdapter.kt:org.totschnig.myexpenses.adapter.GroupedSpinnerAdapter.kt</ID>
     <ID>NewLineAtEndOfFile:Grouping.kt:org.totschnig.myexpenses.model.Grouping.kt</ID>
     <ID>NewLineAtEndOfFile:GroupingNavigator.kt:org.totschnig.myexpenses.util.GroupingNavigator.kt</ID>
