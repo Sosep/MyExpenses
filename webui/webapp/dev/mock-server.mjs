@@ -1607,6 +1607,7 @@ createServer(async (request, response) => {
         if (item.date < from || item.date > to) return false
         if (type === 'income' && item.amountMinor <= 0) return false
         if (type === 'expense' && item.amountMinor >= 0) return false
+        if (url.searchParams.get('uncategorized') === 'true' && item.category) return false
         if (categoryIds.length && !categoryIds.includes(item.category?.id)) return false
         if (payeeIds.length && !payeeIds.includes(item.payee?.id)) return false
         if (methodIds.length && !methodIds.includes(item.method?.id)) return false
