@@ -79,7 +79,10 @@ import org.totschnig.myexpenses.provider.getStringOrNull
 import org.totschnig.myexpenses.provider.useAndMapToList
 import org.totschnig.myexpenses.provider.withLimit
 
-internal fun Repository.queryAccounts(currencyContext: CurrencyContext): List<AccountDto> {
+internal fun Repository.queryAccounts(
+    currencyContext: CurrencyContext,
+    id: Long? = null
+): List<AccountDto> {
     val uri = TransactionProvider.ACCOUNTS_URI.buildUpon()
         .appendQueryParameter(
             TransactionProvider.QUERY_PARAMETER_FULL_PROJECTION_WITH_SUMS,
@@ -87,7 +90,11 @@ internal fun Repository.queryAccounts(currencyContext: CurrencyContext): List<Ac
         )
         .build()
     val fractionDigits = mutableMapOf<String, Int>()
-    return contentResolver.query(uri, null, "$KEY_SEALED = 0", null, null)
+    // The list hides sealed accounts; a single account is read as it is, so the
+    // write endpoints can answer 409 for a sealed debt instead of a 404.
+    val selection = if (id == null) "$KEY_SEALED = 0" else "$KEY_ROWID = ?"
+    val args = if (id == null) null else arrayOf(id.toString())
+    return contentResolver.query(uri, null, selection, args, null)
         ?.useAndMapToList { cursor ->
             val currency = cursor.getString(KEY_CURRENCY)
             val rawType = cursor.getStringOrNull(KEY_ACCOUNT_TYPE_LABEL).orEmpty()

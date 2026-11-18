@@ -43,12 +43,16 @@ existe; se resuelve con [`SPEC-cuentas-escritura.md`](../SPEC-cuentas-escritura.
 - [ ] Editar la transferencia desde cualquiera de las dos caras.
 - [ ] Borrar una cara y comprobar que desaparece la pareja.
 
-## Hallazgos abiertos que no son código
+## Hallazgos abiertos: estado
 
-- [ ] `GET /accounts/{id}` y los nombres de tipo: [`SPEC-api-contrato.md`](../SPEC-api-contrato.md).
-- [ ] Búsqueda sin acentos: [`SPEC-busqueda-acentos.md`](../SPEC-busqueda-acentos.md).
-- [ ] `limit` fuera de rango recortado en silencio: entra en `SPEC-api-contrato`.
-- [x] Subir `versionName` en la próxima build (decisión: 4.1.5) para no
-      confundir entornos con la misma versión.
+- [x] `GET /accounts/{id}`, `typeName` y `openingBalanceMinor` (`SPEC-api-contrato`).
+- [x] `limit`/`offset` fuera de rango → 400.
+- [x] Búsqueda sin acentos (`SPEC-busqueda-acentos`).
+- [x] `versionName` 4.1.5 / versionCode 893.
+- [x] Vistas y detalle de transacción con historial (`SPEC-navegacion-historial`).
+- [x] Enlace del presupuesto a Transacciones (`SPEC-presupuesto-movimientos`, opción B).
+- [ ] Panel de alta de cuenta en la SPA (la API ya está).
+- [ ] Resto de paneles en la URL: detalle de presupuesto, editores, drill-down de
+      informes y confirmaciones; hoy se abren desde estado.
 - [ ] Unificar la caché de maestros: Transacciones usa `['transaction-references']`
       y presupuestos `['references']`; hoy se piden dos veces.

@@ -97,7 +97,8 @@ class AndroidWebApiDataSource(
 
     override fun accounts() = repository.queryAccounts(currencyContext)
 
-    override suspend fun account(id: Long) = accounts().firstOrNull { it.id == id }
+    override suspend fun account(id: Long) =
+        repository.queryAccounts(currencyContext, id).firstOrNull()
 
     override fun accountTypes() = repository.queryAccountTypes()
 
