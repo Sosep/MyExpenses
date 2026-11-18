@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useHistoryPanel } from '../navigation'
 import { t } from '@lingui/core/macro'
 import type { Account, Budget, BudgetProgress } from '../types'
 import { describeError, getBudgetProgress, getBudgets } from '../api'
@@ -31,13 +32,15 @@ export function Budgets({
   onDataChanged,
   onNavigate,
 }: BudgetsProps) {
-  const [editor, setEditor] = useState<
-    { mode: 'create' } | { mode: 'edit'; entry: BudgetEntry } | null
+  // One state for the side panel: detail and editor share a single history
+  // entry, so going from one to the other does not leave a dead "back" step.
+  const [panel, setPanel] = useState<
+    { kind: 'detail'; entry: BudgetEntry } | { kind: 'create' } | { kind: 'edit'; entry: BudgetEntry } | null
   >(null)
+  const closePanel = useHistoryPanel(panel !== null, () => setPanel(null))
   const [month, setMonth] = useState(currentMonth())
   const current = currentMonth()
   const atCurrentMonth = month >= current
-  const [detail, setDetail] = useState<BudgetEntry | null>(null)
   const [year, monthNumber] = month.split('-').map(Number)
   const entries = useAsync<BudgetEntry[]>(async () => {
     const budgets = await getBudgets()
@@ -126,7 +129,7 @@ export function Budgets({
           >
             {entries.loading ? t`Refreshing…` : t`Refresh`}
           </button>
-          <button type="button" className="btn primary" onClick={() => setEditor({ mode: 'create' })}>
+          <button type="button" className="btn primary" onClick={() => setPanel({ kind: 'create' })}>
             {t`New budget`}
           </button>
         </div>
@@ -276,14 +279,14 @@ export function Budgets({
                       type="button"
                       className="btn ghost budget-detail-btn"
                       data-action="budget-detail"
-                      onClick={() => setDetail({ budget, progress })}
+                      onClick={() => setPanel({ kind: 'detail', entry: { budget, progress } })}
                     >
                       {t`Detail`}
                     </button>
                     <button
                       type="button"
                       className="btn ghost budget-edit"
-                      onClick={() => setEditor({ mode: 'edit', entry: { budget, progress } })}
+                      onClick={() => setPanel({ kind: 'edit', entry: { budget, progress } })}
                     >
                       {t`Edit`}
                     </button>
@@ -305,31 +308,28 @@ export function Budgets({
         </>
       )}
 
-      {detail ? (
+      {panel?.kind === 'detail' ? (
         <BudgetDetailPanel
-          budget={detail.budget}
-          progress={detail.progress}
-          onEdit={() => {
-            setDetail(null)
-            setEditor({ mode: 'edit', entry: detail })
-          }}
-          onClose={() => setDetail(null)}
+          budget={panel.entry.budget}
+          progress={panel.entry.progress}
+          onEdit={() => setPanel({ kind: 'edit', entry: panel.entry })}
+          onClose={closePanel}
           onNavigate={onNavigate}
         />
       ) : null}
 
-      {editor ? (
+      {panel?.kind === 'create' || panel?.kind === 'edit' ? (
         <BudgetEditor
-          mode={editor.mode}
-          budget={editor.mode === 'edit' ? editor.entry.budget : undefined}
-          progress={editor.mode === 'edit' ? editor.entry.progress : undefined}
+          mode={panel.kind === 'create' ? 'create' : 'edit'}
+          budget={panel.kind === 'edit' ? panel.entry.budget : undefined}
+          progress={panel.kind === 'edit' ? panel.entry.progress : undefined}
           accounts={accounts}
           defaultAccountId={
-            editor.mode === 'edit' ? editor.entry.budget.accountId : defaultAccountId
+            panel.kind === 'edit' ? panel.entry.budget.accountId : defaultAccountId
           }
-          onClose={() => setEditor(null)}
+          onClose={closePanel}
           onSaved={(message) => {
-            setEditor(null)
+            closePanel()
             onDataChanged(message)
           }}
         />

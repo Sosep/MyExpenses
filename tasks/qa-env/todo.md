@@ -53,6 +53,5 @@ existe; se resuelve con [`SPEC-cuentas-escritura.md`](../SPEC-cuentas-escritura.
 - [x] Enlace del presupuesto a Transacciones (`SPEC-presupuesto-movimientos`, opción B).
 - [x] Panel de alta de cuenta en la SPA (botón `+` del topbar).
 - [x] Editor de transacción y drill-down de informes en el historial.
-- [ ] Detalle y editor de presupuesto en el historial: siguen abriéndose desde
-      estado.
+- [x] Detalle y editor de presupuesto en el historial (una sola entrada).
 - [x] Caché de maestros unificada en la clave `['references']`.

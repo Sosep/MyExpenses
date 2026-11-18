@@ -1,8 +1,8 @@
 # Spec: navegacion-historial — atrás y adelante como espera el navegador — V1
 
-Status: implementado para vistas, detalle de transacción, editor de transacción
-y drill-down de informes (18-nov-2026). El detalle y el editor de presupuesto
-siguen abriéndose desde estado.
+Status: implementado (18-nov-2026): vistas, detalle y editor de transacción,
+drill-down de informes y panel de presupuesto (detalle y editor comparten una
+sola entrada, así que pasar de uno a otro no deja un paso muerto).
 Scope: la SPA (App, vistas, paneles) y el contrato de la URL. Sin cambios de API
 salvo el filtro `uncategorized` que necesita el enlace del presupuesto (ver
 [`SPEC-presupuesto-movimientos.md`](./SPEC-presupuesto-movimientos.md)).
