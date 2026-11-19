@@ -339,11 +339,28 @@ class ApiRoutes(
                         "grouping must be DAY, WEEK, MONTH, YEAR or NONE"
                     )
                 }
+                val type = (call.parameters["type"] ?: "both").lowercase(Locale.ROOT)
+                if (type !in setOf("income", "expense", "both")) {
+                    throw ApiException(
+                        HttpStatusCode.BadRequest,
+                        "invalid_type",
+                        "type must be income, expense or both"
+                    )
+                }
                 val now = LocalDate.now()
                 val from = call.dateParam("from") ?: now.withDayOfMonth(1).minusMonths(11)
                 val to = call.dateParam("to") ?: now
                 validateRange(from, to)
-                call.respond(dataSource.groups(accountId, grouping, from, to))
+                call.respond(
+                    dataSource.groups(
+                        accountId,
+                        grouping,
+                        from,
+                        to,
+                        type,
+                        call.transactionFilters()
+                    )
+                )
             }
         }
     }

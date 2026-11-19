@@ -1596,7 +1596,7 @@ abstract class BaseTransactionProvider : ContentProvider() {
             group = group,
             includeTransfers = includeTransfers,
             aggregateFunction = aggregateFunction,
-            splitStrategy = splitStrategy
+            splitStrategy = resolveSplitStrategy(uri)
         ) + " " +
                 SupportSQLiteQueryBuilder.builder(if (breakdownByAccount) "with_market_rate" else CTE_TRANSACTION_GROUPS)
                     .columns(projection)

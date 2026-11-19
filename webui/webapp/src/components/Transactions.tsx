@@ -250,8 +250,16 @@ export function Transactions({
   }, [filters, references.data, paths, account.currency, account.fractionDigits, money])
 
   const grouped = useAsync(
-    () => getGrouped(account.id, grouping, window_.from ?? '1970-01-01', window_.to ?? '2999-12-31'),
-    ['transaction-groups', account.id, grouping, window_.from, window_.to],
+    () =>
+      getGrouped(
+        account.id,
+        grouping,
+        window_.from ?? '1970-01-01',
+        window_.to ?? '2999-12-31',
+        apiType,
+        filters,
+      ),
+    ['transaction-groups', account.id, grouping, window_.from, window_.to, apiType, filtersKey],
   )
   // Grouped views pool every transaction of the window in one page (up to the
   // API maximum) so each period header has rows under it. With 50 rows only the

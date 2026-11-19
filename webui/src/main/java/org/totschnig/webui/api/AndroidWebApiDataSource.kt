@@ -368,7 +368,9 @@ class AndroidWebApiDataSource(
         accountId: Long,
         grouping: String,
         from: LocalDate,
-        to: LocalDate
+        to: LocalDate,
+        type: String?,
+        filters: TransactionQueryFilters
     ): List<GroupDto> {
         repository.getCurrencyUnitForAccount(accountId)
             ?: throw ApiException(
@@ -380,7 +382,20 @@ class AndroidWebApiDataSource(
             accountId = accountId,
             grouping = Grouping.valueOf(grouping),
             from = from,
-            to = to
+            to = to,
+            type = type,
+            // Same branch expansion as the transaction list, so the period sums
+            // cover exactly the rows the filter shows.
+            filters = if (filters.categoryIds.isEmpty()) {
+                filters
+            } else {
+                filters.copy(
+                    categoryIds = categoryBranchIds(
+                        filters.categoryIds,
+                        repository.queryCategories().associate { it.id to it.parentId }
+                    )
+                )
+            }
         )
     }
 

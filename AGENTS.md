@@ -92,10 +92,12 @@ Read this before changing code. Detailed sources:
   the server, so the SPA sends one id and the `total` already includes the
   subtree.
   The list is not tied to a month: the grouping (`NONE/DAY/WEEK/MONTH/YEAR`) is a
-  visual choice kept in the URL and `localStorage`, each period header carries
-  its income, expenses and transfers from `/reports/grouped` (`firstDate`
-  anchors rows to periods), and the range is just another filter (`Historial`
-  by default, plus `Este mes`, `Últimos 3 meses`, `Este año` and a custom one).
+  visual choice kept in the URL and `localStorage`. Each period header carries
+  its income, expenses and transfers from `/reports/grouped` **with the same
+  type and filters as the list**, so a header never totals hidden rows
+  (`firstDate` anchors rows to periods), and the range is just another filter
+  (`Historial` by default, plus `Este mes`, `Últimos 3 meses`, `Este año` and a
+  custom one).
 - Budgets have month navigation; monthly budgets load that month's progress,
   allocations and period total. Each budget has a 12-month history panel and
   per-category spent/allocated bars. A budget's saved category filter is the

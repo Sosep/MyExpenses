@@ -640,7 +640,7 @@ que la web detecta pero no reescribe.
 
 | Método | Ruta | Descripción |
 |---|---|---|
-| GET | `/reports/grouped?accountId&grouping=DAY\|WEEK\|MONTH\|YEAR\|NONE&from&to` | Serie temporal: ingresos, gastos, transferencias, total por grupo |
+| GET | `/reports/grouped?accountId&grouping=DAY\|WEEK\|MONTH\|YEAR\|NONE&from&to&type=both\|income\|expense&categoryId&payeeId&tagId&methodId&q&amountMin&amountMax&status&transfer&uncategorized` | Serie temporal: ingresos, gastos, transferencias, total por grupo |
 | GET | `/reports/summary?accountId&from&to` | Totales del rango |
 | GET | `/reports/breakdown?accountId&from&to&by=category\|payee\|tag\|method&type=expense\|income\|both` | Reparto con importe, número y porcentaje |
 | GET | `/reports/transactions?accountId&by&id&type&from&to&limit&offset` | Drill-down de un grupo |
@@ -657,6 +657,14 @@ Cada grupo lleva además `firstDate` (ISO): la fecha de su primera transacción.
 Los grupos vienen ordenados y son disjuntos, así que el cliente asigna cada fila
 al último grupo cuyo `firstDate` no sea posterior a ella; no necesita recalcular
 inicios de mes ni de semana.
+
+`type`, `categoryId`, `payeeId`, `tagId`, `methodId`, `q`, `amountMin`,
+`amountMax`, `status`, `transfer` y `uncategorized` son los **mismos criterios**
+que `/transactions` (misma expansión de la rama de categorías y misma semántica
+de OR dentro de una dimensión y AND entre dimensiones). Los importes del grupo
+se calculan **después** del filtro, así que la cabecera de un periodo siempre
+coincide con las filas que tiene debajo; un periodo sin movimientos que cumplan
+los criterios no aparece.
 
 `ReportSummaryDto`:
 

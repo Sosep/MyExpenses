@@ -33,7 +33,9 @@ interface WebApiDataSource {
         accountId: Long,
         grouping: String,
         from: LocalDate,
-        to: LocalDate
+        to: LocalDate,
+        type: String? = null,
+        filters: TransactionQueryFilters = TransactionQueryFilters()
     ): List<GroupDto>
     fun summary(accountId: Long, from: LocalDate, to: LocalDate): ReportSummaryDto
     fun breakdown(

@@ -61,6 +61,7 @@ import org.totschnig.myexpenses.provider.KEY_TYPE
 import org.totschnig.myexpenses.provider.KEY_TYPE_SORT_KEY
 import org.totschnig.myexpenses.provider.KEY_YEAR
 import org.totschnig.myexpenses.provider.SPLIT_CATID
+import org.totschnig.myexpenses.provider.SplitStrategy
 import org.totschnig.myexpenses.provider.TABLE_TRANSACTIONS
 import org.totschnig.myexpenses.provider.TABLE_TRANSACTIONS_TAGS
 import org.totschnig.myexpenses.provider.TransactionProvider
@@ -581,13 +582,33 @@ internal fun Repository.queryTransactionGroups(
     accountId: Long,
     grouping: Grouping,
     from: LocalDate,
-    to: LocalDate
+    to: LocalDate,
+    type: String?,
+    filters: TransactionQueryFilters
 ): List<GroupDto> {
+    val unfiltered = filters.isEmpty && (type == null || type == "both")
     val uri = BaseTransactionProvider.groupingUriBuilder(grouping)
         .appendQueryParameter(KEY_ACCOUNTID, accountId.toString())
         .appendQueryParameter(KEY_FIRST_DATE, "1")
+        .apply {
+            // The list shows a split as its parent whole. Under a filter the sums
+            // must do the same even if the phone preference says "parts".
+            if (!unfiltered) {
+                appendQueryParameter(
+                    TransactionProvider.QUERY_PARAMETER_SPLIT_STRATEGY,
+                    SplitStrategy.TOTAL.name
+                )
+            }
+        }
         .build()
-    val (selection, selectionArgs) = dateSelection(from, to)
+    // The period sums must cover the same rows as the filtered transaction list.
+    // A filter also selects the provider's "count archived splits individually"
+    // branch, so the unfiltered query keeps its previous selection.
+    val (selection, selectionArgs) = if (unfiltered) {
+        dateSelection(from, to)
+    } else {
+        transactionSelection(from, to, type, filters)
+    }
     val zone = ZoneId.systemDefault()
     return contentResolver.query(uri, null, selection, selectionArgs, null)
         ?.useAndMapToList { cursor ->

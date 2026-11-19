@@ -987,6 +987,86 @@ function sendJson(response, status, value, extraHeaders = {}) {
   response.end(JSON.stringify(value))
 }
 
+/**
+ * Rows the transaction list shows for the range, type and filter criteria. The
+ * grouped period sums use the same function so a header never totals movements
+ * the list is hiding.
+ */
+function matchingTransactions(url) {
+  const from = url.searchParams.get('from') || '0000-01-01'
+  const to = url.searchParams.get('to') || '9999-12-31'
+  const type = url.searchParams.get('type') ?? 'both'
+  const ids = (name) =>
+    url.searchParams
+      .getAll(name)
+      .flatMap((value) => value.split(','))
+      .map(Number)
+      .filter((value) => Number.isInteger(value) && value > 0)
+  const categoryIds = ids('categoryId')
+  const payeeIds = ids('payeeId')
+  const tagIds = ids('tagId')
+  const methodIds = ids('methodId')
+  const statuses = url.searchParams
+    .getAll('status')
+    .flatMap((value) => value.split(','))
+    .map((value) => value.trim().toUpperCase())
+    .filter(Boolean)
+  const fold = (value) =>
+    String(value ?? '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+  const text = fold(url.searchParams.get('q') ?? '').trim()
+  const amountMin = Number(url.searchParams.get('amountMin')) || null
+  const amountMax = Number(url.searchParams.get('amountMax')) || null
+  const transfer = url.searchParams.get('transfer')
+
+  // A category filter means the category and everything below it, like the
+  // Android CategoryCriterion. A split counts when one of its parts falls
+  // in the branch.
+  const categoryBranch = new Set()
+  for (const id of categoryIds) {
+    const pending = [id]
+    while (pending.length) {
+      const current = pending.pop()
+      if (categoryBranch.has(current)) continue
+      categoryBranch.add(current)
+      for (const entry of categories) {
+        if (entry.parentId === current) pending.push(entry.id)
+      }
+    }
+  }
+  const inCategoryBranch = (item) =>
+    item.category
+      ? categoryBranch.has(item.category.id)
+      : (item.splitParts ?? []).some((part) => categoryBranch.has(part.category?.id))
+
+  return transactions.filter((item) => {
+    if (item.date < from || item.date > to) return false
+    if (type === 'income' && item.amountMinor <= 0) return false
+    if (type === 'expense' && item.amountMinor >= 0) return false
+    if (url.searchParams.get('uncategorized') === 'true' && item.category) return false
+    if (categoryBranch.size && !inCategoryBranch(item)) return false
+    if (payeeIds.length && !payeeIds.includes(item.payee?.id)) return false
+    if (methodIds.length && !methodIds.includes(item.method?.id)) return false
+    if (tagIds.length && !(item.tags ?? []).some((tag) => tagIds.includes(tag.id))) {
+      return false
+    }
+    if (statuses.length && !statuses.includes(item.crStatus)) return false
+    if (transfer === 'true' && !item.transferPeerId) return false
+    if (transfer === 'false' && item.transferPeerId) return false
+    if (amountMin !== null && Math.abs(item.amountMinor) < amountMin) return false
+    if (amountMax !== null && Math.abs(item.amountMinor) > amountMax) return false
+    if (text) {
+      const haystack = fold(
+        [item.comment, item.payee?.label, item.referenceNumber].filter(Boolean).join(' '),
+      )
+      if (!haystack.includes(text)) return false
+    }
+    return true
+  })
+}
+
 createServer(async (request, response) => {
   try {
     const url = new URL(request.url ?? '/', `http://localhost:${port}`)
@@ -1544,8 +1624,6 @@ createServer(async (request, response) => {
       // Same shape as the API: groups carry the first date of the period, so the
       // SPA can bucket rows without doing month or week arithmetic.
       const grouping = (url.searchParams.get('grouping') ?? 'MONTH').toUpperCase()
-      const from = url.searchParams.get('from') || '0000-01-01'
-      const to = url.searchParams.get('to') || '9999-12-31'
       const dayOfYear = (iso) => {
         const date = new Date(`${iso}T00:00:00`)
         const start = new Date(date.getFullYear(), 0, 1)
@@ -1560,8 +1638,7 @@ createServer(async (request, response) => {
         return iso.slice(0, 7)
       }
       const buckets = new Map()
-      for (const item of transactions) {
-        if (item.date < from || item.date > to) continue
+      for (const item of matchingTransactions(url)) {
         const key = keyFor(item.date)
         const entry = buckets.get(key) ?? {
           year: Number(item.date.slice(0, 4)),
@@ -1588,80 +1665,9 @@ createServer(async (request, response) => {
 
     if (path === '/api/v1/transactions' && request.method === 'GET') {
       // No range means the whole history, newest first.
-      const from = url.searchParams.get('from') || '0000-01-01'
-      const to = url.searchParams.get('to') || '9999-12-31'
-      const type = url.searchParams.get('type') ?? 'both'
       const limit = Number(url.searchParams.get('limit') ?? 50)
       const offset = Number(url.searchParams.get('offset') ?? 0)
-      const ids = (name) =>
-        url.searchParams
-          .getAll(name)
-          .flatMap((value) => value.split(','))
-          .map(Number)
-          .filter((value) => Number.isInteger(value) && value > 0)
-      const categoryIds = ids('categoryId')
-      const payeeIds = ids('payeeId')
-      const tagIds = ids('tagId')
-      const methodIds = ids('methodId')
-      const statuses = url.searchParams
-        .getAll('status')
-        .flatMap((value) => value.split(','))
-        .map((value) => value.trim().toUpperCase())
-        .filter(Boolean)
-      const fold = (value) =>
-        String(value ?? '')
-          .normalize('NFD')
-          .replace(/[\u0300-\u036f]/g, '')
-          .toLowerCase()
-      const text = fold(url.searchParams.get('q') ?? '').trim()
-      const amountMin = Number(url.searchParams.get('amountMin')) || null
-      const amountMax = Number(url.searchParams.get('amountMax')) || null
-      const transfer = url.searchParams.get('transfer')
-
-      // A category filter means the category and everything below it, like the
-      // Android CategoryCriterion. A split counts when one of its parts falls
-      // in the branch.
-      const categoryBranch = new Set()
-      for (const id of categoryIds) {
-        const pending = [id]
-        while (pending.length) {
-          const current = pending.pop()
-          if (categoryBranch.has(current)) continue
-          categoryBranch.add(current)
-          for (const entry of categories) {
-            if (entry.parentId === current) pending.push(entry.id)
-          }
-        }
-      }
-      const inCategoryBranch = (item) =>
-        item.category
-          ? categoryBranch.has(item.category.id)
-          : (item.splitParts ?? []).some((part) => categoryBranch.has(part.category?.id))
-
-      const matches = transactions.filter((item) => {
-        if (item.date < from || item.date > to) return false
-        if (type === 'income' && item.amountMinor <= 0) return false
-        if (type === 'expense' && item.amountMinor >= 0) return false
-        if (url.searchParams.get('uncategorized') === 'true' && item.category) return false
-        if (categoryBranch.size && !inCategoryBranch(item)) return false
-        if (payeeIds.length && !payeeIds.includes(item.payee?.id)) return false
-        if (methodIds.length && !methodIds.includes(item.method?.id)) return false
-        if (tagIds.length && !(item.tags ?? []).some((tag) => tagIds.includes(tag.id))) {
-          return false
-        }
-        if (statuses.length && !statuses.includes(item.crStatus)) return false
-        if (transfer === 'true' && !item.transferPeerId) return false
-        if (transfer === 'false' && item.transferPeerId) return false
-        if (amountMin !== null && Math.abs(item.amountMinor) < amountMin) return false
-        if (amountMax !== null && Math.abs(item.amountMinor) > amountMax) return false
-        if (text) {
-          const haystack = fold(
-            [item.comment, item.payee?.label, item.referenceNumber].filter(Boolean).join(' '),
-          )
-          if (!haystack.includes(text)) return false
-        }
-        return true
-      })
+      const matches = matchingTransactions(url)
 
       const items = matches
         .slice(offset, offset + limit)

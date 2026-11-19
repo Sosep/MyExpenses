@@ -133,6 +133,24 @@ class ApiRoutesTest {
     }
 
     @Test
+    fun `grouped periods apply the transaction filters`() = testApplication {
+        val fake = FakeDataSource()
+        installRoutes(fake)
+        val response = client.get(
+            "/api/v1/reports/grouped?accountId=1&grouping=MONTH&type=expense" +
+                "&categoryId=2&payeeId=3&q=cafe&status=CLEARED&transfer=false"
+        )
+        assertEquals(HttpStatusCode.OK, response.status)
+        assertEquals("expense", fake.lastGroupType)
+        val filters = fake.lastGroupFilters
+        assertEquals(listOf(2L), filters.categoryIds)
+        assertEquals(listOf(3L), filters.payeeIds)
+        assertEquals("cafe", filters.text)
+        assertEquals(listOf("CLEARED"), filters.statuses)
+        assertEquals(false, filters.transfer)
+    }
+
+    @Test
     fun `malformed body is a 400`() = testApplication {
         installRoutes(FakeDataSource())
         val response = client.post("/api/v1/transactions") {
@@ -625,6 +643,8 @@ private class FakeDataSource : WebApiDataSource {
     var savedAllocations: BudgetAllocationsWriteDto? = null
     var lastFilters: Map<String, Long?> = emptyMap()
     var lastQueryFilters: TransactionQueryFilters = TransactionQueryFilters()
+    var lastGroupType: String? = null
+    var lastGroupFilters: TransactionQueryFilters = TransactionQueryFilters()
     private val sample = sampleTransaction()
 
     override fun meta() = MetaDto(
@@ -708,8 +728,13 @@ private class FakeDataSource : WebApiDataSource {
         accountId: Long,
         grouping: String,
         from: LocalDate,
-        to: LocalDate
-    ) = listOf(GroupDto(2026, 10, 1000, -500, 0, firstDate = "2026-11-03"))
+        to: LocalDate,
+        type: String?,
+        filters: TransactionQueryFilters
+    ) = listOf(GroupDto(2026, 10, 1000, -500, 0, firstDate = "2026-11-03")).also {
+        lastGroupType = type
+        lastGroupFilters = filters
+    }
 
     override suspend fun budgetAllocations(id: Long, year: Int?, second: Int?) =
         if (id == 1L) {

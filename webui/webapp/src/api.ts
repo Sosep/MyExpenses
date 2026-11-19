@@ -189,16 +189,44 @@ export const getGrouped = (
   grouping: Grouping,
   from: string,
   to: string,
+  type: 'both' | 'income' | 'expense' = 'both',
+  filters: TransactionFilters = {},
   signal?: AbortSignal,
-) =>
-  request<Group[]>(
-    `/reports/grouped?accountId=${accountId}&from=${from}&to=${to}&grouping=${grouping}`,
-    { signal },
-  )
+) => {
+  const params = new URLSearchParams({
+    accountId: String(accountId),
+    grouping,
+    from,
+    to,
+    type,
+  })
+  // The period sums follow the same criteria as the rows below them; without
+  // the filters a header would total transactions the list is hiding.
+  appendTransactionFilters(params, filters)
+  return request<Group[]>(`/reports/grouped?${params.toString()}`, { signal })
+}
 
 import type { Filters } from './filters'
 
 export type TransactionFilters = Partial<Filters>
+
+function appendTransactionFilters(params: URLSearchParams, filters: TransactionFilters) {
+  for (const [key, values] of [
+    ['categoryId', filters.categoryIds],
+    ['payeeId', filters.payeeIds],
+    ['tagId', filters.tagIds],
+    ['methodId', filters.methodIds],
+  ] as const) {
+    for (const value of values ?? []) params.append(key, String(value))
+  }
+  if (filters.uncategorized) params.set('uncategorized', 'true')
+  if (filters.text) params.set('q', filters.text)
+  if (filters.amountMin != null) params.set('amountMin', String(filters.amountMin))
+  if (filters.amountMax != null) params.set('amountMax', String(filters.amountMax))
+  for (const status of filters.statuses ?? []) params.append('status', status)
+  if (filters.transfer === 'only') params.set('transfer', 'true')
+  if (filters.transfer === 'none') params.set('transfer', 'false')
+}
 
 export const getTransactions = (
   accountId: number,
@@ -219,21 +247,7 @@ export const getTransactions = (
   // Without a range the list is the whole history, newest first.
   if (from) params.set('from', from)
   if (to) params.set('to', to)
-  for (const [key, values] of [
-    ['categoryId', filters.categoryIds],
-    ['payeeId', filters.payeeIds],
-    ['tagId', filters.tagIds],
-    ['methodId', filters.methodIds],
-  ] as const) {
-    for (const value of values ?? []) params.append(key, String(value))
-  }
-  if (filters.uncategorized) params.set('uncategorized', 'true')
-  if (filters.text) params.set('q', filters.text)
-  if (filters.amountMin != null) params.set('amountMin', String(filters.amountMin))
-  if (filters.amountMax != null) params.set('amountMax', String(filters.amountMax))
-  for (const status of filters.statuses ?? []) params.append('status', status)
-  if (filters.transfer === 'only') params.set('transfer', 'true')
-  if (filters.transfer === 'none') params.set('transfer', 'false')
+  appendTransactionFilters(params, filters)
   return request<Page<Transaction>>(`/transactions?${params.toString()}`, { signal })
 }
 

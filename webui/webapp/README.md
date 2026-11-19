@@ -107,8 +107,9 @@ usa el modo Vite en caliente.
 El mock tiene movimientos de los últimos cuatro meses, así que agrupar por mes,
 semana o día tiene algo que enseñar. La lista del mock aplica los mismos
 criterios que la API (texto, importe, estado, transferencias y valores
-múltiples). `reports/grouped` devuelve `firstDate` por
-grupo, igual que la API.
+múltiples). `reports/grouped` devuelve `firstDate` por grupo y calcula los
+ingresos, gastos y transferencias de cada periodo con **los mismos criterios y
+tipo**, para que la cabecera cuadre con las filas que tiene debajo.
 
 Como la API real, el mock devuelve `second` con **base 0** en `reports/grouped`,
 `budgets/{id}` y su historial: noviembre es `10`. La SPA guarda el mes que
