@@ -7,8 +7,11 @@ services:
         GROUP_ID: ${HOST_GID:-1000}
     image: myexpenses-android-build:latest
     working_dir: /workspace
-    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
     environment:
+      # The entrypoint starts as root, aligns HOME and the Gradle cache with
+      # this uid/gid and then drops privileges, so Gradle never runs as root.
+      HOST_UID: ${HOST_UID:-1000}
+      HOST_GID: ${HOST_GID:-1000}
       BUILD_VARIANT: ${BUILD_VARIANT:-release}
       GRADLE_PARALLEL: ${GRADLE_PARALLEL:-0}
       GRADLE_MAX_WORKERS: ${GRADLE_MAX_WORKERS:-2}
@@ -28,7 +31,9 @@ services:
         GROUP_ID: ${HOST_GID:-1000}
     image: myexpenses-android-build:latest
     working_dir: /workspace
-    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+    environment:
+      HOST_UID: ${HOST_UID:-1000}
+      HOST_GID: ${HOST_GID:-1000}
     entrypoint: ["keystore-init.sh"]
     mem_limit: 512m
     volumes:

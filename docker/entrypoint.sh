@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# shellcheck source=docker-user.sh
+source /usr/local/bin/docker-user.sh
+docker_user_prepare "$@"
+
 GRADLE_ARGS=(
   --no-daemon
   --build-cache

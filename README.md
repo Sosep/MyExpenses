@@ -182,8 +182,27 @@ parallel builds:
 GRADLE_PARALLEL=1 GRADLE_MAX_WORKERS=4 BUILD_MEMORY=10g docker compose run --rm android-build
 ```
 
-The first build is the slowest. Later builds reuse the Gradle cache. If your user id is not 1000,
-pass it explicitly:
+The first build is the slowest. Later builds reuse the Gradle cache.
+
+The container runs as the user given by `HOST_UID`/`HOST_GID`
+(default 1000). Compose passes them into the container; the entrypoint then
+starts as root, aligns the image's baked home directory and Gradle cache with
+that user and drops privileges, so gradle never runs as root. If the ids do
+not match the user that owns the repository, every run fails with git's
+"dubious ownership" error or a `/gradle-cache` permission error. Put your ids
+in a repo-root `.env` file (compose reads it automatically; see
+`.env.example`):
+
+```sh
+printf 'HOST_UID=%s\nHOST_GID=%s\n' "$(id -u)" "$(id -g)" > .env
+```
+
+Changing the ids does not require an image rebuild; the entrypoint realigns
+ownership on each run. (A `docker compose build` is only needed when the
+Dockerfile changes.)
+
+After that no exports are needed on any command. If you prefer not to keep an
+`.env`, pass the ids inline instead:
 
 ```sh
 HOST_UID=$(id -u) HOST_GID=$(id -g) docker compose run --rm android-build
@@ -194,6 +213,7 @@ HOST_UID=$(id -u) HOST_GID=$(id -g) docker compose run --rm android-build
 | Problem | What to do |
 | --- | --- |
 | Docker is not running | Start Docker Desktop/Engine and try again. |
+| "dubious ownership" or `/gradle-cache` permission denied | Your user id is not 1000. Create the `.env` file from the previous section, or pass `HOST_UID=$(id -u) HOST_GID=$(id -g)` on the command. |
 | Permission denied in `.secrets` | Create the folder as your user with `mkdir -p .secrets`; do not run the setup as root. |
 | The build is killed or runs out of memory | Raise `BUILD_MEMORY` (for example `16g`) or leave parallel builds off. |
 | "Missing signing key" | Run the one-time setup command from step 1. |

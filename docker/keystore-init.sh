@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# shellcheck source=docker-user.sh
+source /usr/local/bin/docker-user.sh
+docker_user_prepare "$@"
+
 SECRETS_DIR="${SECRETS_DIR:-/secrets}"
 ENV_FILE="${SECRETS_DIR}/keystore.env"
 KEYSTORE="${SECRETS_DIR}/release.jks"

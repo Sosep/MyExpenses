@@ -16,7 +16,9 @@ ENV DEBIAN_FRONTEND=noninteractive \
     ANDROID_BUILD_TOOLS=${ANDROID_BUILD_TOOLS} \
     ANDROID_USER_HOME=/home/builder/.android \
     GRADLE_USER_HOME=/gradle-cache \
-    HOME=/home/builder
+    HOME=/home/builder \
+    USER_ID=${USER_ID} \
+    GROUP_ID=${GROUP_ID}
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
@@ -57,11 +59,14 @@ RUN yes | sdkmanager --licenses > /dev/null \
 RUN mkdir -p /gradle-cache \
     && chown -R "${USER_ID}:${GROUP_ID}" /home/builder /gradle-cache "${ANDROID_HOME}"
 
-COPY docker/entrypoint.sh docker/keystore-init.sh /usr/local/bin/
-RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/bin/keystore-init.sh
+COPY docker/entrypoint.sh docker/keystore-init.sh docker/docker-user.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/bin/keystore-init.sh /usr/local/bin/docker-user.sh
 
 WORKDIR /workspace
-USER ${USER_ID}:${GROUP_ID}
 
+# The entrypoints start as root so they can align the baked /home/builder and
+# /gradle-cache ownership with the uid/gid the container actually runs as
+# (compose passes HOST_UID/HOST_GID as environment), then drop privileges via
+# setpriv before running Gradle or keytool. Nothing user-facing runs as root.
 ENTRYPOINT ["entrypoint.sh"]
 CMD []

@@ -18,3 +18,4 @@ google-services.json
 !.env.example
 compose.override.yaml
 docker-compose.override.yml
+.kanbots/

@@ -11,9 +11,9 @@ Read this before changing code. Detailed sources:
 
 - `/api/v1`: read endpoints plus create/update/delete for simple transactions,
   transfers and splits.
-- API routes covered on the JVM by 32 `ApiRoutesTest` tests plus 4
-  `SessionStoreTest` tests, with a fake `WebApiDataSource` and Ktor
-  `testApplication`.
+- API routes covered on the JVM by 68 tests — 52 `ApiRoutesTest`, 7
+  `CategoryBranchTest`, 5 `LoginThrottleTest` and 4 `SessionStoreTest` — with a
+  fake `WebApiDataSource` and Ktor `testApplication`.
 - SPA: dashboard, transactions, detail, reports, files, budgets, and the simple,
   transfer and split editors. The split editor uses signed amounts, a parts list
   and a part panel. It is installable as a PWA; on narrow screens the side rail
@@ -114,6 +114,14 @@ Read this before changing code. Detailed sources:
 
 The host has no JDK or Android SDK. Run Android tasks in Docker:
 
+- The container user comes from `HOST_UID`/`HOST_GID` in the repo-root `.env`
+  (gitignored; `.env.example` is the committed template). They must match the
+  user that owns the checkout, or gradle fails with git "dubious ownership"
+  (`build.gradle:76`) and `/gradle-cache` permission errors. Compose passes
+  them into the container as environment; `docker/docker-user.sh`, sourced by
+  both entrypoints, starts as root, aligns `/home/builder` and the
+  `myexpenses_gradle-cache` volume with that uid and drops privileges via
+  `setpriv`, so no rebuild is needed when the ids change.
 - Compile the web UI feature: `docker compose run --rm android-build :webui:compileDebugKotlin`
 - Kotlin lint: `docker compose run --rm android-build :webui:ktlintCheck`
 - Unit tests: `docker compose run --rm android-build :webui:testDebugUnitTest`

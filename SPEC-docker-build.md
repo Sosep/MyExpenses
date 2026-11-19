@@ -37,7 +37,13 @@ publishing.
 
 ## Assumptions
 
-1. Docker Engine/Compose v2+ is available (host: Linux `x86_64`, UID/GID 1000).
+1. Docker Engine/Compose v2+ is available (host: Linux `x86_64`, UID/GID 1001).
+2. The container user is driven by `HOST_UID`/`HOST_GID`. They must match the
+   user that owns the repository checkout, or every gradle run fails at
+   `build.gradle:76` (git "dubious ownership") and cannot write
+   `/gradle-cache`. The repo-root `.env` (gitignored, copied from
+   `.env.example`) holds this host's values, so documented commands work
+   without exporting anything; `.env` is read by compose automatically.
 2. Java 21 is required (README); Gradle is pinned by the wrapper (9.9.0), AGP is 9.5.1 and
    `compileSdk`/`targetSdk` are 37/36. The stable SDK platform package is `platforms;android-37.0`
    (minor API version); `build-tools;37.0.0` exists.
@@ -69,6 +75,13 @@ One-time keystore creation (generates `.secrets/release.jks` and `.secrets/keyst
 docker compose --profile setup run --rm keystore-init
 ```
 
+One-time host alignment (skip when `.env` already matches this host's ids;
+no image rebuild needed — the entrypoint realigns ownership on each run):
+
+```
+printf 'HOST_UID=%s\nHOST_GID=%s\n' "$(id -u)" "$(id -g)" > .env
+```
+
 Build the signed production APK (default):
 
 ```
@@ -92,18 +105,21 @@ Standalone alternative without Compose:
 ```
 docker build -t myexpenses-android-build .
 docker run --rm -v "$PWD:/workspace" -v "$PWD/.secrets:/secrets:ro" \
-  -e BUILD_VARIANT=release myexpenses-android-build
+  -e BUILD_VARIANT=release -e HOST_UID="$(id -u)" -e HOST_GID="$(id -g)" \
+  myexpenses-android-build
 ```
 
 ## Project structure
 
 ```
-Dockerfile                  -> JDK 21 + Android SDK toolchain; non-root builder user
+Dockerfile                  -> JDK 21 + Android SDK toolchain; non-root at runtime
+                               (root entrypoint aligns ownership, then setpriv drop)
 compose.yaml                -> android-build service + keystore-init setup profile
 docker/entrypoint.sh        -> resolves BUILD_VARIANT, builds, zipaligns and signs release
 docker/keystore-init.sh     -> generates password file and self-signed keystore once
 .dockerignore               -> excludes .git, build/, .gradle/, local.properties, .secrets/
 .gitignore                  -> adds .secrets/ and the Docker Gradle cache directory
+.env / .env.example         -> HOST_UID/HOST_GID for this host (.env gitignored)
 README.md                   -> new "Build with Docker" section
 .secrets/release.jks        -> generated; never committed
 .secrets/keystore.env       -> generated password + alias; never committed
@@ -116,6 +132,16 @@ No app sources or Gradle build files are changed.
 Gradle always runs with `--no-daemon --build-cache --max-workers="${GRADLE_MAX_WORKERS:-2}"`.
 `--parallel` is added only when `GRADLE_PARALLEL=1`. The final universal packaging and signing are
 serial.
+
+The entrypoints start as root only to align ownership; nothing user-facing runs as root. The image is built with fixed `USER_ID`/`GROUP_ID`
+build args (default 1000), so a container running under a different uid/gid (compose passes `HOST_UID`
+and `HOST_GID`) would otherwise find `HOME=/home/builder` and `/gradle-cache` unwritable — Robolectric
+fails with "Couldn't create lock file /home/builder/.robolectric-download-lock" and Gradle cannot use the
+cache. `docker/docker-user.sh`, sourced by both `entrypoint.sh` and `keystore-init.sh`, starts as root,
+aligns the ownership of `/home/builder` and `/gradle-cache` with `HOST_UID`/`HOST_GID` (only when they
+differ, to keep runs cheap), and then drops privileges with `setpriv` before Gradle or keytool run, so no
+user-facing process and no generated file are root-owned. A non-root start (plain `docker run --user …`)
+falls back to a writable `/tmp` HOME.
 
 `BUILD_VARIANT=release` (default):
 
@@ -146,7 +172,7 @@ Both variants print the final APK path at the end.
 ## Code style
 
 Dockerfile: one concern per layer, pinned versions, clean `apt` lists, no secrets, non-root at
-runtime. Compose: explicit service name, quoted `${UID:-1000}` defaults, named Gradle cache volume,
+runtime. Compose: explicit service name, quoted `${HOST_UID:-1000}`/`${HOST_GID:-1000}` defaults, named Gradle cache volume,
 read-only secrets mount. Shell: `set -euo pipefail`, quoted variables.
 
 ```dockerfile
@@ -186,8 +212,8 @@ No automated Docker test suite in V1; the image build and the commands above are
   image; document ARM/emulation and backup of `.secrets/`.
 - Ask first: editing `myExpenses/build.gradle` (e.g. to pin `buildToolsVersion` or add a Gradle
   signingConfig), adding a CI workflow, publishing the image, building an AAB for Play.
-- Never: bake keystores or passwords into the image/compose/docs; commit `.secrets/`; modify app
-  sources to make the container work; build release as debug.
+- Never: bake keystores or passwords into the image/compose/docs; commit `.secrets/` or `.env`;
+  modify app sources to make the container work; build release as debug.
 
 ## Success criteria
 
