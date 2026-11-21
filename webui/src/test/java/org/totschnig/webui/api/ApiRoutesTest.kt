@@ -710,6 +710,63 @@ class ApiRoutesTest {
         assertEquals(HttpStatusCode.OK, response.status)
         assertTrue(response.bodyAsText().contains("Joint"))
     }
+
+    @Test
+    fun `create trade returns 201 and the trade location`() = testApplication {
+        val fake = FakeDataSource()
+        installRoutes(fake)
+        val response = client.post("/api/v1/portfolios/7/trades") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """{"type":"BUY","assetSymbol":"AAPL","quantity":"3","price":"5",
+                   "feeMinor":500,"fundingSource":"PORTFOLIO","date":"2026-11-12"}"""
+            )
+        }
+        assertEquals(HttpStatusCode.Created, response.status)
+        assertEquals(
+            "/api/v1/portfolios/7/trades/71",
+            response.headers[HttpHeaders.Location]
+        )
+        assertEquals("BUY", fake.createdTrade?.type)
+    }
+
+    @Test
+    fun `deposit funded by portfolio cash is a 422`() = testApplication {
+        installRoutes(FakeDataSource())
+        val response = client.post("/api/v1/portfolios/7/trades") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """{"type":"DEPOSIT","quantity":"100","fundingSource":"PORTFOLIO",
+                   "date":"2026-11-12"}"""
+            )
+        }
+        assertEquals(HttpStatusCode.UnprocessableEntity, response.status)
+    }
+
+    @Test
+    fun `update trade responds with the stored operation`() = testApplication {
+        installRoutes(FakeDataSource())
+        val response = client.put("/api/v1/portfolios/7/trades/71") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """{"type":"SELL","assetSymbol":"AAPL","quantity":"1","price":"5.2",
+                   "fundingSource":"ACCOUNT","peerAccountId":1,"date":"2026-11-09"}"""
+            )
+        }
+        assertEquals(HttpStatusCode.OK, response.status)
+        assertTrue(response.bodyAsText().contains("\"type\":\"BUY\""))
+    }
+
+    @Test
+    fun `unknown trade update is a 404`() = testApplication {
+        installRoutes(FakeDataSource())
+        val response = client.put("/api/v1/portfolios/7/trades/99") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"type":"SELL","quantity":"1","price":"5","date":"2026-11-09"}""")
+        }
+        assertEquals(HttpStatusCode.NotFound, response.status)
+        assertTrue(response.bodyAsText().contains("trade_not_found"))
+    }
 }
 
 private fun ApplicationTestBuilder.installRoutes(dataSource: WebApiDataSource) {
@@ -1092,6 +1149,43 @@ private class FakeDataSource : WebApiDataSource {
 
     override fun trade(portfolioId: Long, transactionId: Long): TradeDto? =
         sampleTrade().takeIf { portfolioId == PORTFOLIO_ID && transactionId == 71L }
+
+    var createdTrade: TradeWriteDto? = null
+
+    override suspend fun createTrade(portfolioId: Long, body: TradeWriteDto): TradeDto {
+        if (portfolioId != PORTFOLIO_ID) {
+            throw ApiException(
+                HttpStatusCode.NotFound,
+                "portfolio_not_found",
+                "Portfolio not found"
+            )
+        }
+        if (body.type == "DEPOSIT" && body.fundingSource == "PORTFOLIO") {
+            throw ApiException(
+                HttpStatusCode.UnprocessableEntity,
+                "validation_failed",
+                "Deposits cannot be funded by the portfolio cash"
+            )
+        }
+        createdTrade = body
+        return sampleTrade()
+    }
+
+    override suspend fun updateTrade(
+        portfolioId: Long,
+        transactionId: Long,
+        body: TradeWriteDto
+    ): TradeDto {
+        if (portfolioId != PORTFOLIO_ID || transactionId != 71L) {
+            throw ApiException(
+                HttpStatusCode.NotFound,
+                "trade_not_found",
+                "Trade not found"
+            )
+        }
+        createdTrade = body
+        return sampleTrade()
+    }
 }
 
 private const val PORTFOLIO_ID = 7L

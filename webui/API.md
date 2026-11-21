@@ -327,6 +327,42 @@ contenedor):
   subcuenta de efectivo (financiación de cartera), una cuenta externa o la
   otra cartera en un traspaso.
 
+`POST /portfolios/{id}/trades` (`201` + `Location`) y
+`PUT /portfolios/{id}/trades/{transactionId}` reemplazan una operación con el
+mismo dominio que la app (`TradeIntent` → `RepositoryTrades`). El borrado usa
+`DELETE /transactions/{transactionId}`.
+
+```json
+{
+  "type": "BUY",
+  "assetSymbol": "AAPL",
+  "quantity": "3",
+  "price": "5.0",
+  "feeMinor": 500,
+  "feeCategoryId": null,
+  "fundingSource": "PORTFOLIO",
+  "peerAccountId": null,
+  "comment": "",
+  "date": "2026-11-12",
+  "time": null
+}
+```
+
+- `type`: `BUY`, `SELL`, `DEPOSIT`, `WITHDRAW`, `TRANSFER_IN` o
+  `TRANSFER_OUT`. `quantity` y `price` son strings decimales en unidades
+  mayores; el principal se deriva (`cantidad × precio`) salvo que se envíe
+  `principalMinor`.
+- Depósitos y Retiradas usan la divisa de la cartera como activo, precio 1, y
+  exigen `fundingSource` `ACCOUNT` o `EXTERNAL` (`PORTFOLIO` es
+  `422 validation_failed`, como el `require` de `TradeIntent`).
+- Compra/Venta: `fundingSource` `PORTFOLIO` (por defecto), `ACCOUNT` (exige
+  `peerAccountId`) o `EXTERNAL`. Traspaso: `peerAccountId` debe ser otra
+  cartera y distinta (`422`).
+- Cantidad y precio > 0, comisión ≥ 0 (`422 validation_failed` con `fields`).
+  El guardado actualiza además el histórico de precios con fuente `User`.
+- `PUT` reemplaza la operación conservando sus piernas; id desconocido o de
+  otra cartera, `404 trade_not_found`.
+
 ### 4.3 Transacciones
 
 Modelo de lectura (`kind` explícito):

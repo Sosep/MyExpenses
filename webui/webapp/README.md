@@ -180,6 +180,7 @@ El detalle de una transacción abre una entrada de historial: atrás lo cierra.
 | `?accountId=7` | Resumen de la cartera: valoración, efectivo y activos |
 | `?new=1&kind=portfolio` | Alta de cartera (el `+` abre el editor con Cartera preseleccionada) |
 | `?portfolioLimit=1` | El mock responde `409 portfolio_limit_reached` al crear una cartera |
+| `?view=transactions&accountId=7` + `New operation` | Editor de operaciones (Compra/Venta/Depósito/Retirada/Traspaso) |
 | `?panel=split` / `?panel=transfer` | Detalle de dividida / transferencia |
 | `?new=1` | Selector de tipo de alta |
 | `?new=1&kind=transfer` / `&kind=split` | Editor de transferencia / dividida |

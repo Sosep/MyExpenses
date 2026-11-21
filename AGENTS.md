@@ -38,7 +38,11 @@ Read this before changing code. Detailed sources:
   sub-accounts (cash/assets) from the picker. The `+` editor is dual (Account |
   Portfolio), and the rail hides Budgets on a portfolio. The portfolio overview
   is the valuation hero plus cash/assets; Transacciones lists operations and
-  opens their detail in a side panel. Trade **writing** is not in this slice.
+  opens their detail in a side panel. Trade writing goes through
+  `POST/PUT /portfolios/{id}/trades` and the domain extracted from the
+  ViewModel into `db2/RepositoryTrades.kt`, which the Android trade screens
+  use too; the web editor mirrors `TradeIntent` and the mock applies the
+  operation deltas in memory.
 - Budget filters: `criteria` (categories, payees, methods, tags, states) is read
   and written in the app preference `budgetFilter_<id>`, so a budget created or
   edited from the web is scoped exactly like one from the phone. A filter the web
@@ -274,8 +278,10 @@ Update the docs while the change is fresh; do not defer them to a later commit.
   confirm the phone shows it exactly like one created in Android (type, currency,
   fixed/dynamic rate, colour); confirm the valuation matches `BalanceType.VALUATION`
   (cash plus assets at the latest stored price) and that the second portfolio
-  answers `409` without the Professional licence. Trade writing
-  (`POST/PUT /portfolios/{id}/trades`) is the next portfolio slice.
+  answers `409` without the Professional licence. A trade of each kind created
+  from the web must appear in the phone exactly like one created there
+  (quantity, price, fee, funding, transfer between two portfolios) — the
+  `RepositoryTrades` extraction must not change the Android save flow.
 - Every side panel is a history entry (`useHistoryPanel`): transaction detail and
   editor, report drill-down and the budget panel (detail and editor share one
   entry). Back closes them; closing from the UI pops the entry.

@@ -23,12 +23,14 @@ import { AmountsProvider } from './privacy'
 import { Reports } from './components/Reports'
 import { Shell } from './components/Shell'
 import type { View } from './components/Shell'
+import { TradeEditor } from './components/TradeEditor'
 import { Trades } from './components/Trades'
 import { TransactionEditor } from './components/TransactionEditor'
 import { Transactions } from './components/Transactions'
 
 type Status = 'checking' | 'login' | 'ready'
 type EditorState = { mode: 'create' } | { mode: 'edit'; id: number }
+type TradeEditorState = { mode: 'create' } | { mode: 'edit'; id: number }
 
 const THEME_KEY = 'myexpenses.theme'
 const ACCOUNT_KEY = 'myexpenses.accountId'
@@ -64,6 +66,7 @@ export default function App({ initialLocale: initial }: { initialLocale: Locale 
   const [view, setViewState] = useState<View>(() => readView(window.location.search))
   const [theme, setTheme] = useState<'light' | 'dark'>(initialTheme)
   const [editor, setEditor] = useState<EditorState | null>(null)
+  const [tradeEditor, setTradeEditor] = useState<TradeEditorState | null>(null)
   const [accountEditor, setAccountEditor] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
   const [locale, setLocale] = useState<Locale>(() => initial ?? initialLocale())
@@ -112,6 +115,7 @@ export default function App({ initialLocale: initial }: { initialLocale: Locale 
 
   // Called before the early returns so the hook order never changes.
   const closeEditor = useHistoryPanel(editor !== null, () => setEditor(null))
+  const closeTradeEditor = useHistoryPanel(tradeEditor !== null, () => setTradeEditor(null))
 
   useEffect(() => {
     const onUnauthorized = () => {
@@ -288,7 +292,11 @@ export default function App({ initialLocale: initial }: { initialLocale: Locale 
               onNavigate={navigate}
             />
           ) : isPortfolio ? (
-            <Trades account={account} />
+            <Trades
+              account={account}
+              onNewTrade={() => setTradeEditor({ mode: 'create' })}
+              onEditTrade={(id) => setTradeEditor({ mode: 'edit', id })}
+            />
           ) : (
             <Transactions
               account={account}
@@ -322,12 +330,16 @@ export default function App({ initialLocale: initial }: { initialLocale: Locale 
           }}
         />
       ) : null}
-      {(view === 'dashboard' || view === 'transactions') && accounts.length > 0 && !isPortfolio ? (
+      {(view === 'dashboard' || view === 'transactions') && accounts.length > 0 ? (
         <button
           type="button"
           className="fab"
-          aria-label={t`New transaction`}
-          onClick={() => setEditor({ mode: 'create' })}
+          aria-label={isPortfolio ? t`New operation` : t`New transaction`}
+          onClick={() =>
+            isPortfolio
+              ? setTradeEditor({ mode: 'create' })
+              : setEditor({ mode: 'create' })
+          }
         >
           <span aria-hidden="true">+</span>
         </button>
@@ -343,6 +355,20 @@ export default function App({ initialLocale: initial }: { initialLocale: Locale 
           onSaved={() => {
             closeEditor()
             refreshData(t`Transaction saved.`)
+          }}
+        />
+      ) : null}
+      {tradeEditor && account ? (
+        <TradeEditor
+          mode={tradeEditor.mode}
+          id={tradeEditor.mode === 'edit' ? tradeEditor.id : undefined}
+          account={account}
+          accounts={accounts}
+          meta={meta}
+          onClose={closeTradeEditor}
+          onSaved={() => {
+            closeTradeEditor()
+            refreshData(t`Operation saved.`)
           }}
         />
       ) : null}

@@ -80,6 +80,12 @@ interface WebApiDataSource {
     suspend fun portfolioAssets(id: Long): PortfolioAssetsDto
     fun tradePage(portfolioId: Long, limit: Int, offset: Int): PageDto<TradeDto>
     fun trade(portfolioId: Long, transactionId: Long): TradeDto?
+    suspend fun createTrade(portfolioId: Long, body: TradeWriteDto): TradeDto
+    suspend fun updateTrade(
+        portfolioId: Long,
+        transactionId: Long,
+        body: TradeWriteDto
+    ): TradeDto
 }
 
 /** Criteria of the transaction list, all optional and combined with AND. */

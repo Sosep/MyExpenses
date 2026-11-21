@@ -383,6 +383,21 @@ export interface PortfolioAssets {
   assets: PortfolioAsset[]
 }
 
+export interface TradeWrite {
+  type: TradeType
+  assetSymbol?: string
+  quantity: string
+  price: string
+  principalMinor?: number | null
+  feeMinor?: number | null
+  feeCategoryId?: number | null
+  fundingSource?: 'PORTFOLIO' | 'ACCOUNT' | 'EXTERNAL'
+  peerAccountId?: number | null
+  comment?: string
+  date: string
+  time?: string | null
+}
+
 export type TradeType = 'BUY' | 'SELL' | 'DEPOSIT' | 'WITHDRAW' | 'TRANSFER_IN' | 'TRANSFER_OUT'
 
 export interface Trade {

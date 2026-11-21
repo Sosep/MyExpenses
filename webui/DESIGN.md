@@ -439,6 +439,14 @@ Overview · Investments                     Transactions   Refresh
 - Las divisas que no son ISO-4217 (AAPL, BTC) se formatean como número + código
   cuando `Intl` no acepta el estilo de moneda; la cantidad usa los dígitos de la
   divisa del activo.
+- El **editor de operaciones** (`TradeEditor`) usa el mismo panel lateral que la
+  transacción: segmentado con los seis tipos (Compra, Venta, Depósito,
+  Retirada, Traspaso a otra cartera, Entrada por traspaso), activo con
+  sugerencias, cantidad y precio decimales, importe calculado en una
+  `summary-strip`, comisión y financiación. En edición precarga los valores y
+  añade `Delete` a la izquierda del pie; guardar cierra el panel y refresca.
+  El detalle de la operación gana `Edit` y `Delete`, y el editor se abre encima
+  del detalle para no encadenar entradas de historial.
 
 ### Transacciones agrupadas por mes
 

@@ -23,6 +23,7 @@ import type {
   SplitWrite,
   Tag,
   Trade,
+  TradeWrite,
   Transaction,
   TransactionWrite,
   TransferWrite,
@@ -205,6 +206,12 @@ export const getTrades = (
 
 export const getTrade = (portfolioId: number, id: number, signal?: AbortSignal) =>
   request<Trade>(`/portfolios/${portfolioId}/trades/${id}`, { signal })
+
+export const createTrade = (portfolioId: number, payload: TradeWrite) =>
+  request<Trade>(`/portfolios/${portfolioId}/trades`, { method: 'POST', body: payload })
+
+export const updateTrade = (portfolioId: number, id: number, payload: TradeWrite) =>
+  request<Trade>(`/portfolios/${portfolioId}/trades/${id}`, { method: 'PUT', body: payload })
 
 export const getCategories = (signal?: AbortSignal) =>
   request<Category[]>('/categories', { signal })

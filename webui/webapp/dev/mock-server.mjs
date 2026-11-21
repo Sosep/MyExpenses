@@ -352,6 +352,7 @@ const portfolioTradesByPortfolio = {
 }
 
 let nextAccountId = 20
+let nextTradeId = 1000
 
 const monthName = new Intl.DateTimeFormat('en-GB', { month: 'long', year: 'numeric' }).format(
   new Date(year, month - 1, 1),
@@ -1180,6 +1181,64 @@ function adjustBalance(accountId, delta) {
   if (account) account.currentBalanceMinor += delta
 }
 
+
+/** Applies (or reverts, with sign -1) one operation to the portfolio state. */
+function applyTradeEffect(portfolioId, trade, sign) {
+  const assets = portfolioAssets[portfolioId]
+  if (!assets) return
+  assets.cashMinor += sign * cashDelta(trade, assets)
+  if (trade.type !== 'DEPOSIT' && trade.type !== 'WITHDRAW') {
+    let asset = assets.assets.find((item) => item.symbol === trade.assetSymbol)
+    if (!asset) {
+      asset = {
+        id: nextAccountId++,
+        label: trade.assetSymbol,
+        symbol: trade.assetSymbol,
+        fractionDigits: trade.fractionDigits,
+        quantityMinor: 0,
+        priceMinor: null,
+        valuationMinor: 0,
+      }
+      assets.assets.push(asset)
+    }
+    const quantityDelta =
+      trade.type === 'SELL' || trade.type === 'TRANSFER_OUT'
+        ? -trade.quantityMinor
+        : trade.quantityMinor
+    asset.quantityMinor += sign * quantityDelta
+    const realPrice = trade.price === null ? 0 : Number(trade.price)
+    if (realPrice > 0) {
+      // Raw price: portfolio minor units per asset minor unit.
+      asset.priceMinor = realPrice * Math.pow(10, assets.fractionDigits - trade.fractionDigits)
+    }
+  }
+  refreshValuation(portfolioId)
+}
+
+function cashDelta(trade, assets) {
+  if (trade.type === 'DEPOSIT') return trade.principalMinor
+  if (trade.type === 'WITHDRAW') return -trade.principalMinor
+  if (trade.type !== 'BUY' && trade.type !== 'SELL') return 0
+  // Only a trade funded by the portfolio cash moves it.
+  if (trade.peerAccountId !== assets.cashAccountId) return 0
+  const fee = trade.feeMinor ?? 0
+  return trade.type === 'BUY'
+    ? -(trade.principalMinor + fee)
+    : trade.principalMinor - fee
+}
+
+function refreshValuation(portfolioId) {
+  const assets = portfolioAssets[portfolioId]
+  if (!assets) return
+  for (const asset of assets.assets) {
+    asset.valuationMinor = Math.round(asset.quantityMinor * (asset.priceMinor ?? 0))
+  }
+  const assetValuation = assets.assets.reduce((total, asset) => total + asset.valuationMinor, 0)
+  assets.valuationMinor = assets.cashMinor + assetValuation
+  const account = accounts.find((item) => item.id === portfolioId)
+  if (account) account.valuationMinor = assets.valuationMinor
+}
+
 function sortTransactions() {
   transactions.sort((left, right) => right.date.localeCompare(left.date))
 }
@@ -1470,6 +1529,96 @@ createServer(async (request, response) => {
       return sendJson(response, 200, assets)
     }
     const tradesMatch = path.match(/^\/api\/v1\/portfolios\/(\d+)\/trades$/)
+    if (tradesMatch && request.method === 'POST') {
+      const portfolioId = Number(tradesMatch[1])
+      const tradeAssets = portfolioAssets[portfolioId]
+      if (!tradeAssets) {
+        return sendJson(response, 404, {
+          error: 'portfolio_not_found',
+          message: 'Portfolio not found',
+        })
+      }
+      const body = await readJson(request)
+      if (!body.type || !body.date) {
+        return sendJson(response, 422, {
+          error: 'validation_failed',
+          message: 'type and date are required',
+        })
+      }
+      if (
+        (body.type === 'DEPOSIT' || body.type === 'WITHDRAW') &&
+        body.fundingSource === 'PORTFOLIO'
+      ) {
+        return sendJson(response, 422, {
+          error: 'validation_failed',
+          message: 'Deposits and withdrawals cannot be funded by the portfolio cash',
+        })
+      }
+      const assetFd = body.assetSymbol === 'BTC' ? 8 : body.assetSymbol === 'ETH' ? 8 : 4
+      const quantity = Number(String(body.quantity).replace(',', '.'))
+      const price = body.type === 'DEPOSIT' || body.type === 'WITHDRAW'
+        ? 1
+        : Number(String(body.price).replace(',', '.'))
+      if (!(quantity > 0)) {
+        return sendJson(response, 422, {
+          error: 'validation_failed',
+          message: 'Quantity must be positive',
+        })
+      }
+      const assetSymbol =
+        body.type === 'DEPOSIT' || body.type === 'WITHDRAW'
+          ? tradeAssets.currency
+          : String(body.assetSymbol).toUpperCase()
+      if (
+        tradeAssets.assets.every((asset) => asset.symbol !== assetSymbol) &&
+        assetSymbol !== tradeAssets.currency
+      ) {
+        tradeAssets.assets.push({
+          id: nextAccountId++,
+          label: assetSymbol,
+          symbol: assetSymbol,
+          fractionDigits: assetFd,
+          quantityMinor: 0,
+          priceMinor: null,
+          valuationMinor: 0,
+        })
+      }
+      const trade = {
+        id: nextTradeId++,
+        type: body.type,
+        accountId: portfolioId,
+        currency: tradeAssets.currency,
+        date: body.date,
+        time: body.time ?? null,
+        comment: body.comment ?? '',
+        assetSymbol,
+        fractionDigits: assetFd,
+        quantityMinor: Math.round(quantity * Math.pow(10, assetFd)),
+        price: String(price),
+        principalMinor: Math.round(quantity * price * Math.pow(10, tradeAssets.fractionDigits)),
+        feeMinor: body.feeMinor ? Number(body.feeMinor) : null,
+        peerAccountId:
+          body.fundingSource === 'PORTFOLIO' &&
+          (body.type === 'BUY' || body.type === 'SELL')
+            ? tradeAssets.cashAccountId
+            : body.peerAccountId ?? null,
+        peerAccountLabel:
+          body.fundingSource === 'PORTFOLIO' &&
+          (body.type === 'BUY' || body.type === 'SELL')
+            ? accountFor(tradeAssets.cashAccountId).label
+            : body.peerAccountId === null || body.peerAccountId === undefined
+              ? null
+              : accountFor(Number(body.peerAccountId)).label,
+      }
+      portfolioTradesByPortfolio[portfolioId].push(trade)
+      portfolioTradesByPortfolio[portfolioId].sort((left, right) =>
+        right.date.localeCompare(left.date),
+      )
+      applyTradeEffect(portfolioId, trade, 1)
+      return sendJson(response, 201, trade, {
+        Location: `/api/v1/portfolios/${portfolioId}/trades/${trade.id}`,
+      })
+    }
     if (tradesMatch && request.method === 'GET') {
       const portfolioId = Number(tradesMatch[1])
       if (!portfolioTradesByPortfolio[portfolioId]) {
@@ -1491,11 +1640,55 @@ createServer(async (request, response) => {
     const tradeMatch = path.match(/^\/api\/v1\/portfolios\/(\d+)\/trades\/(\d+)$/)
     if (tradeMatch) {
       const portfolioId = Number(tradeMatch[1])
-      const trade = (portfolioTradesByPortfolio[portfolioId] ?? []).find(
-        (item) => item.id === Number(tradeMatch[2]),
-      )
+      const rows = portfolioTradesByPortfolio[portfolioId] ?? []
+      const index = rows.findIndex((item) => item.id === Number(tradeMatch[2]))
+      const trade = index >= 0 ? rows[index] : null
       if (!trade) {
         return sendJson(response, 404, { error: 'trade_not_found', message: 'Trade not found' })
+      }
+      if (request.method === 'PUT') {
+        const body = await readJson(request)
+        const quantity = Number(String(body.quantity).replace(',', '.'))
+        if (!(quantity > 0)) {
+          return sendJson(response, 422, {
+            error: 'validation_failed',
+            message: 'Quantity must be positive',
+          })
+        }
+        const price =
+          body.type === 'DEPOSIT' || body.type === 'WITHDRAW'
+            ? 1
+            : Number(String(body.price).replace(',', '.'))
+        const previous = rows[index]
+        rows[index] = {
+          ...trade,
+          type: body.type ?? trade.type,
+          date: body.date ?? trade.date,
+          time: body.time ?? null,
+          comment: body.comment ?? trade.comment,
+          assetSymbol: body.assetSymbol ? String(body.assetSymbol).toUpperCase() : trade.assetSymbol,
+          quantityMinor: Math.round(quantity * Math.pow(10, trade.fractionDigits)),
+          price: String(price),
+          principalMinor: Math.round(
+            quantity * price * Math.pow(10, portfolioAssets[portfolioId].fractionDigits),
+          ),
+          feeMinor: body.feeMinor ?? trade.feeMinor,
+          peerAccountId: body.peerAccountId ?? null,
+          peerAccountLabel:
+            body.peerAccountId === null || body.peerAccountId === undefined
+              ? null
+              : accountFor(Number(body.peerAccountId)).label,
+        }
+        rows.sort((left, right) => right.date.localeCompare(left.date))
+        applyTradeEffect(portfolioId, previous, -1)
+        applyTradeEffect(portfolioId, rows[index], 1)
+        return sendJson(response, 200, rows[index])
+      }
+      if (request.method === 'DELETE') {
+        rows.splice(index, 1)
+        applyTradeEffect(portfolioId, trade, -1)
+        response.writeHead(204, { 'Cache-Control': 'no-store' })
+        return response.end()
       }
       return sendJson(response, 200, trade)
     }
@@ -2086,6 +2279,20 @@ createServer(async (request, response) => {
       const id = Number(match[1])
       const index = transactions.findIndex((item) => item.id === id)
       if (index < 0) {
+        // Portfolio operations are not in the plain transaction list; the
+        // editor deletes them through the same endpoint the app uses.
+        for (const portfolioId of Object.keys(portfolioTradesByPortfolio)) {
+          const rows = portfolioTradesByPortfolio[portfolioId]
+          const tradeIndex = rows.findIndex((item) => item.id === id)
+          if (tradeIndex < 0) continue
+          if (request.method === 'DELETE') {
+            const [removed] = rows.splice(tradeIndex, 1)
+            applyTradeEffect(Number(portfolioId), removed, -1)
+            response.writeHead(204, { 'Cache-Control': 'no-store' })
+            return response.end()
+          }
+          return sendJson(response, 200, rows[tradeIndex])
+        }
         return sendJson(response, 404, { error: 'not_found', message: 'Not found' })
       }
       if (request.method === 'GET') {

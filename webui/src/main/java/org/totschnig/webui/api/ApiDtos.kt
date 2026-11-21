@@ -132,6 +132,29 @@ data class TradeDto(
     val peerAccountLabel: String?
 )
 
+/** Create or replace a portfolio operation, mirroring the app's `TradeIntent`. */
+@Keep
+data class TradeWriteDto(
+    /** BUY, SELL, DEPOSIT, WITHDRAW, TRANSFER_IN or TRANSFER_OUT. */
+    val type: String? = null,
+    /** Commodity code; ignored (portfolio currency) for deposits/withdrawals. */
+    val assetSymbol: String? = null,
+    /** Quantity in major units as a decimal string. */
+    val quantity: String? = null,
+    /** Price of one asset major unit in portfolio major units, decimal string. */
+    val price: String? = null,
+    /** Optional override of the principal; derived from quantity × price. */
+    val principalMinor: Long? = null,
+    val feeMinor: Long? = null,
+    val feeCategoryId: Long? = null,
+    /** PORTFOLIO (cash), ACCOUNT (a bank account) or EXTERNAL (untracked). */
+    val fundingSource: String? = null,
+    val peerAccountId: Long? = null,
+    val comment: String? = null,
+    val date: String? = null,
+    val time: String? = null
+)
+
 /** Account type as the app knows it. `name` is CASH, BANK, ... without underscores. */
 @Keep
 data class AccountTypeDto(

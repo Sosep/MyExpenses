@@ -125,6 +125,22 @@ class ApiRoutes(
                     )
                 call.respond(trade)
             }
+            post("/portfolios/{id}/trades") {
+                val id = call.requirePathId()
+                val created = dataSource.createTrade(id, call.receive<TradeWriteDto>())
+                call.response.headers.append(
+                    HttpHeaders.Location,
+                    "/api/v1/portfolios/$id/trades/${created.id}"
+                )
+                call.respond(HttpStatusCode.Created, created)
+            }
+            put("/portfolios/{id}/trades/{transactionId}") {
+                val id = call.requirePathId()
+                val transactionId = call.requirePathId("transactionId")
+                call.respond(
+                    dataSource.updateTrade(id, transactionId, call.receive<TradeWriteDto>())
+                )
+            }
             get("/transactions") {
                 val accountId = call.requireLong("accountId")
                 val limit = call.intParamOrNull("limit")?.also {

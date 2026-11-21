@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { t } from '@lingui/core/macro'
 import type { Account, Trade, TradeType } from '../types'
-import { describeError, getTrades } from '../api'
+import { deleteTransaction, describeError, getTrades } from '../api'
 import { formatDate } from '../format'
 import { useHistoryPanel } from '../navigation'
 import { Money, useAmounts, useMoney } from '../privacy'
@@ -13,6 +13,8 @@ import { IconX } from './Icons'
 
 interface TradesProps {
   account: Account
+  onNewTrade: () => void
+  onEditTrade: (id: number) => void
 }
 
 const TYPE_LABEL: Record<TradeType, () => string> = {
@@ -54,15 +56,34 @@ function TradePanel({
   trade,
   account,
   onClose,
+  onEdit,
+  onDeleted,
 }: {
   trade: Trade
   account: Account
   onClose: () => void
+  onEdit: (id: number) => void
+  onDeleted: () => void
 }) {
   const panelRef = useRef<HTMLElement>(null)
   useFocusTrap(panelRef)
   const money = useMoney('transactions')
   const amounts = useAmounts()
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+
+  async function remove() {
+    setDeleting(true)
+    setDeleteError(null)
+    try {
+      await deleteTransaction(trade.id)
+      onDeleted()
+    } catch (cause) {
+      setDeleteError(describeError(cause, t`Could not delete the operation.`))
+      setDeleting(false)
+    }
+  }
+
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onClose()
@@ -129,6 +150,7 @@ function TradePanel({
             </div>
           </div>
 
+          {deleteError ? <p className="error-text">{deleteError}</p> : null}
           <div className="detail-grid">
             <Field label={t`Type`}>{typeLabel(trade.type)}</Field>
             <Field label={t`Asset`}>{trade.assetSymbol}</Field>
@@ -152,8 +174,19 @@ function TradePanel({
         </div>
         <div className="panel-footer">
           <div className="panel-actions">
+            <button
+              type="button"
+              className="btn ghost danger"
+              onClick={() => void remove()}
+              disabled={deleting}
+            >
+              {deleting ? t`Deleting…` : t`Delete`}
+            </button>
             <button type="button" className="btn ghost" onClick={onClose}>
               {t`Close`}
+            </button>
+            <button type="button" className="btn primary" onClick={() => onEdit(trade.id)}>
+              {t`Edit`}
             </button>
           </div>
         </div>
@@ -167,7 +200,7 @@ function TradePanel({
  * `GET /portfolios/{id}/trades`. The detail opens in a side panel like the
  * transaction detail; editing arrives with the trade editor milestone.
  */
-export function Trades({ account }: TradesProps) {
+export function Trades({ account, onNewTrade, onEditTrade }: TradesProps) {
   const money = useMoney('transactions')
   const amounts = useAmounts()
   const page = useAsync(() => getTrades(account.id, 50, 0), ['trades', account.id])
@@ -184,6 +217,9 @@ export function Trades({ account }: TradesProps) {
         <div className="page-actions">
           <button type="button" className="btn" onClick={() => page.reload()}>
             {t`Refresh`}
+          </button>
+          <button type="button" className="btn primary" onClick={onNewTrade}>
+            {t`New operation`}
           </button>
         </div>
       </div>
@@ -285,7 +321,16 @@ export function Trades({ account }: TradesProps) {
       </section>
 
       {selected ? (
-        <TradePanel trade={selected} account={account} onClose={closePanel} />
+        <TradePanel
+          trade={selected}
+          account={account}
+          onClose={closePanel}
+          onEdit={(id) => onEditTrade(id)}
+          onDeleted={() => {
+            closePanel()
+            page.reload()
+          }}
+        />
       ) : null}
     </>
   )
