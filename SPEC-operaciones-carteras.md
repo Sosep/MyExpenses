@@ -64,7 +64,9 @@ Cuerpo (`TradeWriteDto`):
 - `feeMinor` ≥ 0 con `feeCategoryId` opcional (categoría de gasto).
 - Cantidad y precio > 0 (`422 validation_failed` con `fields`).
 - `PUT` reemplaza la operación (misma lógica que la app: conserva uuids y
-  piernas); id desconocido o de otra cartera → `404 trade_not_found`.
+  piernas); id desconocido o de otra cartera → `404 trade_not_found`. La
+  familia no cambia (`422 unsupported_trade_change`), igual que el segmentado
+  del editor Android: Compra/Venta, Depósito/Retirada o Traspaso.
 
 ## SPA
 

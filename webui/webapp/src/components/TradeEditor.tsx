@@ -8,8 +8,7 @@ import {
   getTrade,
   updateTrade,
 } from '../api'
-import { parseAmountMinor } from '../format'
-import { Money } from '../privacy'
+import { formatMoney, parseAmountMinor } from '../format'
 import { useAsync } from '../hooks'
 import { useFocusTrap } from '../useFocusTrap'
 import { SearchSelect } from './SearchSelect'
@@ -42,6 +41,13 @@ function isCash(type: TradeType): boolean {
 
 function isTransfer(type: TradeType): boolean {
   return type === 'TRANSFER_IN' || type === 'TRANSFER_OUT'
+}
+
+/** Peer account kind: each operation kind points at a different picker. */
+function peerKind(type: TradeType): 'asset' | 'cash' | 'transfer' {
+  if (isCash(type)) return 'cash'
+  if (isTransfer(type)) return 'transfer'
+  return 'asset'
 }
 
 /** Today in the phone's time zone, as the API expects `YYYY-MM-DD`. */
@@ -106,14 +112,21 @@ export function TradeEditor({
   useEffect(() => {
     if (mode !== 'edit' || !existing.data || fundingTouched.current) return
     const trade = existing.data
-    // The read model reports the counterpart, not the source: a sub-account
-    // (not in the top-level list) means the cash sub-account; a top-level
-    // account means external funding.
+    // The read model reports the counterpart, not the source: no counterpart
+    // means external funding; a sub-account (not in the top-level list) means
+    // the cash sub-account; a top-level account means it was funded from an
+    // account.
     const peerIsTopLevel = accounts.some((candidate) => candidate.id === trade.peerAccountId)
     if (trade.type === 'DEPOSIT' || trade.type === 'WITHDRAW') {
       setFunding(trade.peerAccountId === null ? 'EXTERNAL' : 'ACCOUNT')
     } else if (trade.type === 'BUY' || trade.type === 'SELL') {
-      setFunding(peerIsTopLevel ? 'ACCOUNT' : 'PORTFOLIO')
+      setFunding(
+        trade.peerAccountId === null
+          ? 'EXTERNAL'
+          : peerIsTopLevel
+            ? 'ACCOUNT'
+            : 'PORTFOLIO',
+      )
     }
   }, [existing.data, accounts, mode])
 
@@ -132,6 +145,13 @@ export function TradeEditor({
 
   const cash = isCash(type)
   const transfer = isTransfer(type)
+  // Like the app's editor, an existing operation keeps its kind: a transfer
+  // stays a transfer and a buy/sell stays an asset trade.
+  const typeKind = peerKind(existing.data?.type ?? type)
+  const applicableTypes =
+    mode === 'create'
+      ? TYPES
+      : TYPES.filter((entry) => peerKind(entry.type) === typeKind)
   const portfolioAccounts = accounts.filter(
     (candidate) => candidate.portfolioRole === 'CONTAINER' && candidate.id !== account.id,
   )
@@ -147,6 +167,10 @@ export function TradeEditor({
       : 0
 
   function selectType(next: TradeType) {
+    // The previous counterpart belongs to another kind of operation (a bank
+    // account for a buy, a portfolio for a transfer): keep it only when the
+    // picker is the same one.
+    if (peerKind(next) !== peerKind(type)) setPeerAccountId('')
     setType(next)
     if (isCash(next)) {
       setFunding((current) => (current === 'PORTFOLIO' ? 'ACCOUNT' : current))
@@ -191,7 +215,9 @@ export function TradeEditor({
         assetSymbol: cash ? account.currency : assetSymbol.trim().toUpperCase(),
         quantity: quantity.replace(',', '.'),
         price: cash ? '1' : price.replace(',', '.'),
-        feeMinor,
+        // The fee field is hidden for deposits and withdrawals; a value typed
+        // before switching must not travel behind the user's back.
+        feeMinor: cash ? 0 : feeMinor,
         fundingSource: transfer ? undefined : funding,
         peerAccountId: peerAccountId ? Number(peerAccountId) : null,
         comment,
@@ -253,7 +279,7 @@ export function TradeEditor({
             </div>
           ) : null}
           <div className="segmented wrap" role="group" aria-label={t`Operation type`}>
-            {TYPES.map((entry) => (
+            {applicableTypes.map((entry) => (
               <button
                 key={entry.type}
                 type="button"
@@ -315,11 +341,7 @@ export function TradeEditor({
           <div className="summary-strip" role="group" aria-label={t`Amount`}>
             <span>{t`Amount`}</span>
             <b>
-              <Money
-                amountMinor={principalMinor}
-                currency={account.currency}
-                fractionDigits={account.fractionDigits}
-              />
+              {formatMoney(principalMinor, account.currency, account.fractionDigits)}
             </b>
           </div>
           {!cash ? (

@@ -448,8 +448,16 @@ msgid "Could not delete the budget."
 msgstr "No se pudo eliminar el presupuesto."
 
 #: src/components/AppData.tsx
+msgid "Could not delete the category."
+msgstr "No se pudo borrar la categoría."
+
+#: src/components/AppData.tsx
 msgid "Could not delete the currency."
 msgstr "No se pudo borrar la divisa."
+
+#: src/components/AppData.tsx
+msgid "Could not delete the method."
+msgstr "No se pudo borrar el método."
 
 #: src/components/TradeEditor.tsx
 #: src/components/Trades.tsx
@@ -459,6 +467,10 @@ msgstr "No se pudo borrar la operación."
 #: src/components/AppData.tsx
 msgid "Could not delete the price."
 msgstr "No se pudo borrar el precio."
+
+#: src/components/AppData.tsx
+msgid "Could not delete the tag."
+msgstr "No se pudo borrar la etiqueta."
 
 #: src/components/TransactionPanel.tsx
 msgid "Could not delete the transaction."
@@ -1060,7 +1072,9 @@ msgstr "Últimos 3 meses"
 msgid "Leave the password empty if you have not set one."
 msgstr "Deja la contraseña vacía si no has configurado ninguna."
 
+#. placeholder {0}: page.data.total - page.data.items.length
 #. placeholder {0}: total - items.length
+#: src/components/Trades.tsx
 #: src/components/Transactions.tsx
 msgid "Load more ({0})"
 msgstr "Cargar más ({0})"

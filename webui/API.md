@@ -359,9 +359,11 @@ mismo dominio que la app (`TradeIntent` → `RepositoryTrades`). El borrado usa
   `peerAccountId`) o `EXTERNAL`. Traspaso: `peerAccountId` debe ser otra
   cartera y distinta (`422`).
 - Cantidad y precio > 0, comisión ≥ 0 (`422 validation_failed` con `fields`).
-  El guardado actualiza además el histórico de precios con fuente `User`.
+  El guardado actualiza además el histórico de precios con fuente `USER`.
 - `PUT` reemplaza la operación conservando sus piernas; id desconocido o de
-  otra cartera, `404 trade_not_found`.
+  otra cartera, `404 trade_not_found`. No cambia de familia (`422
+  unsupported_trade_change`): una Compra/Venta sigue siéndolo, un
+  Depósito/Retirada y un Traspaso también, como en el editor de la app.
 
 ### 4.3 Transacciones
 
@@ -595,7 +597,8 @@ la app; el API las expone tal cual.
 - **Precios**: `value` es el precio real (mayor a mayor) de una unidad del
   activo en la divisa base, > 0. El precio manual es único por
   (activo, fecha): `POST` reemplaza, `PUT` exige que exista y `DELETE` de uno
-  inexistente es `404 price_not_found`. La fuente almacenada es `User`.
+  inexistente es `404 price_not_found`. La fuente de un precio manual es
+  `USER`.
 
 ### 4.6 Presupuestos
 

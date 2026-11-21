@@ -119,57 +119,72 @@ internal fun Repository.queryAccounts(
     // write endpoints can answer 409 for a sealed debt instead of a 404.
     val selection = if (id == null) "$KEY_SEALED = 0" else "$KEY_ROWID = ?"
     val args = if (id == null) null else arrayOf(id.toString())
-    val rows = contentResolver.query(uri, null, selection, args, null)
-        ?.useAndMapToList { cursor ->
-            val currency = cursor.getString(KEY_CURRENCY)
-            val rawType = cursor.getStringOrNull(KEY_ACCOUNT_TYPE_LABEL).orEmpty()
-            val portfolioRole = cursor.getIntIfExists(KEY_IS_PORTFOLIO) ?: PORTFOLIO_NONE
-            AccountRow(
-                dto = AccountDto(
-                    id = cursor.getLong(KEY_ROWID),
-                    label = cursor.getString(KEY_LABEL),
-                    type = cursor.getStringOrNull(KEY_TYPE).orEmpty(),
-                    // Reserved names travel with their underscores stripped, so the
-                    // SPA can say CASH instead of _CASH_; custom names stay as-is.
-                    typeName = rawType.removeSurrounding("_"),
-                    openingBalanceMinor = cursor.getLongIfExistsOr0(KEY_OPENING_BALANCE),
-                    currency = currency,
-                    fractionDigits = fractionDigits.getOrPut(currency) {
-                        runCatching { currencyContext[currency].fractionDigits }.getOrDefault(2)
-                    },
-                    currentBalanceMinor = cursor.getLongIfExistsOr0(KEY_CURRENT_BALANCE),
-                    totalMinor = cursor.getLongIfExistsOr0(KEY_TOTAL),
-                    incomeMinor = cursor.getLongIfExistsOr0(KEY_SUM_INCOME),
-                    expensesMinor = cursor.getLongIfExistsOr0(KEY_SUM_EXPENSES),
-                    excludeFromTotals = cursor.getBoolean(KEY_EXCLUDE_FROM_TOTALS),
-                    sealed = cursor.getBoolean(KEY_SEALED),
-                    color = cursor.getIntIfExists(KEY_COLOR) ?: 0,
-                    parentId = cursor.getLongOrNull(KEY_PARENTID),
-                    portfolioRole = when (portfolioRole) {
-                        PORTFOLIO_CONTAINER -> "CONTAINER"
-                        PORTFOLIO_ASSET -> "ASSET"
-                        PORTFOLIO_CASH -> "CASH"
-                        else -> "NONE"
-                    },
-                    dynamicExchangeRates = cursor.getBoolean(KEY_DYNAMIC)
-                ),
-                currency = currency,
-                currentBalanceMinor = cursor.getLongIfExistsOr0(KEY_CURRENT_BALANCE),
-                parentId = cursor.getLongOrNull(KEY_PARENTID),
-                portfolioRole = portfolioRole,
-                dynamicExchangeRates = cursor.getBoolean(KEY_DYNAMIC)
-            )
-        } ?: emptyList()
+    val rows = queryAccountRows(uri, selection, args, currencyContext, fractionDigits)
+    // A single container still needs its children to compute the valuation;
+    // the children are not part of the response, only the input of the sum.
+    val valuationRows = if (id == null) {
+        rows
+    } else {
+        queryAccountRows(uri, "$KEY_SEALED = 0", null, currencyContext, fractionDigits)
+    }
     val prices = queryLatestPrices()
     return rows.map { row ->
         val valuation = if (row.portfolioRole == PORTFOLIO_CONTAINER) {
-            containerValuation(row, rows, prices)
+            containerValuation(row, valuationRows, prices)
         } else {
             null
         }
         row.dto.copy(valuationMinor = valuation)
     }
 }
+
+private fun Repository.queryAccountRows(
+    uri: Uri,
+    selection: String?,
+    args: Array<String>?,
+    currencyContext: CurrencyContext,
+    fractionDigits: MutableMap<String, Int>
+): List<AccountRow> = contentResolver.query(uri, null, selection, args, null)
+    ?.useAndMapToList { cursor ->
+        val currency = cursor.getString(KEY_CURRENCY)
+        val rawType = cursor.getStringOrNull(KEY_ACCOUNT_TYPE_LABEL).orEmpty()
+        val portfolioRole = cursor.getIntIfExists(KEY_IS_PORTFOLIO) ?: PORTFOLIO_NONE
+        AccountRow(
+            dto = AccountDto(
+                id = cursor.getLong(KEY_ROWID),
+                label = cursor.getString(KEY_LABEL),
+                type = cursor.getStringOrNull(KEY_TYPE).orEmpty(),
+                // Reserved names travel with their underscores stripped, so the
+                // SPA can say CASH instead of _CASH_; custom names stay as-is.
+                typeName = rawType.removeSurrounding("_"),
+                openingBalanceMinor = cursor.getLongIfExistsOr0(KEY_OPENING_BALANCE),
+                currency = currency,
+                fractionDigits = fractionDigits.getOrPut(currency) {
+                    runCatching { currencyContext[currency].fractionDigits }.getOrDefault(2)
+                },
+                currentBalanceMinor = cursor.getLongIfExistsOr0(KEY_CURRENT_BALANCE),
+                totalMinor = cursor.getLongIfExistsOr0(KEY_TOTAL),
+                incomeMinor = cursor.getLongIfExistsOr0(KEY_SUM_INCOME),
+                expensesMinor = cursor.getLongIfExistsOr0(KEY_SUM_EXPENSES),
+                excludeFromTotals = cursor.getBoolean(KEY_EXCLUDE_FROM_TOTALS),
+                sealed = cursor.getBoolean(KEY_SEALED),
+                color = cursor.getIntIfExists(KEY_COLOR) ?: 0,
+                parentId = cursor.getLongOrNull(KEY_PARENTID),
+                portfolioRole = when (portfolioRole) {
+                    PORTFOLIO_CONTAINER -> "CONTAINER"
+                    PORTFOLIO_ASSET -> "ASSET"
+                    PORTFOLIO_CASH -> "CASH"
+                    else -> "NONE"
+                },
+                dynamicExchangeRates = cursor.getBoolean(KEY_DYNAMIC)
+            ),
+            currency = currency,
+            currentBalanceMinor = cursor.getLongIfExistsOr0(KEY_CURRENT_BALANCE),
+            parentId = cursor.getLongOrNull(KEY_PARENTID),
+            portfolioRole = portfolioRole,
+            dynamicExchangeRates = cursor.getBoolean(KEY_DYNAMIC)
+        )
+    } ?: emptyList()
 
 /**
  * Latest stored price per (commodity, base currency) pair, the same mapping
@@ -196,8 +211,8 @@ internal fun Repository.queryLatestPrices(): Map<Pair<String, String>, Double> =
  * Valuation of a portfolio container: its own balance plus every child
  * converted at the latest price, exactly `FullAccount.effectiveBalance`.
  * A child in the portfolio's currency counts 1:1; an asset child uses the
- * latest stored price and falls back to the stored exchange rate or 1.0, the
- * same fallback chain the app applies.
+ * latest stored price and falls back to 1.0 when none is stored, the same
+ * fallback the app applies to asset sub-accounts.
  */
 internal fun containerValuation(
     container: AccountRow,

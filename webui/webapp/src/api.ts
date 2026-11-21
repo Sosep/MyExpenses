@@ -66,8 +66,15 @@ export function describeError(error: unknown, fallback?: string): string {
       case 'invalid_password':
         return t`Wrong password.`
       case 'not_found':
+      case 'category_not_found':
+      case 'method_not_found':
+      case 'tag_not_found':
+      case 'currency_not_found':
+      case 'price_not_found':
         return t`This item no longer exists on the phone.`
       case 'conflict':
+      case 'unsupported_trade_change':
+      case 'unsupported_move':
         return t`This change is not allowed here.`
       case 'portfolio_limit_reached':
         return t`The free version tracks one portfolio. More need the Professional licence.`

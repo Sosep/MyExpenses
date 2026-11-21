@@ -215,6 +215,17 @@ class ApiRoutes(
                     "date is required"
                 )
                 val body = call.receive<PriceWriteDto>()
+                // PUT edits an existing manual price; a missing row is a 404,
+                // like the app's edit dialog. POST is the upsert.
+                val exists = dataSource.prices(commodity.uppercase(Locale.ROOT))
+                    .any { it.date == date && it.source == "USER" }
+                if (!exists) {
+                    throw ApiException(
+                        HttpStatusCode.NotFound,
+                        "price_not_found",
+                        "Price not found"
+                    )
+                }
                 call.respond(
                     dataSource.savePrice(body.copy(commodity = commodity, date = date))
                 )

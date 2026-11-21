@@ -217,11 +217,11 @@ Sirve para comprobar:
 
 - **Sí**: transacciones simples (`POST/PUT/DELETE`), presupuestos, asignaciones,
   rollover, total por periodo, duplicación, informes y descarga de ficheros.
-- **Sí**: alta/edición de carteras (`POST/PUT /portfolios`); el límite de
-  licencia se simula con `?portfolioLimit=1`.
-- **No**: guardar transferencias, divididas ni operaciones de cartera; se abren
-  y editan visualmente, pero el guardado se prueba contra el API real del
-  teléfono.
+- **Sí**: alta/edición de carteras (`POST/PUT /portfolios`) y sus operaciones
+  (`POST/PUT/DELETE /portfolios/{id}/trades`); el límite de licencia se simula
+  con `?portfolioLimit=1`.
+- **No**: guardar transferencias ni divididas; se abren y editan visualmente,
+  pero el guardado se prueba contra el API real del teléfono.
 - Todo vive en memoria: reiniciar el mock vuelve a los datos de ejemplo.
 - El código está en `dev/mock-server.mjs`; los fixtures están al principio del
   archivo.

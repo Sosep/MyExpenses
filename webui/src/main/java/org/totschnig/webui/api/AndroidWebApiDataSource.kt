@@ -1864,7 +1864,7 @@ class AndroidWebApiDataSource(
         body: TradeWriteDto
     ): TradeDto {
         val account = requirePortfolioAccount(portfolioId)
-        repository.loadTrade(transactionId)
+        val existing = repository.loadTrade(transactionId)
             ?.takeIf { it.portfolioId == portfolioId }
             ?: throw ApiException(
                 HttpStatusCode.NotFound,
@@ -1872,6 +1872,17 @@ class AndroidWebApiDataSource(
                 "Trade not found"
             )
         val intent = body.toTradeIntent(account, tradeId = transactionId)
+        // The app's editor only offers the same kind when editing (buy/sell,
+        // deposit/withdraw, transfer); crossing it would leave the other leg
+        // of a transfer behind or reuse an unrelated split.
+        if (tradeKind(existing.type) != tradeKind(intent.type)) {
+            throw ApiException(
+                HttpStatusCode.UnprocessableEntity,
+                "unsupported_trade_change",
+                "Changing the kind of an operation is not supported",
+                mapOf("type" to "Must keep the current kind")
+            )
+        }
         repository.saveTrade(account, intent)
         return repository.loadTrade(transactionId)?.toTradeDto(
             prefHandler.getBoolean(PrefKey.TRANSACTION_WITH_TIME, false)
@@ -1964,6 +1975,14 @@ class AndroidWebApiDataSource(
                 "Invalid quantity",
                 mapOf("quantity" to "Out of range")
             )
+        if (abs(quantityMoney.amountMinor) > MAX_AMOUNT_MINOR) {
+            throw ApiException(
+                HttpStatusCode.UnprocessableEntity,
+                "validation_failed",
+                "Invalid quantity",
+                mapOf("quantity" to "Out of range")
+            )
+        }
         val principal = principalMinor?.let { minor ->
             if (minor <= 0L) {
                 throw ApiException(
@@ -1984,13 +2003,21 @@ class AndroidWebApiDataSource(
                     mapOf("principalMinor" to "Out of range")
                 )
         }
+        if (principal.amountMinor > MAX_AMOUNT_MINOR) {
+            throw ApiException(
+                HttpStatusCode.UnprocessableEntity,
+                "validation_failed",
+                "Invalid principal",
+                mapOf("principalMinor" to "Out of range")
+            )
+        }
         val feeMinor = this.feeMinor ?: 0L
-        if (feeMinor < 0L) {
+        if (feeMinor < 0L || feeMinor > MAX_AMOUNT_MINOR) {
             throw ApiException(
                 HttpStatusCode.UnprocessableEntity,
                 "validation_failed",
                 "Invalid fee",
-                mapOf("feeMinor" to "Must not be negative")
+                mapOf("feeMinor" to "Out of range")
             )
         }
         val funding = when {
@@ -2091,6 +2118,12 @@ class AndroidWebApiDataSource(
             "type must be BUY, SELL, DEPOSIT, WITHDRAW, TRANSFER_IN or TRANSFER_OUT",
             mapOf("type" to "Invalid value")
         )
+    }
+
+    private fun tradeKind(type: TradeType): String = when (type) {
+        is TradeType.AssetTrade -> "ASSET"
+        is TradeType.CashMovement -> "CASH"
+        is TradeType.Transfer -> "TRANSFER"
     }
 
     private fun parseFundingSource(raw: String): FundingSource = when (raw) {
@@ -2246,8 +2279,10 @@ class AndroidWebApiDataSource(
                 label = label,
                 type = body.type ?: existing.type,
                 isNumbered = body.isNumbered ?: existing.isNumbered,
-                accountTypes = parseAccountTypes(body.accountTypes)
-                    .ifEmpty { existing.accountTypes.mapNotNull { it.toLongOrNull() } }
+                // An explicit empty list clears the restriction; an absent
+                // field keeps the stored one.
+                accountTypes = body.accountTypes?.let { parseAccountTypes(it) }
+                    ?: existing.accountTypes.mapNotNull { it.toLongOrNull() }
             )
         )
         return repository.queryMethods().firstOrNull { it.id == id }
@@ -2358,7 +2393,7 @@ class AndroidWebApiDataSource(
                 "The currency is already defined"
             )
         }
-        val uri = repository.insertCurrency(
+        repository.insertCurrency(
             code = code,
             symbol = body.symbol?.trim()?.takeIf { it.isNotBlank() } ?: code,
             label = body.label?.trim()?.takeIf { it.isNotBlank() },
@@ -2372,7 +2407,6 @@ class AndroidWebApiDataSource(
         currencyContext.invalidate(code)
         val created = currencies().firstOrNull { it.code == code }
         if (created == null) {
-            android.content.ContentUris.parseId(uri)
             throw ApiException(
                 HttpStatusCode.InternalServerError,
                 "save_failed",
@@ -2437,7 +2471,16 @@ class AndroidWebApiDataSource(
 
     override suspend fun prices(commodity: String): List<PriceDto> {
         val base = currencyContext.homeCurrencyUnit
-        val commodityUnit = currencyContext[commodity]
+        val commodityUnit = try {
+            currencyContext[commodity]
+        } catch (_: Exception) {
+            throw ApiException(
+                HttpStatusCode.UnprocessableEntity,
+                "validation_failed",
+                "Unknown commodity",
+                mapOf("commodity" to "Does not exist")
+            )
+        }
         return repository.contentResolver.query(
             TransactionProvider.PRICES_URI.buildUpon()
                 .appendQueryParameter(KEY_COMMODITY, commodity)
@@ -2457,7 +2500,10 @@ class AndroidWebApiDataSource(
                     commodityUnit,
                     base
                 ).toDouble(),
-                source = cursor.getStringOrNull(KEY_SOURCE) ?: "USER"
+                // The table stores the app's lowercase source names; the API
+                // exposes the uppercase token the client reasons about.
+                source = cursor.getStringOrNull(KEY_SOURCE)?.uppercase(Locale.ROOT)
+                    ?: "USER"
             )
         } ?: emptyList()
     }
@@ -2510,7 +2556,7 @@ class AndroidWebApiDataSource(
             currency = base.code,
             date = date.toString(),
             value = value,
-            source = ExchangeRateSource.User.name
+            source = "USER"
         )
     }
 

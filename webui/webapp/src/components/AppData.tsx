@@ -169,8 +169,10 @@ function CategoriesTab() {
   const categories = useAsync(() => getCategories(), ['categories'])
   const [editing, setEditing] = useState<Category | 'new' | null>(null)
   const [remapping, setRemapping] = useState<Category | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   async function remove(category: Category, remapTo?: number) {
+    setError(null)
     try {
       await deleteCategory(category.id, remapTo)
       setRemapping(null)
@@ -178,6 +180,8 @@ function CategoriesTab() {
     } catch (cause) {
       if (cause instanceof ApiError && cause.code === 'category_in_use') {
         setRemapping(category)
+      } else {
+        setError(describeError(cause, t`Could not delete the category.`))
       }
     }
   }
@@ -197,6 +201,7 @@ function CategoriesTab() {
         {categories.error ? (
           <Banner error={categories.error} retry={categories.reload} />
         ) : null}
+        <ErrorText message={error} />
         <table className="table">
           <thead>
             <tr>
@@ -262,7 +267,11 @@ function CategoriesTab() {
         <RemapPanel
           category={remapping}
           categories={categories.data ?? []}
-          onClose={() => setRemapping(null)}
+          error={error}
+          onClose={() => {
+            setRemapping(null)
+            setError(null)
+          }}
           onConfirm={(target) => {
             void remove(remapping, target)
           }}
@@ -361,6 +370,7 @@ function CategoryEditor({
           ariaLabel={t`Parent category`}
           value={parentId}
           options={parentOptions}
+          disabled={category !== null}
           onChange={setParentId}
         />
       </label>
@@ -384,11 +394,13 @@ function CategoryEditor({
 function RemapPanel({
   category,
   categories,
+  error,
   onClose,
   onConfirm,
 }: {
   category: Category
   categories: Category[]
+  error: string | null
   onClose: () => void
   onConfirm: (target: number) => void
 }) {
@@ -429,6 +441,7 @@ function RemapPanel({
           onChange={setTarget}
         />
       </label>
+      <ErrorText message={error} />
     </Panel>
   )
 }
@@ -452,10 +465,16 @@ function MethodsTab() {
   const methods = useAsync(() => getMethods(), ['methods'])
   const accountTypes = useAsync(() => getAccountTypes(), ['account-types'])
   const [editing, setEditing] = useState<Method | 'new' | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   async function remove(method: Method) {
-    await deleteMethod(method.id)
-    methods.reload()
+    setError(null)
+    try {
+      await deleteMethod(method.id)
+      methods.reload()
+    } catch (cause) {
+      setError(describeError(cause, t`Could not delete the method.`))
+    }
   }
 
   return (
@@ -471,6 +490,7 @@ function MethodsTab() {
           </button>
         </div>
         {methods.error ? <Banner error={methods.error} retry={methods.reload} /> : null}
+        <ErrorText message={error} />
         <table className="table">
           <thead>
             <tr>
@@ -644,10 +664,16 @@ function MethodEditor({
 function TagsTab() {
   const tags = useAsync(() => getTags(), ['tags'])
   const [editing, setEditing] = useState<Tag | 'new' | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   async function remove(tag: Tag) {
-    await deleteTag(tag.id)
-    tags.reload()
+    setError(null)
+    try {
+      await deleteTag(tag.id)
+      tags.reload()
+    } catch (cause) {
+      setError(describeError(cause, t`Could not delete the tag.`))
+    }
   }
 
   return (
@@ -663,6 +689,7 @@ function TagsTab() {
           </button>
         </div>
         {tags.error ? <Banner error={tags.error} retry={tags.reload} /> : null}
+        <ErrorText message={error} />
         <table className="table">
           <thead>
             <tr>
@@ -1072,20 +1099,24 @@ function PricesTab() {
                   </td>
                   <td>{price.source}</td>
                   <td className="num">
-                    <button
-                      type="button"
-                      className="btn ghost"
-                      onClick={() => setEditing(price)}
-                    >
-                      {t`Edit`}
-                    </button>
-                    <button
-                      type="button"
-                      className="btn ghost danger"
-                      onClick={() => void remove(price)}
-                    >
-                      {t`Delete`}
-                    </button>
+                    {price.source === 'USER' ? (
+                      <>
+                        <button
+                          type="button"
+                          className="btn ghost"
+                          onClick={() => setEditing(price)}
+                        >
+                          {t`Edit`}
+                        </button>
+                        <button
+                          type="button"
+                          className="btn ghost danger"
+                          onClick={() => void remove(price)}
+                        >
+                          {t`Delete`}
+                        </button>
+                      </>
+                    ) : null}
                   </td>
                 </tr>
               ))}
@@ -1186,6 +1217,7 @@ function PriceEditor({
           className="input"
           aria-label={t`Date`}
           value={date}
+          disabled={price !== null}
           onChange={(event) => setDate(event.target.value)}
         />
       </label>

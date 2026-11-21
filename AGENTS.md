@@ -42,7 +42,8 @@ Read this before changing code. Detailed sources:
   `POST/PUT /portfolios/{id}/trades` and the domain extracted from the
   ViewModel into `db2/RepositoryTrades.kt`, which the Android trade screens
   use too; the web editor mirrors `TradeIntent` and the mock applies the
-  operation deltas in memory.
+  operation deltas in memory. Editing an operation keeps its family (buy/sell,
+  deposit/withdraw, transfer), like the Android editor.
 - App data: `?view=datos` mirrors Android's Settings > Data with tabs for
   categories (tree, delete with remap), payment methods, tags, currencies
   (fiat and custom assets) and the manual price history. The writes go through

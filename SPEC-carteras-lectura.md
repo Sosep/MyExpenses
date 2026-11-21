@@ -19,8 +19,9 @@ sus activos y sus operaciones. La escritura de operaciones llega en
   / `findOrCreateCashAccount`); la web las expone, no las gestiona.
 - **Valoración** (`BalanceType.VALUATION`): `saldo del contenedor +
   Σ hijos.conversión(saldo hijo)`, donde la conversión usa el último precio
-  almacenado (commodity → divisa de la cartera) y, sin precio, el tipo de
-  cambio inicial o 1.0 (mismo criterio de `FullAccount.enrich`).
+  almacenado (commodity → divisa de la cartera) y, sin precio, 1.0 (las
+  subcuentas de activo son siempre dinámicas y la de efectivo comparte la
+  divisa de la cartera).
 - **Licencia**: 1 cartera gratis; crear más exige Profesional
   (`ContribFeature.PORTFOLIO`). El chequeo vive en el servidor
   (`LicenceHandler.hasAccessTo`), no en el cliente.
@@ -131,14 +132,14 @@ descendente (la de la app). Cada elemento (`TradeDto`) mapea
   normal no cambia. El selector del topbar lista contenedores y cuentas
   normales, nunca subcuentas.
 - **Resumen de cartera** (`Dashboard.tsx`): tarjeta de valoración + efectivo
-  aparte, lista de activos «SÍMBOLO — cantidad @ precio» y distribución
-  reutilizando `Chart`. Los importes responden a la privacidad `totals`
-  (`Money`/`useMoney`).
+  aparte y una tabla de activos con cantidad, precio y valoración, cada una con
+  su peso en la cartera (`asset-share`). Los importes y precios responden a la
+  privacidad `totals` (`Money`/`useMoney`).
 - **Operaciones** (`components/Trades.tsx`): cuando la cuenta es cartera, la
   vista Transacciones lista operaciones (tipo, activo, cantidad, precio,
   importe, comisión, contraparte) con la agrupación visual actual; el detalle
-  abre en panel (`useHistoryPanel`). El FAB queda en «Nueva operación» (la
-  escritura llega en M2; en M1 el FAB está oculto en carteras).
+  abre en panel (`useHistoryPanel`). El FAB pasa a «Nueva operación»; la
+  escritura llegó en M2 y su mock está en `SPEC-operaciones-carteras.md`.
 - **Privacidad**: valoración y agregados → `totals`; filas de operaciones →
   `transactions`.
 
@@ -149,7 +150,7 @@ efectivo, activos AAPL/ETH y operaciones de los tipos Compra, Venta, Depósito,
 Retirada y Traspaso (la contraparte es otra cartera del mock), más precios
 recientes por activo. QA switches:
 
-- `?view=transactions&portfolio=1` — selecciona la cartera como cuenta activa.
+- `?view=transactions&accountId=7` — selecciona la cartera como cuenta activa.
 - `?new=1&kind=portfolio` — abre el editor en modo cartera.
 - `?portfolioLimit=1` — el mock responde `409 portfolio_limit_reached` al
   crear la segunda cartera.

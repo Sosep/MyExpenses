@@ -270,8 +270,8 @@ const portfolioTrades = [
     assetSymbol: 'BTC',
     fractionDigits: 8,
     quantityMinor: 1000000,
-    price: '430.0',
-    principalMinor: 43000,
+    price: '4300.0',
+    principalMinor: 4300,
     feeMinor: null,
     peerAccountId: 8,
     peerAccountLabel: 'Trading',
@@ -322,7 +322,7 @@ const portfolioTrades = [
     fractionDigits: 4,
     quantityMinor: 30000,
     price: '5.0',
-    principalMinor: 15000,
+    principalMinor: 1500,
     feeMinor: 500,
     peerAccountId: 9,
     peerAccountLabel: 'Cash',
@@ -339,7 +339,7 @@ const portfolioTrades = [
     fractionDigits: 4,
     quantityMinor: 10000,
     price: '5.2',
-    principalMinor: 52000,
+    principalMinor: 520,
     feeMinor: 300,
     peerAccountId: 1,
     peerAccountLabel: 'Everyday',
@@ -511,16 +511,16 @@ const meta = {
 }
 
 const categories = [
-  { id: 1, parentId: null, label: 'Food', level: 0, color: null, type: -1 },
-  { id: 2, parentId: 1, label: 'Groceries', level: 1, color: null, type: -1 },
-  { id: 3, parentId: null, label: 'Income', level: 0, color: null, type: 1 },
-  { id: 4, parentId: null, label: 'Transport', level: 0, color: null, type: -1 },
-  { id: 5, parentId: 1, label: 'Restaurants', level: 1, color: null, type: -1 },
-  { id: 6, parentId: null, label: 'Home', level: 0, color: null, type: -1 },
-  { id: 7, parentId: 6, label: 'Utilities', level: 1, color: null, type: -1 },
-  { id: 8, parentId: 6, label: 'Household', level: 1, color: null, type: -1 },
-  { id: 9, parentId: 1, label: 'Treats', level: 1, color: null, type: -1 },
-  { id: 10, parentId: null, label: 'Leisure', level: 0, color: null, type: -1 },
+  { id: 1, parentId: null, label: 'Food', level: 0, color: null, type: 1 },
+  { id: 2, parentId: 1, label: 'Groceries', level: 1, color: null, type: 1 },
+  { id: 3, parentId: null, label: 'Income', level: 0, color: null, type: 2 },
+  { id: 4, parentId: null, label: 'Transport', level: 0, color: null, type: 1 },
+  { id: 5, parentId: 1, label: 'Restaurants', level: 1, color: null, type: 1 },
+  { id: 6, parentId: null, label: 'Home', level: 0, color: null, type: 1 },
+  { id: 7, parentId: 6, label: 'Utilities', level: 1, color: null, type: 1 },
+  { id: 8, parentId: 6, label: 'Household', level: 1, color: null, type: 1 },
+  { id: 9, parentId: 1, label: 'Treats', level: 1, color: null, type: 1 },
+  { id: 10, parentId: null, label: 'Leisure', level: 0, color: null, type: 1 },
 ]
 
 const currencies = [
@@ -529,6 +529,11 @@ const currencies = [
   { code: 'AAPL', label: 'Apple Inc.', symbol: 'AAPL', fractionDigits: 4, commodityType: 'SECURITY' },
   { code: 'BTC', label: 'Bitcoin', symbol: 'BTC', fractionDigits: 8, commodityType: 'CRYPTO' },
 ]
+
+/** Fraction digits as the app resolves them; an unknown code falls back to 2. */
+function currencyFractionDigits(code) {
+  return currencies.find((entry) => entry.code === code)?.fractionDigits ?? 2
+}
 
 let prices = [
   { commodity: 'AAPL', currency: 'EUR', date: iso(19), value: 5.0, source: 'USER' },
@@ -1266,8 +1271,10 @@ function refreshValuation(portfolioId) {
     asset.valuationMinor = Math.round(asset.quantityMinor * (asset.priceMinor ?? 0))
   }
   const assetValuation = assets.assets.reduce((total, asset) => total + asset.valuationMinor, 0)
-  assets.valuationMinor = assets.cashMinor + assetValuation
   const account = accounts.find((item) => item.id === portfolioId)
+  // Same identity as the server: the container's own balance plus the cash
+  // sub-account plus every asset at the latest stored price.
+  assets.valuationMinor = (account?.currentBalanceMinor ?? 0) + assets.cashMinor + assetValuation
   if (account) account.valuationMinor = assets.valuationMinor
 }
 
@@ -1586,7 +1593,6 @@ createServer(async (request, response) => {
           message: 'Deposits and withdrawals cannot be funded by the portfolio cash',
         })
       }
-      const assetFd = body.assetSymbol === 'BTC' ? 8 : body.assetSymbol === 'ETH' ? 8 : 4
       const quantity = Number(String(body.quantity).replace(',', '.'))
       const price = body.type === 'DEPOSIT' || body.type === 'WITHDRAW'
         ? 1
@@ -1601,6 +1607,7 @@ createServer(async (request, response) => {
         body.type === 'DEPOSIT' || body.type === 'WITHDRAW'
           ? tradeAssets.currency
           : String(body.assetSymbol).toUpperCase()
+      const assetFd = currencyFractionDigits(assetSymbol)
       if (
         tradeAssets.assets.every((asset) => asset.symbol !== assetSymbol) &&
         assetSymbol !== tradeAssets.currency
@@ -1692,24 +1699,51 @@ createServer(async (request, response) => {
             ? 1
             : Number(String(body.price).replace(',', '.'))
         const previous = rows[index]
+        const nextType = body.type ?? trade.type
+        const kindOf = (value) =>
+          value === 'BUY' || value === 'SELL'
+            ? 'ASSET'
+            : value === 'DEPOSIT' || value === 'WITHDRAW'
+              ? 'CASH'
+              : 'TRANSFER'
+        if (kindOf(nextType) !== kindOf(trade.type)) {
+          return sendJson(response, 422, {
+            error: 'unsupported_trade_change',
+            message: 'Changing the kind of an operation is not supported',
+          })
+        }
+        const nextAssetSymbol = body.assetSymbol
+          ? String(body.assetSymbol).toUpperCase()
+          : trade.assetSymbol
+        const assetFd = currencyFractionDigits(nextAssetSymbol)
+        const funding = body.fundingSource
+        const isBuySell = nextType === 'BUY' || nextType === 'SELL'
+        // The counterpart depends on the funding, not on what the form kept:
+        // portfolio cash for a cash-funded buy, the account for bank funding,
+        // the target portfolio for a transfer, nothing for external funding.
+        const peerAccountId =
+          funding === 'PORTFOLIO' && isBuySell
+            ? portfolioAssets[portfolioId].cashAccountId
+            : funding === 'ACCOUNT' || nextType.startsWith('TRANSFER')
+              ? body.peerAccountId ?? null
+              : null
         rows[index] = {
           ...trade,
-          type: body.type ?? trade.type,
+          type: nextType,
           date: body.date ?? trade.date,
           time: body.time ?? null,
           comment: body.comment ?? trade.comment,
-          assetSymbol: body.assetSymbol ? String(body.assetSymbol).toUpperCase() : trade.assetSymbol,
-          quantityMinor: Math.round(quantity * Math.pow(10, trade.fractionDigits)),
+          assetSymbol: nextAssetSymbol,
+          fractionDigits: assetFd,
+          quantityMinor: Math.round(quantity * Math.pow(10, assetFd)),
           price: String(price),
           principalMinor: Math.round(
             quantity * price * Math.pow(10, portfolioAssets[portfolioId].fractionDigits),
           ),
           feeMinor: body.feeMinor ?? trade.feeMinor,
-          peerAccountId: body.peerAccountId ?? null,
+          peerAccountId,
           peerAccountLabel:
-            body.peerAccountId === null || body.peerAccountId === undefined
-              ? null
-              : accountFor(Number(body.peerAccountId)).label,
+            peerAccountId === null ? null : accountFor(Number(peerAccountId)).label,
         }
         rows.sort((left, right) => right.date.localeCompare(left.date))
         applyTradeEffect(portfolioId, previous, -1)
@@ -1863,11 +1897,7 @@ createServer(async (request, response) => {
       if (request.method === 'DELETE') {
         const used =
           accounts.some((account) => account.currency === currency.code) ||
-          transactions.some(
-            (item) =>
-              item.currency === currency.code ||
-              (item.splitParts ?? []).some((part) => part.category?.id && false),
-          )
+          transactions.some((item) => item.currency === currency.code)
         if (used) {
           return sendJson(response, 409, {
             error: 'currency_still_used',
@@ -1952,6 +1982,7 @@ createServer(async (request, response) => {
         const body = await readJson(request)
         if (body.label) category.label = body.label
         if (body.color !== undefined) category.color = body.color
+        if (body.type !== undefined) category.type = body.type
         return sendJson(response, 200, category)
       }
       if (request.method === 'DELETE') {
@@ -1977,6 +2008,11 @@ createServer(async (request, response) => {
           for (const item of transactions) {
             if (branch.includes(item.category?.id)) {
               item.category = categoryRef(Number(remapTo))
+            }
+            for (const part of item.splitParts ?? []) {
+              if (branch.includes(part.category?.id)) {
+                part.category = categoryRef(Number(remapTo))
+              }
             }
           }
         }
@@ -2040,7 +2076,7 @@ createServer(async (request, response) => {
         label: body.label,
         level: parent ? (parent.level ?? 0) + 1 : 0,
         color: body.color ?? null,
-        type: parent ? parent.type : body.type ?? -1,
+        type: parent ? parent.type : body.type ?? 1,
       }
       categories.push(category)
       return sendJson(response, 201, category, {

@@ -37,12 +37,6 @@ function tradeTypeClass(type: TradeType): string {
   return 'amount-neutral'
 }
 
-function quantityText(trade: Trade): string {
-  return new Intl.NumberFormat(undefined, {
-    maximumFractionDigits: trade.fractionDigits,
-  }).format(trade.quantityMinor / Math.pow(10, trade.fractionDigits))
-}
-
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="field">
@@ -154,7 +148,9 @@ function TradePanel({
           <div className="detail-grid">
             <Field label={t`Type`}>{typeLabel(trade.type)}</Field>
             <Field label={t`Asset`}>{trade.assetSymbol}</Field>
-            <Field label={t`Quantity`}>{quantityText(trade)}</Field>
+            <Field label={t`Quantity`}>
+              {money(trade.quantityMinor, trade.assetSymbol, trade.fractionDigits)}
+            </Field>
             <Field label={t`Price`}>{priceText}</Field>
             <Field label={t`Amount`}>
               <Money
@@ -203,7 +199,11 @@ function TradePanel({
 export function Trades({ account, onNewTrade, onEditTrade }: TradesProps) {
   const money = useMoney('transactions')
   const amounts = useAmounts()
-  const page = useAsync(() => getTrades(account.id, 50, 0), ['trades', account.id])
+  const [limit, setLimit] = useState(50)
+  const page = useAsync(
+    () => getTrades(account.id, limit, 0),
+    ['trades', account.id, limit],
+  )
   const [selected, setSelected] = useState<Trade | null>(null)
   const closePanel = useHistoryPanel(selected !== null, () => setSelected(null))
 
@@ -318,6 +318,17 @@ export function Trades({ account, onNewTrade, onEditTrade }: TradesProps) {
             )}
           </tbody>
         </table>
+        {page.data && page.data.items.length < page.data.total ? (
+          <div className="load-more">
+            <button
+              type="button"
+              className="btn"
+              onClick={() => setLimit((current) => current + 50)}
+            >
+              {t`Load more (${page.data.total - page.data.items.length})`}
+            </button>
+          </div>
+        ) : null}
       </section>
 
       {selected ? (

@@ -156,7 +156,10 @@ export function AccountEditor({
               className={kind === 'account' ? 'active' : ''}
               data-kind="account"
               aria-pressed={kind === 'account'}
-              onClick={() => setKind('account')}
+              onClick={() => {
+                setKind('account')
+                setType('')
+              }}
             >
               {t`Account`}
             </button>
@@ -165,7 +168,10 @@ export function AccountEditor({
               className={kind === 'portfolio' ? 'active' : ''}
               data-kind="portfolio"
               aria-pressed={kind === 'portfolio'}
-              onClick={() => setKind('portfolio')}
+              onClick={() => {
+                setKind('portfolio')
+                setType('')
+              }}
             >
               {t`Portfolio`}
             </button>
