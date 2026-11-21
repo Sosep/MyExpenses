@@ -166,7 +166,7 @@
     </string-array>
     <string-array name="whats_new_416">
         <item>Web app: portfolios with valuation, assets and operations</item>
-        <item>Web app: manage categories, payment methods, tags, currencies and prices</item>
+        <item>Web app: manage categories, payment methods, tags, currencies and price history</item>
         <item>Web app: back/forward and deep links, with remembered screens and theme</item>
         <item>Web app: budget detail panel, branch-wide category filters and filtered period totals</item>
         <item>Web app: the budget\'s own account opens when drilling into its categories</item>
