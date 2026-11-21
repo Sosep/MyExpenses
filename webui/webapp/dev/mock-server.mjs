@@ -352,7 +352,6 @@ const portfolioTradesByPortfolio = {
 }
 
 let nextAccountId = 20
-let nextTradeId = 1000
 let nextDataId = 500
 
 const monthName = new Intl.DateTimeFormat('en-GB', { month: 'long', year: 'numeric' }).format(
@@ -1674,7 +1673,7 @@ createServer(async (request, response) => {
         })
       }
       const trade = {
-        id: nextTradeId++,
+        id: nextId++,
         type: body.type,
         accountId: portfolioId,
         currency: tradeAssets.currency,
@@ -1781,7 +1780,7 @@ createServer(async (request, response) => {
             : funding === 'ACCOUNT' || nextType.startsWith('TRANSFER')
               ? body.peerAccountId ?? null
               : null
-        rows[index] = {
+        const updated = {
           ...trade,
           type: nextType,
           date: body.date ?? trade.date,
@@ -1799,10 +1798,13 @@ createServer(async (request, response) => {
           peerAccountLabel:
             peerAccountId === null ? null : accountFor(Number(peerAccountId)).label,
         }
+        rows[index] = updated
+        // Sorting may move the row: keep the reference, a changing date must
+        // not make the revert/apply hit another operation.
         rows.sort((left, right) => right.date.localeCompare(left.date))
         applyTradeEffect(portfolioId, previous, -1)
-        applyTradeEffect(portfolioId, rows[index], 1)
-        return sendJson(response, 200, rows[index])
+        applyTradeEffect(portfolioId, updated, 1)
+        return sendJson(response, 200, updated)
       }
       if (request.method === 'DELETE') {
         rows.splice(index, 1)

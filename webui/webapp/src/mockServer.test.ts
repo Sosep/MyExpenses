@@ -90,6 +90,58 @@ describe('mock portfolio operations', () => {
     const cash = accounts.find((account: { id: number }) => account.id === trade.peerAccountId)
     expect(cash).toMatchObject({ portfolioRole: 'CASH', parentId: portfolio.id })
   })
+
+  it('keeps the edited operation when its date moves it in the list', async () => {
+    const portfolio = await (
+      await api('/api/v1/portfolios', {
+        method: 'POST',
+        body: JSON.stringify({ label: 'Mock edit', type: '6', currency: 'EUR' }),
+      })
+    ).json()
+    const trades = `/api/v1/portfolios/${portfolio.id}/trades`
+    const first = await (
+      await api(trades, {
+        method: 'POST',
+        body: JSON.stringify({
+          type: 'DEPOSIT',
+          quantity: '10',
+          price: '1',
+          fundingSource: 'EXTERNAL',
+          date: '2026-11-01',
+        }),
+      })
+    ).json()
+    const second = await (
+      await api(trades, {
+        method: 'POST',
+        body: JSON.stringify({
+          type: 'DEPOSIT',
+          quantity: '20',
+          price: '1',
+          fundingSource: 'EXTERNAL',
+          date: '2026-11-02',
+        }),
+      })
+    ).json()
+    // Newest first: `second` is the row at index 0. Editing it to an older
+    // date reorders the list, and the response must still be that operation.
+    const updated = await api(`${trades}/${second.id}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        type: 'DEPOSIT',
+        quantity: '20',
+        price: '1',
+        fundingSource: 'EXTERNAL',
+        date: '2026-10-01',
+      }),
+    })
+    expect(updated.status).toBe(200)
+    expect(await updated.json()).toMatchObject({ id: second.id, date: '2026-10-01' })
+
+    const page = await (await api(trades)).json()
+    expect(page.total).toBe(2)
+    expect(page.items.map((item: { id: number }) => item.id)).toEqual([first.id, second.id])
+  })
 })
 
 describe('mock category rules', () => {

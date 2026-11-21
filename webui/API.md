@@ -305,7 +305,7 @@ contenedor):
       "fractionDigits": 4,
       "quantityMinor": 30000,
       "price": "5.0",
-      "principalMinor": 15000,
+      "principalMinor": 1500,
       "feeMinor": 500,
       "peerAccountId": 9,
       "peerAccountLabel": "Cash"
