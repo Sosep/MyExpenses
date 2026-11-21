@@ -58,7 +58,7 @@ export function LineChart({
   const money = useMoney('totals')
   const [hiddenSeries, setHiddenSeries] = useState<Set<string>>(new Set())
   const [active, setActive] = useState<number | null>(null)
-  const gradientId = useId().replace(/:/g, '')
+  const gradientId = useId().replace(/[^a-zA-Z0-9_-]/g, '')
 
   const visible = series.filter((entry) => !hiddenSeries.has(entry.key))
   const dates = series[0]?.points.map((point) => point.date) ?? []

@@ -1175,12 +1175,15 @@ Tras revisar de nuevo el código:
 ## 8. Pruebas
 
 - **Rutas en JVM**: `webui/src/test/java/org/totschnig/webui/api/ApiRoutesTest.kt`
-  con un `WebApiDataSource` fake y Ktor `testApplication`. 83 tests cubren
+  con un `WebApiDataSource` fake y Ktor `testApplication`. 89 tests cubren
   routing, validación, `201/204/404/409/422`, JSON, body malformado, los
   endpoints de transferencias/divididas, el CRUD y las asignaciones de
-  presupuestos, los informes con drill-down, carteras y operaciones, los datos
-  de la app y las preferencias de la web
-  (documento vacío, fusión parcial, `422` con `fields` y campos desconocidos).
+  presupuestos, los informes con drill-down, la serie de saldos y las
+  inversiones, carteras y operaciones, los datos de la app y las preferencias
+  de la web (documento vacío, fusión parcial, `422` con `fields` y campos
+  desconocidos). `BalanceMathTest` añade 10 pruebas del plegado puro: días sin
+  movimientos, reconciliación del último punto, transferencia que suma cero en
+  el total, tipos heredados y fallback de granularidad.
   Comando: `docker compose run --rm android-build :webui:testDebugUnitTest`.
 - **Capa Android**: `AndroidWebApiDataSource` y el `ContentProvider` se validan
   en el móvil o con tests instrumentados; los mapeadores puros pueden probarse
