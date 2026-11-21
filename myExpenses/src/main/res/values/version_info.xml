@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string-array name="versions">
+        <item>894;4.1.6</item>
         <item>893;4.1.5;</item>
         <item>892;4.1.4</item>
         <item>887;4.1.3</item>
@@ -159,5 +160,16 @@
     </string-array>
     <string-array name="whats_new_414">
         <item>@string/full_text_search</item>
+    </string-array>
+    <string-array name="whats_new_415">
+        <item>Internal QA build, no functional changes</item>
+    </string-array>
+    <string-array name="whats_new_416">
+        <item>Web app: portfolios with valuation, assets and operations</item>
+        <item>Web app: manage categories, payment methods, tags, currencies and prices</item>
+        <item>Web app: back/forward and deep links, with remembered screens and theme</item>
+        <item>Web app: budget detail panel, branch-wide category filters and filtered period totals</item>
+        <item>Web app: the budget\'s own account opens when drilling into its categories</item>
+        <item>Web app: amounts can be masked for privacy</item>
     </string-array>
 </resources>

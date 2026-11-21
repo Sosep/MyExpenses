@@ -132,6 +132,16 @@ The host has no JDK or Android SDK. Run Android tasks in Docker:
   Android implementation and the provider stay device-level.
 - Signed universal APK: `BUILD_VARIANT=release docker compose run --rm android-build`
   Output: `myExpenses/build/outputs/apk_from_bundle/externRelease/*universal-signed.apk`
+- Every version bump (`versionCode`/`versionName` in the root `build.gradle`) is
+  accompanied in the same commit by
+  `metadata/en-US/changelogs/<versionCode>.txt` and
+  `metadata/es-ES/changelogs/<versionCode>.txt` (see 892.txt for the format; correct
+  Spanish in es-ES, English in en-US) **and** by the in-app what's-new entry in
+  `myExpenses/src/main/res/values/version_info.xml`: a new
+  `<item><versionCode>;<versionName></item>` at the top of the `versions` array
+  plus a `whats_new_<versionName without dots>` string-array (e.g.
+  `whats_new_416` for 4.1.6). The what's-new dialog reads those resources; a
+  missing array logs "missing change log entry" and the dialog shows no text.
 
 A debug base APK does not contain the dynamic feature. Test the web UI with the
 release universal APK, or install the feature split.
