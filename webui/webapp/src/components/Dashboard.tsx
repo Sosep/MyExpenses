@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import type { Account, Transaction } from '../types'
-import { describeError, getGrouped, getTransactions } from '../api'
+import { describeError, getGrouped, getPortfolioAssets, getTransactions } from '../api'
 import {
   currentMonth,
   formatDate,
@@ -11,7 +11,7 @@ import {
 } from '../format'
 import { t } from '@lingui/core/macro'
 import { useAsync } from '../hooks'
-import { Money } from '../privacy'
+import { Money, useAmounts } from '../privacy'
 import { fillSeries } from '../series'
 import { Chart } from './Chart'
 
@@ -28,6 +28,207 @@ function description(transaction: Transaction): string {
 }
 
 export function Dashboard({
+  account,
+  onOpenTransactions,
+  onNewTransaction,
+}: DashboardProps) {
+  // A portfolio's overview is its valuation: what it is worth, in cash and in
+  // assets, at the latest stored prices. The income/expense chart below is
+  // about flows, which the portfolio tracks through the transactions screen.
+  if (account.portfolioRole === 'CONTAINER') {
+    return (
+      <PortfolioOverview
+        account={account}
+        onOpenTransactions={onOpenTransactions}
+      />
+    )
+  }
+  return (
+    <AccountOverview
+      account={account}
+      onOpenTransactions={onOpenTransactions}
+      onNewTransaction={onNewTransaction}
+    />
+  )
+}
+
+function PortfolioOverview({
+  account,
+  onOpenTransactions,
+}: {
+  account: Account
+  onOpenTransactions: () => void
+}) {
+  const assets = useAsync(
+    () => getPortfolioAssets(account.id),
+    ['portfolio-assets', account.id],
+  )
+  const amounts = useAmounts()
+  const data = assets.data
+  const assetValuation = data
+    ? data.assets.reduce((total, asset) => total + asset.valuationMinor, 0)
+    : 0
+
+  return (
+    <>
+      <div className="page-head">
+        <div>
+          <h1>{t`Overview`}</h1>
+          <p>{account.label}</p>
+        </div>
+        <div className="page-actions">
+          <button type="button" className="btn ghost" onClick={onOpenTransactions}>
+            {t`Transactions`}
+          </button>
+          <button type="button" className="btn" onClick={() => assets.reload()}>
+            {t`Refresh`}
+          </button>
+        </div>
+      </div>
+
+      {assets.error ? (
+        <div className="banner" role="alert">
+          <span>{describeError(assets.error, t`Could not load the portfolio.`)}</span>
+          <button type="button" className="btn ghost banner-action" onClick={() => assets.reload()}>
+            {t`Retry`}
+          </button>
+        </div>
+      ) : null}
+
+      <div className="kpis">
+        <div className="hero">
+          <div className="accent-bar" />
+          <div className="kpi-label">{t`Valuation`}</div>
+          <div className="hero-value">
+            {data ? (
+              <Money
+                scope="totals"
+                amountMinor={data.valuationMinor}
+                currency={account.currency}
+                fractionDigits={account.fractionDigits}
+              />
+            ) : (
+              '—'
+            )}
+          </div>
+          <div className="hero-delta">{t`At the latest stored prices`}</div>
+        </div>
+        <div className="kpi mint">
+          <div className="kpi-label">{t`Cash`}</div>
+          <div className="kpi-value">
+            {data ? (
+              <Money
+                scope="totals"
+                amountMinor={data.cashMinor}
+                currency={account.currency}
+                fractionDigits={account.fractionDigits}
+              />
+            ) : (
+              '—'
+            )}
+          </div>
+          <div className="kpi-foot">{t`Portfolio cash`}</div>
+        </div>
+        <div className="kpi lav">
+          <div className="kpi-label">{t`Assets`}</div>
+          <div className="kpi-value">
+            {data ? (
+              <Money
+                scope="totals"
+                amountMinor={assetValuation}
+                currency={account.currency}
+                fractionDigits={account.fractionDigits}
+              />
+            ) : (
+              '—'
+            )}
+          </div>
+          <div className="kpi-foot">{data ? `${data.assets.length}` : ''}</div>
+        </div>
+      </div>
+
+      <section className="card">
+        <div className="card-head">
+          <div>
+            <h2>{t`Assets`}</h2>
+            <p>{t`Quantity at the latest price`}</p>
+          </div>
+          <span className="card-note">{account.currency}</span>
+        </div>
+        {assets.loading ? (
+          <div className="panel-loading">
+            <div className="skeleton skeleton-row" />
+            <div className="skeleton skeleton-row" />
+          </div>
+        ) : data && data.assets.length > 0 ? (
+          <table className="table">
+            <thead>
+              <tr>
+                <th>{t`Asset`}</th>
+                <th className="num">{t`Quantity`}</th>
+                <th className="num hide-sm">{t`Price`}</th>
+                <th className="num">{t`Valuation`}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.assets.map((asset) => {
+                const share =
+                  assetValuation > 0 ? Math.round((asset.valuationMinor * 100) / assetValuation) : 0
+                return (
+                  <tr key={asset.id} data-asset-symbol={asset.symbol}>
+                    <td>
+                      <div className="desc">{asset.label}</div>
+                      <div className="sub">{asset.symbol}</div>
+                    </td>
+                    <td className="num">
+                      <Money
+                        amountMinor={asset.quantityMinor}
+                        currency={asset.symbol}
+                        fractionDigits={asset.fractionDigits}
+                      />
+                    </td>
+                    <td className="num hide-sm">
+                      {asset.priceMinor === null
+                        ? '—'
+                        : amounts.totals
+                          ? '••••'
+                          : `${(
+                              asset.priceMinor *
+                              Math.pow(10, asset.fractionDigits - account.fractionDigits)
+                            ).toLocaleString(undefined, { maximumFractionDigits: 8 })} ${
+                              account.currency
+                            }`}
+                    </td>
+                    <td className="num">
+                      <Money
+                        scope="totals"
+                        amountMinor={asset.valuationMinor}
+                        currency={account.currency}
+                        fractionDigits={account.fractionDigits}
+                      />
+                      <span className="asset-share" role="presentation">
+                        <span
+                          style={{ width: `${Math.min(share, 100)}%` }}
+                        />
+                      </span>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        ) : (
+          <div className="empty">
+            <h3>{t`No assets yet`}</h3>
+            <p>{t`The first buy creates the asset here.`}</p>
+          </div>
+        )}
+      </section>
+    </>
+  )
+}
+
+function AccountOverview({
   account,
   onOpenTransactions,
   onNewTransaction,

@@ -669,6 +669,332 @@ class ApiRoutesTest {
         assertTrue(body.contains("November 2026"))
         assertTrue(body.contains("\"allocatedMinor\":40000"))
     }
+
+    @Test
+    fun `accounts carry the portfolio role`() = testApplication {
+        installRoutes(FakeDataSource())
+        val body = client.get("/api/v1/accounts").bodyAsText()
+        assertTrue(body.contains("\"portfolioRole\":\"CONTAINER\""))
+        assertTrue(body.contains("\"valuationMinor\":37500"))
+    }
+
+    @Test
+    fun `create portfolio returns 201 and the account location`() = testApplication {
+        val fake = FakeDataSource()
+        installRoutes(fake)
+        val response = client.post("/api/v1/portfolios") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """{"label":"Joint","type":"6","currency":"USD","color":0,
+                   "dynamicExchangeRates":false,"exchangeRate":1.1}"""
+            )
+        }
+        assertEquals(HttpStatusCode.Created, response.status)
+        assertEquals("/api/v1/accounts/7", response.headers[HttpHeaders.Location])
+        assertEquals("Joint", fake.createdPortfolio?.label)
+    }
+
+    @Test
+    fun `portfolio without exchange rate is a 422`() = testApplication {
+        installRoutes(FakeDataSource())
+        val response = client.post("/api/v1/portfolios") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"label":"Joint","type":"6","currency":"USD"}""")
+        }
+        assertEquals(HttpStatusCode.UnprocessableEntity, response.status)
+        assertTrue(response.bodyAsText().contains("missing_exchangeRate"))
+    }
+
+    @Test
+    fun `a second portfolio without licence is a 409`() = testApplication {
+        installRoutes(FakeDataSource())
+        val response = client.post("/api/v1/portfolios") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"label":"Limited","type":"6","currency":"EUR"}""")
+        }
+        assertEquals(HttpStatusCode.Conflict, response.status)
+        assertTrue(response.bodyAsText().contains("portfolio_limit_reached"))
+    }
+
+    @Test
+    fun `portfolio assets return valuation`() = testApplication {
+        installRoutes(FakeDataSource())
+        val response = client.get("/api/v1/portfolios/7/assets")
+        assertEquals(HttpStatusCode.OK, response.status)
+        val body = response.bodyAsText()
+        assertTrue(body.contains("\"cashMinor\":25000"))
+        assertTrue(body.contains("\"valuationMinor\":37500"))
+        assertTrue(body.contains("\"symbol\":\"AAPL\""))
+    }
+
+    @Test
+    fun `unknown portfolio assets are a 404`() = testApplication {
+        installRoutes(FakeDataSource())
+        val response = client.get("/api/v1/portfolios/99/assets")
+        assertEquals(HttpStatusCode.NotFound, response.status)
+        assertTrue(response.bodyAsText().contains("portfolio_not_found"))
+    }
+
+    @Test
+    fun `portfolio trades are paginated`() = testApplication {
+        installRoutes(FakeDataSource())
+        val response = client.get("/api/v1/portfolios/7/trades?limit=10&offset=0")
+        assertEquals(HttpStatusCode.OK, response.status)
+        val body = response.bodyAsText()
+        assertTrue(body.contains("\"type\":\"BUY\""))
+        assertTrue(body.contains("\"limit\":10"))
+    }
+
+    @Test
+    fun `portfolio trade detail is returned`() = testApplication {
+        installRoutes(FakeDataSource())
+        val response = client.get("/api/v1/portfolios/7/trades/71")
+        assertEquals(HttpStatusCode.OK, response.status)
+        assertTrue(response.bodyAsText().contains("\"price\":\"50.0\""))
+    }
+
+    @Test
+    fun `unknown portfolio trade is a 404`() = testApplication {
+        installRoutes(FakeDataSource())
+        val response = client.get("/api/v1/portfolios/7/trades/99")
+        assertEquals(HttpStatusCode.NotFound, response.status)
+        assertTrue(response.bodyAsText().contains("trade_not_found"))
+    }
+
+    @Test
+    fun `portfolio update responds with the saved portfolio`() = testApplication {
+        installRoutes(FakeDataSource())
+        val response = client.put("/api/v1/portfolios/7") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"label":"Joint II","type":"6","currency":"EUR"}""")
+        }
+        assertEquals(HttpStatusCode.OK, response.status)
+        assertTrue(response.bodyAsText().contains("Joint"))
+    }
+
+    @Test
+    fun `create trade returns 201 and the trade location`() = testApplication {
+        val fake = FakeDataSource()
+        installRoutes(fake)
+        val response = client.post("/api/v1/portfolios/7/trades") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """{"type":"BUY","assetSymbol":"AAPL","quantity":"3","price":"5",
+                   "feeMinor":500,"fundingSource":"PORTFOLIO","date":"2026-11-12"}"""
+            )
+        }
+        assertEquals(HttpStatusCode.Created, response.status)
+        assertEquals(
+            "/api/v1/portfolios/7/trades/71",
+            response.headers[HttpHeaders.Location]
+        )
+        assertEquals("BUY", fake.createdTrade?.type)
+    }
+
+    @Test
+    fun `deposit funded by portfolio cash is a 422`() = testApplication {
+        installRoutes(FakeDataSource())
+        val response = client.post("/api/v1/portfolios/7/trades") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """{"type":"DEPOSIT","quantity":"100","fundingSource":"PORTFOLIO",
+                   "date":"2026-11-12"}"""
+            )
+        }
+        assertEquals(HttpStatusCode.UnprocessableEntity, response.status)
+    }
+
+    @Test
+    fun `update trade responds with the stored operation`() = testApplication {
+        installRoutes(FakeDataSource())
+        val response = client.put("/api/v1/portfolios/7/trades/71") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """{"type":"BUY","assetSymbol":"AAPL","quantity":"1","price":"5.2",
+                   "fundingSource":"ACCOUNT","peerAccountId":1,"date":"2026-11-09"}"""
+            )
+        }
+        assertEquals(HttpStatusCode.OK, response.status)
+        assertTrue(response.bodyAsText().contains("\"type\":\"BUY\""))
+    }
+
+    @Test
+    fun `update trade cannot change the operation family`() = testApplication {
+        installRoutes(FakeDataSource())
+        val response = client.put("/api/v1/portfolios/7/trades/71") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """{"type":"DEPOSIT","quantity":"100",
+                   "fundingSource":"ACCOUNT","peerAccountId":1,"date":"2026-11-09"}"""
+            )
+        }
+        assertEquals(HttpStatusCode.UnprocessableEntity, response.status)
+        assertTrue(response.bodyAsText().contains("unsupported_trade_change"))
+    }
+
+    @Test
+    fun `create category returns 201 and location`() = testApplication {
+        installRoutes(FakeDataSource())
+        val response = client.post("/api/v1/categories") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"label":"Travel","type":1}""")
+        }
+        assertEquals(HttpStatusCode.Created, response.status)
+        assertEquals("/api/v1/categories/8", response.headers[HttpHeaders.Location])
+    }
+
+    @Test
+    fun `deleting a category in use is a 409 without remap`() = testApplication {
+        installRoutes(FakeDataSource())
+        val response = client.delete("/api/v1/categories/2")
+        assertEquals(HttpStatusCode.Conflict, response.status)
+        assertTrue(response.bodyAsText().contains("category_in_use"))
+    }
+
+    @Test
+    fun `deleting a category with remap returns 204`() = testApplication {
+        val fake = FakeDataSource()
+        installRoutes(fake)
+        val response = client.delete("/api/v1/categories/2?remapTo=1")
+        assertEquals(HttpStatusCode.NoContent, response.status)
+        assertEquals(2L to 1L, fake.deletedCategory)
+    }
+
+    @Test
+    fun `create and delete a method`() = testApplication {
+        installRoutes(FakeDataSource())
+        val created = client.post("/api/v1/methods") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"label":"Bizum","type":0,"accountTypes":["2"]}""")
+        }
+        assertEquals(HttpStatusCode.Created, created.status)
+        val deleted = client.delete("/api/v1/methods/4")
+        assertEquals(HttpStatusCode.NoContent, deleted.status)
+    }
+
+    @Test
+    fun `create tag returns 201`() = testApplication {
+        installRoutes(FakeDataSource())
+        val response = client.post("/api/v1/tags") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"label":"holiday"}""")
+        }
+        assertEquals(HttpStatusCode.Created, response.status)
+    }
+
+    @Test
+    fun `currencies list and create`() = testApplication {
+        installRoutes(FakeDataSource())
+        val list = client.get("/api/v1/currencies")
+        assertEquals(HttpStatusCode.OK, list.status)
+        assertTrue(list.bodyAsText().contains("\"code\":\"EUR\""))
+        val created = client.post("/api/v1/currencies") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """{"code":"TSLA","symbol":"TSLA","fractionDigits":4,"commodityType":"SECURITY"}"""
+            )
+        }
+        assertEquals(HttpStatusCode.Created, created.status)
+    }
+
+    @Test
+    fun `deleting a used currency is a 409`() = testApplication {
+        installRoutes(FakeDataSource())
+        val response = client.delete("/api/v1/currencies/EUR")
+        assertEquals(HttpStatusCode.Conflict, response.status)
+        assertTrue(response.bodyAsText().contains("currency_still_used"))
+    }
+
+    @Test
+    fun `prices are listed and saved`() = testApplication {
+        installRoutes(FakeDataSource())
+        val list = client.get("/api/v1/prices?commodity=AAPL")
+        assertEquals(HttpStatusCode.OK, list.status)
+        assertTrue(list.bodyAsText().contains("\"value\":5.0"))
+        val saved = client.post("/api/v1/prices") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"commodity":"AAPL","date":"2026-11-20","value":5.5}""")
+        }
+        assertEquals(HttpStatusCode.Created, saved.status)
+    }
+
+    @Test
+    fun `unknown trade update is a 404`() = testApplication {
+        installRoutes(FakeDataSource())
+        val response = client.put("/api/v1/portfolios/7/trades/99") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"type":"SELL","quantity":"1","price":"5","date":"2026-11-09"}""")
+        }
+        assertEquals(HttpStatusCode.NotFound, response.status)
+        assertTrue(response.bodyAsText().contains("trade_not_found"))
+    }
+
+    @Test
+    fun `unknown portfolio update is a 404`() = testApplication {
+        installRoutes(FakeDataSource())
+        val response = client.put("/api/v1/portfolios/99") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"label":"Joint II","type":"6","currency":"EUR"}""")
+        }
+        assertEquals(HttpStatusCode.NotFound, response.status)
+        assertTrue(response.bodyAsText().contains("portfolio_not_found"))
+    }
+
+    @Test
+    fun `manual price update and delete require an existing row`() = testApplication {
+        installRoutes(FakeDataSource())
+        val updated = client.put("/api/v1/prices/AAPL/2026-11-19") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"commodity":"AAPL","date":"2026-11-19","value":6.0}""")
+        }
+        assertEquals(HttpStatusCode.OK, updated.status)
+
+        val missing = client.put("/api/v1/prices/AAPL/2026-11-20") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"commodity":"AAPL","date":"2026-11-20","value":6.0}""")
+        }
+        assertEquals(HttpStatusCode.NotFound, missing.status)
+        assertTrue(missing.bodyAsText().contains("price_not_found"))
+
+        val deleted = client.delete("/api/v1/prices/AAPL/2026-11-19")
+        assertEquals(HttpStatusCode.NoContent, deleted.status)
+        val unknown = client.delete("/api/v1/prices/AAPL/2026-11-20")
+        assertEquals(HttpStatusCode.NotFound, unknown.status)
+    }
+
+    @Test
+    fun `updating or deleting an unknown method, tag or currency is a 404`() =
+        testApplication {
+            installRoutes(FakeDataSource())
+            val method = client.put("/api/v1/methods/99") {
+                contentType(ContentType.Application.Json)
+                setBody("""{"label":"X","type":0}""")
+            }
+            assertEquals(HttpStatusCode.NotFound, method.status)
+            assertTrue(method.bodyAsText().contains("method_not_found"))
+
+            val tag = client.put("/api/v1/tags/99") {
+                contentType(ContentType.Application.Json)
+                setBody("""{"label":"x"}""")
+            }
+            assertEquals(HttpStatusCode.NotFound, tag.status)
+
+            val currency = client.put("/api/v1/currencies/XXX") {
+                contentType(ContentType.Application.Json)
+                setBody("""{"symbol":"X"}""")
+            }
+            assertEquals(HttpStatusCode.NotFound, currency.status)
+
+            assertEquals(
+                HttpStatusCode.NotFound,
+                client.delete("/api/v1/methods/99").status
+            )
+            assertEquals(HttpStatusCode.NotFound, client.delete("/api/v1/tags/99").status)
+            assertEquals(
+                HttpStatusCode.NotFound,
+                client.delete("/api/v1/currencies/XXX").status
+            )
+        }
 }
 
 private fun ApplicationTestBuilder.installRoutes(dataSource: WebApiDataSource) {
@@ -749,23 +1075,8 @@ private class FakeDataSource : WebApiDataSource {
     override suspend fun deleteAccount(id: Long) = id == 1L
 
     override fun accounts() = listOf(
-        AccountDto(
-            id = 1,
-            label = "Everyday",
-            type = "2",
-            typeName = "BANK",
-            currency = "EUR",
-            fractionDigits = 2,
-            openingBalanceMinor = 0,
-            currentBalanceMinor = 10000,
-            totalMinor = 10000,
-            incomeMinor = 5000,
-            expensesMinor = -1000,
-            excludeFromTotals = false,
-            sealed = false,
-            color = 0,
-            parentId = null
-        )
+        sampleAccount(),
+        samplePortfolio()
     )
 
     override fun categories() = emptyList<CategoryDto>()
@@ -1024,7 +1335,282 @@ private class FakeDataSource : WebApiDataSource {
     }
 
     override fun deleteTransaction(id: Long) = id == 1L
+
+    var createdPortfolio: PortfolioWriteDto? = null
+
+    override suspend fun createPortfolio(body: PortfolioWriteDto): AccountDto {
+        if (body.label == "Limited") {
+            throw ApiException(
+                HttpStatusCode.Conflict,
+                "portfolio_limit_reached",
+                "A licence is needed for more than one portfolio"
+            )
+        }
+        // The contract the real datasource enforces: a fixed rate above zero is
+        // required for a currency that is not the home one.
+        if (body.currency == "USD" && (body.exchangeRate == null || body.exchangeRate <= 0.0)) {
+            throw ApiException(
+                HttpStatusCode.UnprocessableEntity,
+                "missing_exchangeRate",
+                "A fixed exchange rate above zero is required for a foreign currency"
+            )
+        }
+        createdPortfolio = body
+        return samplePortfolio()
+    }
+
+    override suspend fun updatePortfolio(id: Long, body: PortfolioWriteDto): AccountDto {
+        if (id != PORTFOLIO_ID) {
+            throw ApiException(
+                HttpStatusCode.NotFound,
+                "portfolio_not_found",
+                "Portfolio not found"
+            )
+        }
+        return samplePortfolio()
+    }
+
+    override suspend fun portfolioAssets(id: Long): PortfolioAssetsDto {
+        if (id != PORTFOLIO_ID) {
+            throw ApiException(
+                HttpStatusCode.NotFound,
+                "portfolio_not_found",
+                "Portfolio not found"
+            )
+        }
+        return samplePortfolioAssets()
+    }
+
+    override fun tradePage(portfolioId: Long, limit: Int, offset: Int): PageDto<TradeDto> {
+        if (portfolioId != PORTFOLIO_ID) {
+            throw ApiException(
+                HttpStatusCode.NotFound,
+                "portfolio_not_found",
+                "Portfolio not found"
+            )
+        }
+        return PageDto(items = listOf(sampleTrade()), total = 1, limit = limit, offset = offset)
+    }
+
+    override fun trade(portfolioId: Long, transactionId: Long): TradeDto? =
+        sampleTrade().takeIf { portfolioId == PORTFOLIO_ID && transactionId == 71L }
+
+    var createdTrade: TradeWriteDto? = null
+
+    override suspend fun createTrade(portfolioId: Long, body: TradeWriteDto): TradeDto {
+        if (portfolioId != PORTFOLIO_ID) {
+            throw ApiException(
+                HttpStatusCode.NotFound,
+                "portfolio_not_found",
+                "Portfolio not found"
+            )
+        }
+        if (body.type == "DEPOSIT" && body.fundingSource == "PORTFOLIO") {
+            throw ApiException(
+                HttpStatusCode.UnprocessableEntity,
+                "validation_failed",
+                "Deposits cannot be funded by the portfolio cash"
+            )
+        }
+        createdTrade = body
+        return sampleTrade()
+    }
+
+    override suspend fun updateTrade(
+        portfolioId: Long,
+        transactionId: Long,
+        body: TradeWriteDto
+    ): TradeDto {
+        if (portfolioId != PORTFOLIO_ID || transactionId != 71L) {
+            throw ApiException(
+                HttpStatusCode.NotFound,
+                "trade_not_found",
+                "Trade not found"
+            )
+        }
+        createdTrade = body
+        if (tradeKind(body.type) != tradeKind(sampleTrade().type)) {
+            throw ApiException(
+                HttpStatusCode.UnprocessableEntity,
+                "unsupported_trade_change",
+                "Changing the kind of an operation is not supported",
+                mapOf("type" to "Must keep the current kind")
+            )
+        }
+        return sampleTrade()
+    }
+
+    override suspend fun createCategory(body: CategoryWriteDto) =
+        CategoryDto(8, body.parentId, body.label ?: "Category", 1, body.color, body.type)
+
+    override suspend fun updateCategory(id: Long, body: CategoryWriteDto) =
+        CategoryDto(id, null, body.label ?: "Category", 1, body.color, body.type)
+
+    var deletedCategory: Pair<Long, Long?>? = null
+
+    override suspend fun deleteCategory(id: Long, remapTo: Long?): Boolean {
+        deletedCategory = id to remapTo
+        if (id == 2L && remapTo == null) {
+            throw ApiException(
+                HttpStatusCode.Conflict,
+                "category_in_use",
+                "The category has movements"
+            )
+        }
+        return id in setOf(1L, 2L)
+    }
+
+    override suspend fun createMethod(body: MethodWriteDto) =
+        MethodDto(4, body.label ?: "Method", body.isNumbered ?: false, body.type ?: 0, emptyList())
+
+    override suspend fun updateMethod(id: Long, body: MethodWriteDto): MethodDto {
+        if (id != 4L) {
+            throw ApiException(HttpStatusCode.NotFound, "method_not_found", "Method not found")
+        }
+        return MethodDto(id, body.label ?: "Method", false, body.type ?: 0, emptyList())
+    }
+
+    override suspend fun deleteMethod(id: Long) = id == 4L
+
+    override suspend fun createTag(body: TagWriteDto) =
+        TagDto(5, body.label ?: "Tag", null)
+
+    override suspend fun updateTag(id: Long, body: TagWriteDto): TagDto {
+        if (id != 5L) {
+            throw ApiException(HttpStatusCode.NotFound, "tag_not_found", "Tag not found")
+        }
+        return TagDto(id, body.label ?: "Tag", null)
+    }
+
+    override suspend fun deleteTag(id: Long) = id == 5L
+
+    override suspend fun currencies(): List<CurrencyDto> = listOf(
+        CurrencyDto("EUR", "Euro", "€", 2, "FIAT", null),
+        CurrencyDto("AAPL", "Apple Inc.", "AAPL", 4, "SECURITY", 0.05)
+    )
+
+    override suspend fun createCurrency(body: CurrencyWriteDto) =
+        CurrencyDto(
+            body.code ?: "X",
+            body.label,
+            body.symbol ?: body.code ?: "X",
+            body.fractionDigits ?: 2,
+            body.commodityType ?: "FIAT",
+            null
+        )
+
+    override suspend fun updateCurrency(code: String, body: CurrencyWriteDto): CurrencyDto {
+        if (code.uppercase() !in setOf("EUR", "AAPL")) {
+            throw ApiException(
+                HttpStatusCode.NotFound,
+                "currency_not_found",
+                "Currency not found"
+            )
+        }
+        return CurrencyDto(
+            code,
+            body.label,
+            body.symbol ?: code,
+            body.fractionDigits ?: 2,
+            body.commodityType ?: "FIAT",
+            null
+        )
+    }
+
+    override suspend fun deleteCurrency(code: String): Boolean {
+        if (code.uppercase() == "EUR") {
+            throw ApiException(
+                HttpStatusCode.Conflict,
+                "currency_still_used",
+                "The currency is still used"
+            )
+        }
+        return code.uppercase() == "AAPL"
+    }
+
+    override suspend fun prices(commodity: String): List<PriceDto> = listOf(
+        PriceDto(commodity, "EUR", "2026-11-19", 5.0, "USER")
+    )
+
+    override suspend fun savePrice(body: PriceWriteDto) = PriceDto(
+        body.commodity ?: "AAPL",
+        "EUR",
+        body.date ?: "2026-11-20",
+        body.value ?: 1.0,
+        "USER"
+    )
+
+    override suspend fun deletePrice(commodity: String, date: String) =
+        date != "2026-11-20"
 }
+
+private const val PORTFOLIO_ID = 7L
+
+private fun tradeKind(type: String?): String = when (type) {
+    "BUY", "SELL" -> "ASSET"
+    "DEPOSIT", "WITHDRAW" -> "CASH"
+    else -> "TRANSFER"
+}
+
+private fun samplePortfolio() = AccountDto(
+    id = PORTFOLIO_ID,
+    label = "Joint",
+    type = "6",
+    typeName = "INVESTMENT",
+    currency = "EUR",
+    fractionDigits = 2,
+    openingBalanceMinor = 0,
+    currentBalanceMinor = 25000,
+    totalMinor = 25000,
+    incomeMinor = 0,
+    expensesMinor = 0,
+    excludeFromTotals = false,
+    sealed = false,
+    color = 0,
+    parentId = null,
+    portfolioRole = "CONTAINER",
+    dynamicExchangeRates = true,
+    valuationMinor = 37500
+)
+
+private fun samplePortfolioAssets() = PortfolioAssetsDto(
+    portfolioId = PORTFOLIO_ID,
+    label = "Joint",
+    currency = "EUR",
+    fractionDigits = 2,
+    cashAccountId = 9,
+    cashMinor = 25000,
+    valuationMinor = 37500,
+    assets = listOf(
+        AssetDto(
+            id = 10,
+            label = "Apple Inc.",
+            symbol = "AAPL",
+            fractionDigits = 4,
+            quantityMinor = 100000,
+            priceMinor = 0.5,
+            valuationMinor = 12500
+        )
+    )
+)
+
+private fun sampleTrade() = TradeDto(
+    id = 71,
+    type = "BUY",
+    accountId = PORTFOLIO_ID,
+    currency = "EUR",
+    date = "2026-11-17",
+    time = null,
+    comment = "",
+    assetSymbol = "AAPL",
+    fractionDigits = 4,
+    quantityMinor = 100000,
+    price = "50.0",
+    principalMinor = 500000,
+    feeMinor = 100,
+    peerAccountId = 1,
+    peerAccountLabel = "Everyday"
+)
 
 private fun sampleTransaction() = TransactionDto(
     id = 1,

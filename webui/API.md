@@ -197,7 +197,10 @@ agrupación o la cuenta se perdían al cambiar de IP o puerto.
     "excludeFromTotals": false,
     "sealed": false,
     "color": -16776961,
-    "parentId": null
+    "parentId": null,
+    "portfolioRole": "NONE",
+    "dynamicExchangeRates": false,
+    "valuationMinor": null
   }
 ]
 ```
@@ -254,7 +257,172 @@ elemento con `id: "all"` (en la app son IDs negativos) y saldos convertidos a la
 divisa base. Alternativa más simple para v1: el cliente suma solo cuentas de la
 misma divisa y el dashboard avisa si hay divisas mixtas.
 
-### 4.4 Transacciones
+Cada cuenta añade ahora `portfolioRole` (`NONE`, o `CONTAINER` / `CASH` /
+`ASSET`), `dynamicExchangeRates` y, en los contenedores, `valuationMinor`
+(valoración: saldo propio + hijos convertidos al último precio guardado, como
+`BalanceType.VALUATION`). Las subcuentas de cartera (efectivo y activos) se
+listan en `/accounts` pero el cliente las **oculta** del selector y del
+agregado, como hace la app.
+
+### 4.4 Carteras
+
+Espejo de `PortfolioSetupDialog` / `createPortfolio` de la app. Una cartera es
+una cuenta con `portfolioRole = CONTAINER`; sus hijos (efectivo y activos) los
+crea la app al registrar operaciones, no el editor web.
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| POST | `/portfolios` | Alta de cartera (`201` + `Location` sobre `/accounts/{id}`) |
+| PUT | `/portfolios/{id}` | Edición |
+| GET | `/portfolios/{id}/assets` | Efectivo, activos y valoración |
+| GET | `/portfolios/{id}/trades?limit&offset` | Operaciones, paginadas (50 por página) |
+| GET | `/portfolios/{id}/trades/{transactionId}` | Detalle de una operación |
+
+`POST /portfolios`:
+
+```json
+{
+  "label": "Cartera conjunto",
+  "type": "6",
+  "currency": "USD",
+  "color": null,
+  "dynamicExchangeRates": false,
+  "exchangeRate": 1.08
+}
+```
+
+- `label`, `type` y `currency` obligatorios (422); divisa o tipo desconocidos,
+  `422 validation_failed`. La divisa debe ser **fiat** como en el diálogo de la
+  app: un activo (Security, Crypto, Commodity) es `422 validation_failed`.
+- `exchangeRate` es el tipo de cambio **real** (unidades mayores a mayores,
+  como en el diálogo de la app); se almacena en bruto con
+  `storeExchangeRate`. Obligatorio (> 0) si `dynamicExchangeRates` es false y
+  la divisa no es la base; si falta, `422 missing_exchangeRate`.
+- Sin saldo de apertura ni «excluir de totales»: el efectivo entra con un
+  Depósito.
+- Sin licencia Profesional solo se permite **una** cartera; la segunda es
+  `409 portfolio_limit_reached` (la comprobación vive en el servidor, como
+  `ContribFeature.PORTFOLIO`).
+- `PUT` cambia etiqueta, color, divisa, tipo y modo de cambio. Cambiar la
+  divisa de una cartera con movimientos es `422 unsupported_account_change`.
+  El modo dinámico guarda el cambio solo cuando es fijo y la divisa es extranjera.
+
+`GET /portfolios/{id}/assets` (`404 portfolio_not_found` si el id no es un
+contenedor):
+
+```json
+{
+  "portfolioId": 7,
+  "label": "Investments",
+  "currency": "EUR",
+  "fractionDigits": 2,
+  "cashAccountId": 9,
+  "cashMinor": 25000,
+  "valuationMinor": 110000,
+  "assets": [
+    {
+      "id": 10,
+      "label": "Apple Inc.",
+      "symbol": "AAPL",
+      "fractionDigits": 4,
+      "quantityMinor": 30000,
+      "priceMinor": 0.05,
+      "valuationMinor": 1500
+    }
+  ]
+}
+```
+
+- `priceMinor` es el último precio **en bruto** (unidades menores de la divisa
+  de la cartera por unidad menor del activo; el valor de la tabla de
+  precios). El cliente lo muestra en unidades mayores dividiendo entre
+  `10^(fdCartera − fdActivo)`.
+- `valuationMinor` (por activo y total) usa el precio guardado y, sin precio,
+  un cambio de 1.0, igual que `FullAccount.enrich`.
+
+`GET /portfolios/{id}/trades` — mapeo directo de `Repository.loadTrades`:
+
+```json
+{
+  "items": [
+    {
+      "id": 701,
+      "type": "BUY",
+      "accountId": 7,
+      "currency": "EUR",
+      "date": "2026-11-12",
+      "time": null,
+      "comment": "",
+      "assetSymbol": "AAPL",
+      "fractionDigits": 4,
+      "quantityMinor": 30000,
+      "price": "5.0",
+      "principalMinor": 1500,
+      "feeMinor": 500,
+      "peerAccountId": 9,
+      "peerAccountLabel": "Cash"
+    }
+  ],
+  "total": 5,
+  "limit": 50,
+  "offset": 0
+}
+```
+
+- `type`: `BUY` | `SELL` | `DEPOSIT` | `WITHDRAW` | `TRANSFER_IN` |
+  `TRANSFER_OUT` (el traspaso entra y sale según la cartera).
+- `price` es el precio real como string decimal (`null` con cantidad 0);
+  Depósitos y Retiradas devuelven `"1"` y usan la divisa de la cartera como
+  `assetSymbol`.
+- `feeMinor` suma las partes de coste adicionales; `null` si no hay.
+- `peerAccountId`/`peerAccountLabel` identifican la contraparte: la
+  subcuenta de efectivo (financiación de cartera), una cuenta externa o la
+  otra cartera en un traspaso.
+
+`POST /portfolios/{id}/trades` (`201` + `Location`) y
+`PUT /portfolios/{id}/trades/{transactionId}` reemplazan una operación con el
+mismo dominio que la app (`TradeIntent` → `RepositoryTrades`). El borrado usa
+`DELETE /transactions/{transactionId}`.
+
+```json
+{
+  "type": "BUY",
+  "assetSymbol": "AAPL",
+  "quantity": "3",
+  "price": "5.0",
+  "feeMinor": 500,
+  "feeCategoryId": null,
+  "fundingSource": "PORTFOLIO",
+  "peerAccountId": null,
+  "comment": "",
+  "date": "2026-11-12",
+  "time": null
+}
+```
+
+- `type`: `BUY`, `SELL`, `DEPOSIT`, `WITHDRAW`, `TRANSFER_IN` o
+  `TRANSFER_OUT`. `quantity` y `price` son strings decimales en unidades
+  mayores; el principal se deriva (`cantidad × precio`) salvo que se envíe
+  `principalMinor`.
+- Depósitos y Retiradas usan la divisa de la cartera como activo, precio 1, y
+  exigen `fundingSource` `ACCOUNT` o `EXTERNAL` (`PORTFOLIO` es
+  `422 validation_failed`, como el `require` de `TradeIntent`).
+- Compra/Venta: `fundingSource` `PORTFOLIO` (por defecto), `ACCOUNT` (exige
+  `peerAccountId` de una cuenta normal **en la divisa de la cartera**) o
+  `EXTERNAL`. Traspaso: `peerAccountId` debe ser otra cartera y distinta
+  (`422`); entre carteras se permite cualquier divisa, como en la app.
+- Cantidad y precio > 0, comisión ≥ 0 (`422 validation_failed` con `fields`).
+  El guardado actualiza además el histórico de precios con fuente `USER`.
+- `assetSymbol` debe ser una divisa **no fiat** registrada en la app (las de
+  Ajustes > Datos); un código desconocido o una divisa fiat es
+  `422 unknown_asset` con `fields.assetSymbol`. Depósitos y Retiradas no lo
+  necesitan (usan la divisa de la cartera).
+- `PUT` reemplaza la operación conservando sus piernas; id desconocido o de
+  otra cartera, `404 trade_not_found`. No cambia de familia (`422
+  unsupported_trade_change`): una Compra/Venta sigue siéndolo, un
+  Depósito/Retirada y un Traspaso también, como en el editor de la app.
+
+### 4.5 Transacciones
 
 Modelo de lectura (`kind` explícito):
 
@@ -439,7 +607,7 @@ actualiza la existente; las existentes que no se envían se borran; una parte si
 
 Los filtros `categoryId`, `payeeId`, `tagId` y `methodId` son opcionales y se combinan con AND. `categoryId` significa la categoría **y toda su rama** (`parent_id` a cualquier profundidad, sin ascendientes); una dividida entra si alguna parte cae en la rama y el `total` ya cuenta el subárbol. `tagId` coincide con cualquiera de las etiquetas. Solo se listan transacciones completas (padre), no partes sueltas.
 
-### 4.5 Categorías, beneficiarios, etiquetas, métodos
+### 4.6 Categorías, beneficiarios, etiquetas, métodos
 
 | Recurso | Endpoints | Notas |
 |---|---|---|
@@ -452,7 +620,50 @@ Los filtros `categoryId`, `payeeId`, `tagId` y `methodId` son opcionales y se co
 y **transfer peer** (la otra cara de una transferencia). El API las expone por
 separado; el editor de transferencias no usa `payee` para elegir la cuenta.
 
-### 4.6 Presupuestos
+### 4.7 Datos de la app
+
+CRUD de los maestros de Ajustes > Datos. Las reglas viven en el repositorio de
+la app; el API las expone tal cual.
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| POST/PUT | `/categories[/{id}]` | Alta y edición (`parentId`, `label`, `color`, `type`) |
+| DELETE | `/categories/{id}?remapTo=` | Borrado con remapeo de movimientos |
+| POST/PUT | `/methods[/{id}]` | Alta y edición (`label`, `type`, `isNumbered`, `accountTypes`) |
+| DELETE | `/methods/{id}` | Borrado |
+| POST/PUT | `/tags[/{id}]` | Alta y edición (`label`) |
+| DELETE | `/tags/{id}` | Borrado |
+| GET/POST | `/currencies` | Lista y alta (`code`, `label`, `symbol`, `fractionDigits`, `commodityType`) |
+| PUT/DELETE | `/currencies/{code}` | Edición y borrado |
+| GET | `/prices?commodity=` | Historial manual del activo a la divisa base |
+| POST | `/prices` | Alta/actualización manual (`commodity`, `date`, `value`) |
+| PUT/DELETE | `/prices/{commodity}/{date}` | Edición y borrado del precio manual |
+
+- **Categorías**: `label` obligatorio; `type` es la máscara de la app
+  (1 gasto, 2 ingreso, 3 neutro); un hijo toma el tipo de su padre y en la
+  edición el servidor ignora el tipo de un hijo, como `saveCategory`; `PUT`
+  no cambia de padre (`422 unsupported_move`). Una rama está en uso si la
+  referencian transacciones (partes de split incluidas), plantillas o
+  asignaciones de presupuesto; sin `remapTo` responde `409 category_in_use`.
+  El borrado con `remapTo` reutiliza el merge de la app: mueve las filas de
+  transacciones, plantillas, registro de cambios y asignaciones de presupuesto,
+  borra la rama y actualiza los filtros de cuenta/presupuesto guardados.
+  `remapTo` debe existir, no estar dentro de la rama y tener el mismo tipo
+  (`422 invalid_remapTo`).
+- **Métodos**: `type` -1 (gasto), 0 (neutro) o 1 (ingreso); `accountTypes`
+  son ids de `/account-types`.
+- **Divisas**: `commodityType` es `FIAT`, `SECURITY`, `CRYPTO` o `COMMODITY`;
+  `fractionDigits` entre 0 y 8; `priceMinor` es el último precio en bruto
+  (unidades menores de la base por unidad menor del activo). Un código
+  existente es `409 currency_already_defined`; una divisa usada por una cuenta
+  o transacción no se borra (`409 currency_still_used`).
+- **Precios**: `value` es el precio real (mayor a mayor) de una unidad del
+  activo en la divisa base, > 0. El precio manual es único por
+  (activo, fecha): `POST` reemplaza, `PUT` exige que exista y `DELETE` de uno
+  inexistente es `404 price_not_found`. La fuente de un precio manual es
+  `USER`.
+
+### 4.8 Presupuestos
 
 | Método | Ruta | Descripción |
 |---|---|---|
@@ -687,7 +898,7 @@ las rutas de arriba; lo que sigue solo en la app Android es la preferencia
 "agregar neutrales" por presupuesto y los criterios compuestos (`Or`/`Not`),
 que la web detecta pero no reescribe.
 
-### 4.7 Informes y agrupaciones
+### 4.9 Informes y agrupaciones
 
 | Método | Ruta | Descripción |
 |---|---|---|
@@ -769,7 +980,7 @@ los criterios no aparece.
 - `/reports/transactions` lista las transacciones de un grupo (`by` + `id`); no
   admite `accountId=all` (`422 unsupported_all_accounts`).
 
-### 4.8 Ficheros
+### 4.10 Ficheros
 
 | Método | Ruta | Descripción |
 |---|---|---|
@@ -798,7 +1009,7 @@ Modelo de lectura:
 - Implementación: rutas en `WebInputService` porque dependen de `AppDirHelper` y
   del `ContentResolver`; no pasan por `WebApiDataSource`.
 
-### 4.9 Plantillas y planes (v2)
+### 4.11 Plantillas y planes (v2)
 
 `GET /templates`, `POST /templates/{id}/instantiate`. Fuera de v1.
 
@@ -857,10 +1068,11 @@ Tras revisar de nuevo el código:
 ## 8. Pruebas
 
 - **Rutas en JVM**: `webui/src/test/java/org/totschnig/webui/api/ApiRoutesTest.kt`
-  con un `WebApiDataSource` fake y Ktor `testApplication`. 57 tests cubren
+  con un `WebApiDataSource` fake y Ktor `testApplication`. 83 tests cubren
   routing, validación, `201/204/404/409/422`, JSON, body malformado, los
   endpoints de transferencias/divididas, el CRUD y las asignaciones de
-  presupuestos, los informes con drill-down y las preferencias de la web
+  presupuestos, los informes con drill-down, carteras y operaciones, los datos
+  de la app y las preferencias de la web
   (documento vacío, fusión parcial, `422` con `fields` y campos desconocidos).
   Comando: `docker compose run --rm android-build :webui:testDebugUnitTest`.
 - **Capa Android**: `AndroidWebApiDataSource` y el `ContentProvider` se validan

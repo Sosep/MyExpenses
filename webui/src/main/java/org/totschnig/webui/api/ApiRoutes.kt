@@ -82,6 +82,245 @@ class ApiRoutes(
             get("/methods") {
                 call.respond(dataSource.methods())
             }
+            post("/categories") {
+                val created = dataSource.createCategory(call.receive<CategoryWriteDto>())
+                call.response.headers.append(
+                    HttpHeaders.Location,
+                    "/api/v1/categories/${created.id}"
+                )
+                call.respond(HttpStatusCode.Created, created)
+            }
+            put("/categories/{id}") {
+                val id = call.requirePathId()
+                call.respond(dataSource.updateCategory(id, call.receive<CategoryWriteDto>()))
+            }
+            delete("/categories/{id}") {
+                val id = call.requirePathId()
+                val remapTo = call.parameters["remapTo"]?.let {
+                    it.toLongOrNull()?.takeIf { value -> value > 0 } ?: throw ApiException(
+                        HttpStatusCode.BadRequest,
+                        "invalid_remapTo",
+                        "remapTo must be a positive category id"
+                    )
+                }
+                if (!dataSource.deleteCategory(id, remapTo)) {
+                    throw ApiException(
+                        HttpStatusCode.NotFound,
+                        "category_not_found",
+                        "Category not found"
+                    )
+                }
+                call.respond(HttpStatusCode.NoContent)
+            }
+            post("/methods") {
+                val created = dataSource.createMethod(call.receive<MethodWriteDto>())
+                call.response.headers.append(
+                    HttpHeaders.Location,
+                    "/api/v1/methods/${created.id}"
+                )
+                call.respond(HttpStatusCode.Created, created)
+            }
+            put("/methods/{id}") {
+                val id = call.requirePathId()
+                call.respond(dataSource.updateMethod(id, call.receive<MethodWriteDto>()))
+            }
+            delete("/methods/{id}") {
+                val id = call.requirePathId()
+                if (!dataSource.deleteMethod(id)) {
+                    throw ApiException(
+                        HttpStatusCode.NotFound,
+                        "method_not_found",
+                        "Method not found"
+                    )
+                }
+                call.respond(HttpStatusCode.NoContent)
+            }
+            post("/tags") {
+                val created = dataSource.createTag(call.receive<TagWriteDto>())
+                call.response.headers.append(
+                    HttpHeaders.Location,
+                    "/api/v1/tags/${created.id}"
+                )
+                call.respond(HttpStatusCode.Created, created)
+            }
+            put("/tags/{id}") {
+                val id = call.requirePathId()
+                call.respond(dataSource.updateTag(id, call.receive<TagWriteDto>()))
+            }
+            delete("/tags/{id}") {
+                val id = call.requirePathId()
+                if (!dataSource.deleteTag(id)) {
+                    throw ApiException(
+                        HttpStatusCode.NotFound,
+                        "tag_not_found",
+                        "Tag not found"
+                    )
+                }
+                call.respond(HttpStatusCode.NoContent)
+            }
+            get("/currencies") {
+                call.respond(dataSource.currencies())
+            }
+            post("/currencies") {
+                val created = dataSource.createCurrency(call.receive<CurrencyWriteDto>())
+                call.response.headers.append(
+                    HttpHeaders.Location,
+                    "/api/v1/currencies/${created.code}"
+                )
+                call.respond(HttpStatusCode.Created, created)
+            }
+            put("/currencies/{code}") {
+                val code = call.parameters["code"] ?: throw ApiException(
+                    HttpStatusCode.BadRequest,
+                    "invalid_code",
+                    "code is required"
+                )
+                call.respond(
+                    dataSource.updateCurrency(code, call.receive<CurrencyWriteDto>())
+                )
+            }
+            delete("/currencies/{code}") {
+                val code = call.parameters["code"] ?: throw ApiException(
+                    HttpStatusCode.BadRequest,
+                    "invalid_code",
+                    "code is required"
+                )
+                if (!dataSource.deleteCurrency(code)) {
+                    throw ApiException(
+                        HttpStatusCode.NotFound,
+                        "currency_not_found",
+                        "Currency not found"
+                    )
+                }
+                call.respond(HttpStatusCode.NoContent)
+            }
+            get("/prices") {
+                val commodity = call.parameters["commodity"]?.takeIf { it.isNotBlank() }
+                    ?: throw ApiException(
+                        HttpStatusCode.BadRequest,
+                        "missing_commodity",
+                        "Query parameter 'commodity' is required"
+                    )
+                call.respond(dataSource.prices(commodity.uppercase(Locale.ROOT)))
+            }
+            post("/prices") {
+                call.respond(
+                    HttpStatusCode.Created,
+                    dataSource.savePrice(call.receive<PriceWriteDto>())
+                )
+            }
+            put("/prices/{commodity}/{date}") {
+                val commodity = call.parameters["commodity"] ?: throw ApiException(
+                    HttpStatusCode.BadRequest,
+                    "invalid_commodity",
+                    "commodity is required"
+                )
+                val date = call.parameters["date"] ?: throw ApiException(
+                    HttpStatusCode.BadRequest,
+                    "invalid_date",
+                    "date is required"
+                )
+                val body = call.receive<PriceWriteDto>()
+                // PUT edits an existing manual price; a missing row is a 404,
+                // like the app's edit dialog. POST is the upsert.
+                val exists = dataSource.prices(commodity.uppercase(Locale.ROOT))
+                    .any { it.date == date && it.source == "USER" }
+                if (!exists) {
+                    throw ApiException(
+                        HttpStatusCode.NotFound,
+                        "price_not_found",
+                        "Price not found"
+                    )
+                }
+                call.respond(
+                    dataSource.savePrice(body.copy(commodity = commodity, date = date))
+                )
+            }
+            delete("/prices/{commodity}/{date}") {
+                val commodity = call.parameters["commodity"] ?: throw ApiException(
+                    HttpStatusCode.BadRequest,
+                    "invalid_commodity",
+                    "commodity is required"
+                )
+                val date = call.parameters["date"] ?: throw ApiException(
+                    HttpStatusCode.BadRequest,
+                    "invalid_date",
+                    "date is required"
+                )
+                if (!dataSource.deletePrice(commodity, date)) {
+                    throw ApiException(
+                        HttpStatusCode.NotFound,
+                        "price_not_found",
+                        "Price not found"
+                    )
+                }
+                call.respond(HttpStatusCode.NoContent)
+            }
+            post("/portfolios") {
+                val created = dataSource.createPortfolio(call.receive<PortfolioWriteDto>())
+                call.response.headers.append(
+                    HttpHeaders.Location,
+                    "/api/v1/accounts/${created.id}"
+                )
+                call.respond(HttpStatusCode.Created, created)
+            }
+            put("/portfolios/{id}") {
+                val id = call.requirePathId()
+                call.respond(dataSource.updatePortfolio(id, call.receive<PortfolioWriteDto>()))
+            }
+            get("/portfolios/{id}/assets") {
+                val id = call.requirePathId()
+                call.respond(dataSource.portfolioAssets(id))
+            }
+            get("/portfolios/{id}/trades") {
+                val id = call.requirePathId()
+                val limit = call.intParamOrNull("limit")?.also {
+                    if (it !in 1..500) {
+                        throw ApiException(
+                            HttpStatusCode.BadRequest,
+                            "invalid_limit",
+                            "Query parameter 'limit' must be between 1 and 500"
+                        )
+                    }
+                } ?: 50
+                val offset = call.intParamOrNull("offset")?.also {
+                    if (it < 0) {
+                        throw ApiException(
+                            HttpStatusCode.BadRequest,
+                            "invalid_offset",
+                            "Query parameter 'offset' must be zero or positive"
+                        )
+                    }
+                } ?: 0
+                call.respond(dataSource.tradePage(id, limit, offset))
+            }
+            get("/portfolios/{id}/trades/{transactionId}") {
+                val id = call.requirePathId()
+                val transactionId = call.requirePathId("transactionId")
+                val trade = dataSource.trade(id, transactionId)
+                    ?: throw ApiException(
+                        HttpStatusCode.NotFound,
+                        "trade_not_found",
+                        "Trade not found"
+                    )
+                call.respond(trade)
+            }
+            post("/portfolios/{id}/trades") {
+                val id = call.requirePathId()
+                val created = dataSource.createTrade(id, call.receive<TradeWriteDto>())
+                call.response.headers.append(
+                    HttpHeaders.Location,
+                    "/api/v1/portfolios/$id/trades/${created.id}"
+                )
+                call.respond(HttpStatusCode.Created, created)
+            }
+            put("/portfolios/{id}/trades/{transactionId}") {
+                val id = call.requirePathId()
+                val transactionId = call.requirePathId("transactionId")
+                call.respond(
+                    dataSource.updateTrade(id, transactionId, call.receive<TradeWriteDto>())
+                )
+            }
             get("/transactions") {
                 val accountId = call.requireLong("accountId")
                 val limit = call.intParamOrNull("limit")?.also {
@@ -398,12 +637,12 @@ private fun ApplicationCall.reportAccountId(): Long {
         )
 }
 
-private fun ApplicationCall.requirePathId(): Long =
-    parameters["id"]?.toLongOrNull()
+private fun ApplicationCall.requirePathId(name: String = "id"): Long =
+    parameters[name]?.toLongOrNull()
         ?: throw ApiException(
             HttpStatusCode.BadRequest,
-            "invalid_id",
-            "id must be a number"
+            "invalid_$name",
+            "$name must be a number"
         )
 
 private fun ApplicationCall.requireLong(name: String): Long {

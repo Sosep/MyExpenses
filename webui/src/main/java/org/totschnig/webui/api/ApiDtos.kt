@@ -50,6 +50,7 @@ data class UiPreferencesDto(
     val transactionType: String? = null
 )
 
+/** Portfolio role of an account, mirroring the app's `is_portfolio` column. */
 @Keep
 data class AccountDto(
     val id: Long,
@@ -68,7 +69,115 @@ data class AccountDto(
     val excludeFromTotals: Boolean,
     val sealed: Boolean,
     val color: Int,
-    val parentId: Long?
+    val parentId: Long?,
+    /** NONE, or one of CONTAINER (a portfolio), CASH, ASSET (its sub-accounts). */
+    val portfolioRole: String = "NONE",
+    val dynamicExchangeRates: Boolean = false,
+    /**
+     * Containers only: current balance plus the valuation of every child at the
+     * latest stored price, in the portfolio's currency minor units (the app's
+     * `BalanceType.VALUATION`). Null for every other account.
+     */
+    val valuationMinor: Long? = null
+)
+
+@Keep
+data class PortfolioWriteDto(
+    val label: String? = null,
+    /** Id of the account type, from `GET /account-types`. */
+    val type: String? = null,
+    /** The portfolio's fiat currency; asset sub-accounts use the asset symbol. */
+    val currency: String? = null,
+    val color: Int? = null,
+    val dynamicExchangeRates: Boolean? = null,
+    /**
+     * Price of one major unit of the currency in home currency major units.
+     * Required when [dynamicExchangeRates] is false and the currency differs
+     * from the home one.
+     */
+    val exchangeRate: Double? = null
+)
+
+@Keep
+data class AssetDto(
+    val id: Long,
+    val label: String,
+    /** Asset symbol; the "currency" code of the asset sub-account. */
+    val symbol: String,
+    val fractionDigits: Int,
+    /** Quantity in asset minor units: the sub-account balance. */
+    val quantityMinor: Long,
+    /**
+     * Latest price in raw form: portfolio minor units per asset minor unit.
+     * Null when no price is stored; the valuation then falls back to an
+     * exchange rate of 1.0, like the app's `FullAccount.enrich`.
+     */
+    val priceMinor: Double?,
+    val valuationMinor: Long
+)
+
+@Keep
+data class PortfolioAssetsDto(
+    val portfolioId: Long,
+    val label: String,
+    val currency: String,
+    val fractionDigits: Int,
+    val cashAccountId: Long?,
+    /** Balance of the cash sub-account, in portfolio minor units. */
+    val cashMinor: Long,
+    /** Container balance + cash + every asset valuation. */
+    val valuationMinor: Long,
+    val assets: List<AssetDto>
+)
+
+@Keep
+data class TradeDto(
+    val id: Long,
+    /** BUY, SELL, DEPOSIT, WITHDRAW, TRANSFER_IN or TRANSFER_OUT. */
+    val type: String,
+    val accountId: Long,
+    val currency: String,
+    val date: String,
+    val time: String?,
+    val comment: String,
+    /** Asset symbol; the portfolio's currency for deposits and withdrawals. */
+    val assetSymbol: String,
+    /** Fraction digits of the asset currency. */
+    val fractionDigits: Int,
+    val quantityMinor: Long,
+    /**
+     * Price of one major asset unit in major portfolio units as a decimal
+     * string, or null when the quantity is zero.
+     */
+    val price: String?,
+    val principalMinor: Long,
+    /** Sum of the additional cost parts, null when the trade has none. */
+    val feeMinor: Long?,
+    val peerAccountId: Long?,
+    val peerAccountLabel: String?
+)
+
+/** Create or replace a portfolio operation, mirroring the app's `TradeIntent`. */
+@Keep
+data class TradeWriteDto(
+    /** BUY, SELL, DEPOSIT, WITHDRAW, TRANSFER_IN or TRANSFER_OUT. */
+    val type: String? = null,
+    /** Commodity code; ignored (portfolio currency) for deposits/withdrawals. */
+    val assetSymbol: String? = null,
+    /** Quantity in major units as a decimal string. */
+    val quantity: String? = null,
+    /** Price of one asset major unit in portfolio major units, decimal string. */
+    val price: String? = null,
+    /** Optional override of the principal; derived from quantity × price. */
+    val principalMinor: Long? = null,
+    val feeMinor: Long? = null,
+    val feeCategoryId: Long? = null,
+    /** PORTFOLIO (cash), ACCOUNT (a bank account) or EXTERNAL (untracked). */
+    val fundingSource: String? = null,
+    val peerAccountId: Long? = null,
+    val comment: String? = null,
+    val date: String? = null,
+    val time: String? = null
 )
 
 /** Account type as the app knows it. `name` is CASH, BANK, ... without underscores. */
@@ -439,4 +548,67 @@ data class BudgetHistoryPointDto(
     val allocatedMinor: Long,
     val spentMinor: Long,
     val remainingMinor: Long
+)
+
+@Keep
+data class CategoryWriteDto(
+    val parentId: Long? = null,
+    val label: String? = null,
+    val color: Int? = null,
+    /** 1 = expense, 2 = income, 3 = neutral (both flags); a child takes its parent's type. */
+    val type: Int? = null
+)
+
+@Keep
+data class MethodWriteDto(
+    val label: String? = null,
+    /** -1 expense, 0 neutral, 1 income. */
+    val type: Int? = null,
+    val isNumbered: Boolean? = null,
+    /** Ids of /account-types the method is limited to. */
+    val accountTypes: List<String>? = null
+)
+
+@Keep
+data class TagWriteDto(
+    val label: String? = null
+)
+
+@Keep
+data class CurrencyDto(
+    val code: String,
+    val label: String?,
+    val symbol: String,
+    val fractionDigits: Int,
+    /** FIAT, SECURITY, CRYPTO or COMMODITY. */
+    val commodityType: String,
+    /** Latest raw price to the home currency (home minor per unit minor). */
+    val priceMinor: Double?
+)
+
+@Keep
+data class CurrencyWriteDto(
+    val code: String? = null,
+    val label: String? = null,
+    val symbol: String? = null,
+    val fractionDigits: Int? = null,
+    val commodityType: String? = null
+)
+
+@Keep
+data class PriceDto(
+    val commodity: String,
+    val currency: String,
+    val date: String,
+    /** Price of one major commodity unit in major base units. */
+    val value: Double,
+    /** MANUAL prices come from the web; the app also stores network sources. */
+    val source: String
+)
+
+@Keep
+data class PriceWriteDto(
+    val commodity: String? = null,
+    val date: String? = null,
+    val value: Double? = null
 )

@@ -498,6 +498,7 @@ class WebInputService : LifecycleService(), IWebInputService {
                                         currencyContext = currencyContext,
                                         payeeMap = payeeMapFlow,
                                         tagMap = tagMapFlow,
+                                        licenceHandler = licenceHandler,
                                         appVersion = appVersion
                                     )
                                 )

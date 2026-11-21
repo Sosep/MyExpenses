@@ -85,18 +85,28 @@ msgstr "{total} transactions"
 msgid "+ Add part"
 msgstr "+ Add part"
 
+#: src/components/Trades.tsx
+msgid "A deposit or a buy will show up here."
+msgstr "A deposit or a buy will show up here."
+
 #: src/components/Pwa.tsx
 msgid "A new version is available."
 msgstr "A new version is available."
+
+#: src/components/AccountEditor.tsx
+msgid "A portfolio starts at zero: bring cash in with a deposit."
+msgstr "A portfolio starts at zero: bring cash in with a deposit."
 
 #: src/components/TransactionEditor.tsx
 msgid "A single income or expense."
 msgstr "A single income or expense."
 
+#: src/components/AccountEditor.tsx
 #: src/components/BudgetDetailPanel.tsx
 #: src/components/BudgetEditor.tsx
 #: src/components/Budgets.tsx
 #: src/components/Shell.tsx
+#: src/components/TradeEditor.tsx
 #: src/components/TransactionEditor.tsx
 #: src/components/TransactionPanel.tsx
 msgid "Account"
@@ -126,6 +136,11 @@ msgstr "Account name"
 msgid "Account type"
 msgstr "Account type"
 
+#: src/components/AppData.tsx
+msgid "Account types"
+msgstr "Account types"
+
+#: src/components/AppData.tsx
 #: src/components/Files.tsx
 msgid "Actions"
 msgstr "Actions"
@@ -134,10 +149,19 @@ msgstr "Actions"
 msgid "Activity by {noun}"
 msgstr "Activity by {noun}"
 
+#: src/components/AppData.tsx
+msgid "Add a currency of type Security, Crypto or Commodity first."
+msgstr "Add a currency of type Security, Crypto or Commodity first."
+
+#: src/components/AppData.tsx
+msgid "Add the first price for this asset."
+msgstr "Add the first price for this asset."
+
 #: src/components/MultiPicker.tsx
 msgid "Add…"
 msgstr "Add…"
 
+#: src/components/AppData.tsx
 #: src/components/Transactions.tsx
 msgid "All"
 msgstr "All"
@@ -166,6 +190,8 @@ msgstr "Allocations and rollover apply to the current period."
 #: src/components/BudgetEditor.tsx
 #: src/components/Dashboard.tsx
 #: src/components/ReportPanel.tsx
+#: src/components/TradeEditor.tsx
+#: src/components/Trades.tsx
 #: src/components/TransactionEditor.tsx
 #: src/components/TransactionPanel.tsx
 #: src/components/Transactions.tsx
@@ -187,6 +213,34 @@ msgstr "Amount hidden"
 #: src/components/Transactions.tsx
 msgid "Amount to"
 msgstr "Amount to"
+
+#: src/components/TradeEditor.tsx
+msgid "An account"
+msgstr "An account"
+
+#: src/components/AppData.tsx
+#: src/components/Shell.tsx
+msgid "App data"
+msgstr "App data"
+
+#: src/components/AppData.tsx
+#: src/components/Dashboard.tsx
+#: src/components/TradeEditor.tsx
+#: src/components/Trades.tsx
+msgid "Asset"
+msgstr "Asset"
+
+#: src/components/TradeEditor.tsx
+msgid "Asset symbol"
+msgstr "Asset symbol"
+
+#: src/components/Dashboard.tsx
+msgid "Assets"
+msgstr "Assets"
+
+#: src/components/Dashboard.tsx
+msgid "At the latest stored prices"
+msgstr "At the latest stored prices"
 
 #: src/components/Files.tsx
 msgid "Backups and exports stored on the phone"
@@ -270,12 +324,23 @@ msgstr "Budgets"
 msgid "Budgets with different currencies or periods are shown separately."
 msgstr "Budgets with different currencies or periods are shown separately."
 
+#: src/components/TradeEditor.tsx
+#: src/components/Trades.tsx
+msgid "Buy"
+msgstr "Buy"
+
+#: src/components/Trades.tsx
+msgid "Buy, sell, deposits, withdrawals and transfers"
+msgstr "Buy, sell, deposits, withdrawals and transfers"
+
 #: src/api.ts
 msgid "Can't reach the phone. Check that My Expenses is open and on the same network."
 msgstr "Can't reach the phone. Check that My Expenses is open and on the same network."
 
 #: src/components/AccountEditor.tsx
+#: src/components/AppData.tsx
 #: src/components/BudgetEditor.tsx
+#: src/components/TradeEditor.tsx
 #: src/components/TransactionEditor.tsx
 #: src/components/TransactionPanel.tsx
 msgid "Cancel"
@@ -285,9 +350,22 @@ msgstr "Cancel"
 msgid "Carried over from an earlier period"
 msgstr "Carried over from an earlier period"
 
+#: src/components/Dashboard.tsx
+msgid "Cash"
+msgstr "Cash"
+
+#: src/components/AppData.tsx
+msgid "Cash, card, transfers and custom methods"
+msgstr "Cash, card, transfers and custom methods"
+
+#: src/components/AppData.tsx
 #: src/components/BudgetFilterFields.tsx
 msgid "Categories"
 msgstr "Categories"
+
+#: src/components/AppData.tsx
+msgid "Categories, methods, tags, currencies and prices."
+msgstr "Categories, methods, tags, currencies and prices."
 
 #: src/components/Reports.tsx
 msgid "category"
@@ -305,6 +383,14 @@ msgstr "Category"
 msgid "Category allocations"
 msgstr "Category allocations"
 
+#: src/components/AppData.tsx
+msgid "Category name"
+msgstr "Category name"
+
+#: src/components/AppData.tsx
+msgid "Category type"
+msgstr "Category type"
+
 #: src/components/TransactionEditor.tsx
 msgid "Choose two different accounts."
 msgstr "Choose two different accounts."
@@ -318,24 +404,36 @@ msgid "Cleared"
 msgstr "Cleared"
 
 #: src/components/BudgetDetailPanel.tsx
+#: src/components/Trades.tsx
 msgid "Close"
 msgstr "Close"
 
 #: src/components/BudgetDetailPanel.tsx
 #: src/components/ReportPanel.tsx
+#: src/components/Trades.tsx
 #: src/components/TransactionPanel.tsx
 msgid "Close details"
 msgstr "Close details"
 
 #: src/components/AccountEditor.tsx
+#: src/components/AppData.tsx
 #: src/components/BudgetEditor.tsx
+#: src/components/TradeEditor.tsx
 #: src/components/TransactionEditor.tsx
 msgid "Close editor"
 msgstr "Close editor"
 
+#: src/components/AppData.tsx
+msgid "Code"
+msgstr "Code"
+
 #: src/components/Transactions.tsx
 msgid "Collapse period"
 msgstr "Collapse period"
+
+#: src/components/AppData.tsx
+msgid "Commodity"
+msgstr "Commodity"
 
 #: src/App.tsx
 msgid "Connecting to My Expenses…"
@@ -348,6 +446,31 @@ msgstr "Could not create the account."
 #: src/components/BudgetEditor.tsx
 msgid "Could not delete the budget."
 msgstr "Could not delete the budget."
+
+#: src/components/AppData.tsx
+msgid "Could not delete the category."
+msgstr "Could not delete the category."
+
+#: src/components/AppData.tsx
+msgid "Could not delete the currency."
+msgstr "Could not delete the currency."
+
+#: src/components/AppData.tsx
+msgid "Could not delete the method."
+msgstr "Could not delete the method."
+
+#: src/components/TradeEditor.tsx
+#: src/components/Trades.tsx
+msgid "Could not delete the operation."
+msgstr "Could not delete the operation."
+
+#: src/components/AppData.tsx
+msgid "Could not delete the price."
+msgstr "Could not delete the price."
+
+#: src/components/AppData.tsx
+msgid "Could not delete the tag."
+msgstr "Could not delete the tag."
 
 #: src/components/TransactionPanel.tsx
 msgid "Could not delete the transaction."
@@ -373,6 +496,10 @@ msgstr "Could not load the breakdown."
 msgid "Could not load the budgets."
 msgstr "Could not load the budgets."
 
+#: src/components/AppData.tsx
+msgid "Could not load the data."
+msgstr "Could not load the data."
+
 #: src/components/ReportPanel.tsx
 msgid "Could not load the detail."
 msgstr "Could not load the detail."
@@ -385,9 +512,21 @@ msgstr "Could not load the files."
 msgid "Could not load the history."
 msgstr "Could not load the history."
 
+#: src/components/TradeEditor.tsx
+msgid "Could not load the operation."
+msgstr "Could not load the operation."
+
+#: src/components/Trades.tsx
+msgid "Could not load the operations."
+msgstr "Could not load the operations."
+
 #: src/components/Dashboard.tsx
 msgid "Could not load the overview."
 msgstr "Could not load the overview."
+
+#: src/components/Dashboard.tsx
+msgid "Could not load the portfolio."
+msgstr "Could not load the portfolio."
 
 #: src/components/Reports.tsx
 msgid "Could not load the report."
@@ -406,9 +545,33 @@ msgstr "Could not load the transactions."
 msgid "Could not save the budget."
 msgstr "Could not save the budget."
 
+#: src/components/AppData.tsx
+msgid "Could not save the category."
+msgstr "Could not save the category."
+
+#: src/components/AppData.tsx
+msgid "Could not save the currency."
+msgstr "Could not save the currency."
+
+#: src/components/AppData.tsx
+msgid "Could not save the method."
+msgstr "Could not save the method."
+
+#: src/components/TradeEditor.tsx
+msgid "Could not save the operation."
+msgstr "Could not save the operation."
+
+#: src/components/AppData.tsx
+msgid "Could not save the price."
+msgstr "Could not save the price."
+
 #: src/components/TransactionEditor.tsx
 msgid "Could not save the split."
 msgstr "Could not save the split."
+
+#: src/components/AppData.tsx
+msgid "Could not save the tag."
+msgstr "Could not save the tag."
 
 #: src/components/TransactionEditor.tsx
 msgid "Could not save the transaction."
@@ -421,6 +584,10 @@ msgstr "Could not save the transfer."
 #: src/components/Login.tsx
 msgid "Could not sign in"
 msgstr "Could not sign in"
+
+#: src/components/Trades.tsx
+msgid "Counterpart"
+msgstr "Counterpart"
 
 #: src/components/AccountEditor.tsx
 msgid "Create"
@@ -438,17 +605,56 @@ msgstr "Create a budget in the Android app. Its progress for the current period 
 msgid "Create an account in the Android app and reload this page."
 msgstr "Create an account in the Android app and reload this page."
 
+#: src/components/AppData.tsx
+msgid "Crypto"
+msgstr "Crypto"
+
+#: src/components/AppData.tsx
+msgid "Currencies"
+msgstr "Currencies"
+
+#: src/components/AppData.tsx
+msgid "Currencies and assets"
+msgstr "Currencies and assets"
+
 #: src/components/AccountEditor.tsx
 msgid "Currency"
 msgstr "Currency"
+
+#: src/components/AppData.tsx
+msgid "Currency code"
+msgstr "Currency code"
+
+#: src/components/AppData.tsx
+msgid "Currency name"
+msgstr "Currency name"
+
+#: src/components/AppData.tsx
+msgid "Currency symbol"
+msgstr "Currency symbol"
+
+#: src/components/AppData.tsx
+msgid "Currency type"
+msgstr "Currency type"
 
 #: src/budgetUi.ts
 #: src/components/BudgetEditor.tsx
 msgid "Daily"
 msgstr "Daily"
 
+#: src/components/Shell.tsx
+msgid "Data"
+msgstr "Data"
+
+#: src/components/AppData.tsx
+msgid "Data sections"
+msgstr "Data sections"
+
+#: src/components/AppData.tsx
 #: src/components/Dashboard.tsx
 #: src/components/ReportPanel.tsx
+#: src/components/TradeEditor.tsx
+#: src/components/Trades.tsx
 #: src/components/TransactionEditor.tsx
 #: src/components/Transactions.tsx
 msgid "Date"
@@ -471,23 +677,67 @@ msgstr "Default amount"
 msgid "Default budget"
 msgstr "Default budget"
 
+#: src/components/AppData.tsx
 #: src/components/BudgetEditor.tsx
+#: src/components/TradeEditor.tsx
+#: src/components/Trades.tsx
 #: src/components/TransactionPanel.tsx
 msgid "Delete"
 msgstr "Delete"
+
+#: src/components/AppData.tsx
+msgid "Delete category"
+msgstr "Delete category"
 
 #. placeholder {0}: budget.title
 #: src/components/BudgetEditor.tsx
 msgid "Delete the budget “{0}”?"
 msgstr "Delete the budget “{0}”?"
 
+#. placeholder {0}: category.label
+#: src/components/AppData.tsx
+msgid "Delete the category “{0}”?"
+msgstr "Delete the category “{0}”?"
+
+#. placeholder {0}: currency.code
+#: src/components/AppData.tsx
+msgid "Delete the currency “{0}”?"
+msgstr "Delete the currency “{0}”?"
+
+#. placeholder {0}: method.label
+#: src/components/AppData.tsx
+msgid "Delete the method “{0}”?"
+msgstr "Delete the method “{0}”?"
+
+#. placeholder {0}: formatDate(price.date)
+#: src/components/AppData.tsx
+msgid "Delete the price from {0}?"
+msgstr "Delete the price from {0}?"
+
+#. placeholder {0}: tag.label
+#: src/components/AppData.tsx
+msgid "Delete the tag “{0}”?"
+msgstr "Delete the tag “{0}”?"
+
+#: src/components/TradeEditor.tsx
+#: src/components/Trades.tsx
+msgid "Delete this operation? This cannot be undone."
+msgstr "Delete this operation? This cannot be undone."
+
 #: src/components/TransactionPanel.tsx
 msgid "Delete this transaction?"
 msgstr "Delete this transaction?"
 
+#: src/components/TradeEditor.tsx
+#: src/components/Trades.tsx
 #: src/components/TransactionPanel.tsx
 msgid "Deleting…"
 msgstr "Deleting…"
+
+#: src/components/TradeEditor.tsx
+#: src/components/Trades.tsx
+msgid "Deposit"
+msgstr "Deposit"
 
 #: src/components/Dashboard.tsx
 #: src/components/ReportPanel.tsx
@@ -503,6 +753,7 @@ msgstr "Description, payee or reference"
 msgid "Detail"
 msgstr "Detail"
 
+#: src/components/Trades.tsx
 #: src/components/TransactionPanel.tsx
 msgid "Details"
 msgstr "Details"
@@ -510,6 +761,10 @@ msgstr "Details"
 #: src/components/BudgetEditor.tsx
 msgid "Different amount this period"
 msgstr "Different amount this period"
+
+#: src/components/AppData.tsx
+msgid "Digits"
+msgstr "Digits"
 
 #: src/components/BudgetEditor.tsx
 #: src/components/TransactionEditor.tsx
@@ -541,9 +796,16 @@ msgstr "Drill-down"
 msgid "Duplicate"
 msgstr "Duplicate"
 
+#: src/components/AccountEditor.tsx
+msgid "Dynamic exchange rates"
+msgstr "Dynamic exchange rates"
+
+#: src/components/AppData.tsx
 #: src/components/BudgetDetailPanel.tsx
 #: src/components/BudgetEditor.tsx
 #: src/components/Budgets.tsx
+#: src/components/TradeEditor.tsx
+#: src/components/Trades.tsx
 #: src/components/TransactionEditor.tsx
 #: src/components/TransactionPanel.tsx
 msgid "Edit"
@@ -553,9 +815,33 @@ msgstr "Edit"
 msgid "Edit budget"
 msgstr "Edit budget"
 
+#: src/components/AppData.tsx
+msgid "Edit category"
+msgstr "Edit category"
+
+#: src/components/AppData.tsx
+msgid "Edit currency"
+msgstr "Edit currency"
+
+#: src/components/AppData.tsx
+msgid "Edit method"
+msgstr "Edit method"
+
+#: src/components/TradeEditor.tsx
+msgid "Edit operation"
+msgstr "Edit operation"
+
+#: src/components/AppData.tsx
+msgid "Edit price"
+msgstr "Edit price"
+
 #: src/components/TransactionEditor.tsx
 msgid "Edit split transaction"
 msgstr "Edit split transaction"
+
+#: src/components/AppData.tsx
+msgid "Edit tag"
+msgstr "Edit tag"
 
 #: src/components/TransactionEditor.tsx
 msgid "Edit transaction"
@@ -568,6 +854,19 @@ msgstr "Edit transfer"
 #: src/components/BudgetEditor.tsx
 msgid "End"
 msgstr "End"
+
+#: src/components/AppData.tsx
+#: src/components/TradeEditor.tsx
+msgid "Enter a price above zero."
+msgstr "Enter a price above zero."
+
+#: src/components/TradeEditor.tsx
+msgid "Enter a quantity above zero."
+msgstr "Enter a quantity above zero."
+
+#: src/components/AccountEditor.tsx
+msgid "Enter a rate above zero."
+msgstr "Enter a rate above zero."
 
 #: src/components/BudgetEditor.tsx
 msgid "Enter a valid amount for every category."
@@ -587,6 +886,7 @@ msgstr "Enter an amount greater than zero."
 
 #: src/components/AccountEditor.tsx
 #: src/components/BudgetEditor.tsx
+#: src/components/TradeEditor.tsx
 msgid "Enter an amount."
 msgstr "Enter an amount."
 
@@ -603,6 +903,10 @@ msgid "Enter the total amount."
 msgstr "Enter the total amount."
 
 #: src/components/AccountEditor.tsx
+msgid "Exchange rate"
+msgstr "Exchange rate"
+
+#: src/components/AccountEditor.tsx
 msgid "Exclude from totals"
 msgstr "Exclude from totals"
 
@@ -610,6 +914,7 @@ msgstr "Exclude from totals"
 msgid "Expand period"
 msgstr "Expand period"
 
+#: src/components/AppData.tsx
 #: src/components/TransactionEditor.tsx
 msgid "Expense"
 msgstr "Expense"
@@ -620,6 +925,19 @@ msgstr "Expense"
 #: src/components/Transactions.tsx
 msgid "Expenses"
 msgstr "Expenses"
+
+#: src/components/TradeEditor.tsx
+#: src/components/Trades.tsx
+msgid "Fee"
+msgstr "Fee"
+
+#: src/components/AppData.tsx
+msgid "Fiat"
+msgstr "Fiat"
+
+#: src/components/AppData.tsx
+msgid "Fiat currencies plus the assets the app tracks"
+msgstr "Fiat currencies plus the assets the app tracks"
 
 #: src/components/Files.tsx
 #: src/components/Shell.tsx
@@ -683,6 +1001,14 @@ msgstr "Filters"
 msgid "Filters ({activeFilterCount})"
 msgstr "Filters ({activeFilterCount})"
 
+#: src/components/AppData.tsx
+msgid "Fraction digits"
+msgstr "Fraction digits"
+
+#: src/components/AppData.tsx
+msgid "Free labels attached to transactions"
+msgstr "Free labels attached to transactions"
+
 #: src/components/TransactionEditor.tsx
 #: src/components/Transactions.tsx
 msgid "From"
@@ -695,6 +1021,10 @@ msgstr "From / to"
 #: src/components/TransactionEditor.tsx
 msgid "From account"
 msgstr "From account"
+
+#: src/components/TradeEditor.tsx
+msgid "Funding"
+msgstr "Funding"
 
 #: src/components/Transactions.tsx
 msgid "Group by"
@@ -716,10 +1046,15 @@ msgstr "History"
 msgid "In this month"
 msgstr "In this month"
 
+#: src/components/AppData.tsx
+msgid "In use"
+msgstr "In use"
+
 #: src/components/BudgetFilterFields.tsx
 msgid "Includes subcategories"
 msgstr "Includes subcategories"
 
+#: src/components/AppData.tsx
 #: src/components/Chart.tsx
 #: src/components/Dashboard.tsx
 #: src/components/Reports.tsx
@@ -767,7 +1102,9 @@ msgstr "Last 3 months"
 msgid "Leave the password empty if you have not set one."
 msgstr "Leave the password empty if you have not set one."
 
+#. placeholder {0}: page.data.total - page.data.items.length
 #. placeholder {0}: total - items.length
+#: src/components/Trades.tsx
 #: src/components/Transactions.tsx
 msgid "Load more ({0})"
 msgstr "Load more ({0})"
@@ -795,6 +1132,10 @@ msgstr "Loading report…"
 msgid "Loading…"
 msgstr "Loading…"
 
+#: src/components/AppData.tsx
+msgid "Manual prices used for the portfolio valuation"
+msgstr "Manual prices used for the portfolio valuation"
+
 #: src/components/Reports.tsx
 msgid "method"
 msgstr "method"
@@ -806,6 +1147,15 @@ msgstr "method"
 msgid "Method"
 msgstr "Method"
 
+#: src/components/AppData.tsx
+msgid "Method name"
+msgstr "Method name"
+
+#: src/components/AppData.tsx
+msgid "Method type"
+msgstr "Method type"
+
+#: src/components/AppData.tsx
 #: src/components/BudgetFilterFields.tsx
 msgid "Methods"
 msgstr "Methods"
@@ -827,9 +1177,17 @@ msgstr "Monthly"
 msgid "More options"
 msgstr "More options"
 
+#: src/components/AppData.tsx
+msgid "Move and delete"
+msgstr "Move and delete"
+
 #: src/components/TransactionEditor.tsx
 msgid "Move money between two accounts."
 msgstr "Move money between two accounts."
+
+#: src/components/AppData.tsx
+msgid "Move to"
+msgstr "Move to"
 
 #: src/components/BudgetDetailPanel.tsx
 msgid "Movements of {label}"
@@ -840,6 +1198,7 @@ msgid "Must be on or after the start."
 msgstr "Must be on or after the start."
 
 #: src/components/AccountEditor.tsx
+#: src/components/AppData.tsx
 #: src/components/Files.tsx
 msgid "Name"
 msgstr "Name"
@@ -852,8 +1211,14 @@ msgstr "Net"
 msgid "Net worth"
 msgstr "Net worth"
 
+#: src/components/AppData.tsx
+msgid "Neutral"
+msgstr "Neutral"
+
 #: src/components/AccountEditor.tsx
+#: src/components/AppData.tsx
 #: src/components/BudgetEditor.tsx
+#: src/components/TradeEditor.tsx
 #: src/components/TransactionEditor.tsx
 msgid "New"
 msgstr "New"
@@ -867,6 +1232,36 @@ msgstr "New account"
 #: src/components/Budgets.tsx
 msgid "New budget"
 msgstr "New budget"
+
+#: src/components/AppData.tsx
+msgid "New category"
+msgstr "New category"
+
+#: src/components/AppData.tsx
+msgid "New currency"
+msgstr "New currency"
+
+#: src/components/AppData.tsx
+msgid "New method"
+msgstr "New method"
+
+#: src/App.tsx
+#: src/components/TradeEditor.tsx
+#: src/components/Trades.tsx
+msgid "New operation"
+msgstr "New operation"
+
+#: src/components/AccountEditor.tsx
+msgid "New portfolio"
+msgstr "New portfolio"
+
+#: src/components/AppData.tsx
+msgid "New price"
+msgstr "New price"
+
+#: src/components/AppData.tsx
+msgid "New tag"
+msgstr "New tag"
 
 #: src/App.tsx
 #: src/components/Dashboard.tsx
@@ -891,6 +1286,11 @@ msgstr "No activity for this selection"
 #: src/components/Chart.tsx
 msgid "No activity yet"
 msgstr "No activity yet"
+
+#: src/components/AppData.tsx
+#: src/components/Dashboard.tsx
+msgid "No assets yet"
+msgstr "No assets yet"
 
 #: src/components/Budgets.tsx
 msgid "No budgets yet"
@@ -918,6 +1318,14 @@ msgstr "No history yet."
 msgid "No matches"
 msgstr "No matches"
 
+#: src/components/Trades.tsx
+msgid "No operations yet"
+msgstr "No operations yet"
+
+#: src/components/AppData.tsx
+msgid "No prices yet"
+msgstr "No prices yet"
+
 #. placeholder {0}: formatMonthKey(month)
 #: src/components/Transactions.tsx
 #~ msgid "No transactions in {0}"
@@ -944,7 +1352,13 @@ msgstr "No transfers"
 msgid "None"
 msgstr "None"
 
+#: src/components/TradeEditor.tsx
+msgid "Not tracked"
+msgstr "Not tracked"
+
 #: src/components/BudgetEditor.tsx
+#: src/components/TradeEditor.tsx
+#: src/components/Trades.tsx
 #: src/components/TransactionEditor.tsx
 #: src/components/TransactionPanel.tsx
 msgid "Note"
@@ -953,6 +1367,10 @@ msgstr "Note"
 #: src/components/Reports.tsx
 msgid "Nothing was recorded for this month. Try another month or change the type."
 msgstr "Nothing was recorded for this month. Try another month or change the type."
+
+#: src/components/AppData.tsx
+msgid "Numbered"
+msgstr "Numbered"
 
 #: src/components/BudgetDetailPanel.tsx
 #: src/components/Budgets.tsx
@@ -980,6 +1398,22 @@ msgstr "Open transaction: {0}"
 msgid "Opening balance"
 msgstr "Opening balance"
 
+#: src/components/Trades.tsx
+msgid "Operation details"
+msgstr "Operation details"
+
+#: src/App.tsx
+msgid "Operation saved."
+msgstr "Operation saved."
+
+#: src/components/TradeEditor.tsx
+msgid "Operation type"
+msgstr "Operation type"
+
+#: src/components/Trades.tsx
+msgid "Operations"
+msgstr "Operations"
+
 #: src/components/BudgetEditor.tsx
 msgid "Other periods keep using the default amount."
 msgstr "Other periods keep using the default amount."
@@ -1000,6 +1434,14 @@ msgstr "Over by {0}"
 #: src/components/Shell.tsx
 msgid "Overview"
 msgstr "Overview"
+
+#: src/components/AppData.tsx
+msgid "Parent"
+msgstr "Parent"
+
+#: src/components/AppData.tsx
+msgid "Parent category"
+msgstr "Parent category"
 
 #. placeholder {0}: selectedIndex + 1
 #: src/components/TransactionEditor.tsx
@@ -1054,6 +1496,10 @@ msgstr "Payee"
 msgid "Payees"
 msgstr "Payees"
 
+#: src/components/AppData.tsx
+msgid "Payment methods"
+msgstr "Payment methods"
+
 #: src/components/BudgetEditor.tsx
 #: src/components/Reports.tsx
 msgid "Period"
@@ -1064,10 +1510,56 @@ msgstr "Period"
 msgid "Period amount"
 msgstr "Period amount"
 
+#: src/components/AccountEditor.tsx
+msgid "Portfolio"
+msgstr "Portfolio"
+
+#: src/components/Dashboard.tsx
+#: src/components/TradeEditor.tsx
+msgid "Portfolio cash"
+msgstr "Portfolio cash"
+
+#: src/App.tsx
+msgid "Portfolio created."
+msgstr "Portfolio created."
+
+#: src/components/AccountEditor.tsx
+msgid "Portfolio name"
+msgstr "Portfolio name"
+
 #: src/components/Budgets.tsx
 #: src/components/Reports.tsx
 msgid "Previous month"
 msgstr "Previous month"
+
+#: src/components/AppData.tsx
+#: src/components/Dashboard.tsx
+#: src/components/TradeEditor.tsx
+#: src/components/Trades.tsx
+msgid "Price"
+msgstr "Price"
+
+#: src/components/AppData.tsx
+msgid "Price history"
+msgstr "Price history"
+
+#: src/components/AccountEditor.tsx
+msgid "Price of one {currency} in {homeCurrency}."
+msgstr "Price of one {currency} in {homeCurrency}."
+
+#: src/components/AppData.tsx
+msgid "Prices"
+msgstr "Prices"
+
+#: src/components/Dashboard.tsx
+#: src/components/TradeEditor.tsx
+#: src/components/Trades.tsx
+msgid "Quantity"
+msgstr "Quantity"
+
+#: src/components/Dashboard.tsx
+msgid "Quantity at the latest price"
+msgstr "Quantity at the latest price"
 
 #: src/components/Dashboard.tsx
 msgid "Recent transactions"
@@ -1091,6 +1583,7 @@ msgstr "Reference"
 #: src/components/Dashboard.tsx
 #: src/components/Files.tsx
 #: src/components/Reports.tsx
+#: src/components/Trades.tsx
 msgid "Refresh"
 msgstr "Refresh"
 
@@ -1124,12 +1617,16 @@ msgid "Reports"
 msgstr "Reports"
 
 #: src/components/AccountEditor.tsx
+#: src/components/AppData.tsx
 #: src/components/BudgetEditor.tsx
+#: src/components/TradeEditor.tsx
 #: src/components/TransactionEditor.tsx
 msgid "Required."
 msgstr "Required."
 
+#: src/components/AppData.tsx
 #: src/components/Dashboard.tsx
+#: src/components/Trades.tsx
 #: src/components/TransactionEditor.tsx
 #: src/components/TransactionPanel.tsx
 #: src/components/Transactions.tsx
@@ -1149,7 +1646,9 @@ msgstr "Roll over {0}"
 msgid "Roll over unused amount"
 msgstr "Roll over unused amount"
 
+#: src/components/AppData.tsx
 #: src/components/BudgetEditor.tsx
+#: src/components/TradeEditor.tsx
 #: src/components/TransactionEditor.tsx
 msgid "Save"
 msgstr "Save"
@@ -1163,7 +1662,9 @@ msgid "saved this month"
 msgstr "saved this month"
 
 #: src/components/AccountEditor.tsx
+#: src/components/AppData.tsx
 #: src/components/BudgetEditor.tsx
+#: src/components/TradeEditor.tsx
 #: src/components/TransactionEditor.tsx
 msgid "Saving…"
 msgstr "Saving…"
@@ -1180,17 +1681,26 @@ msgstr "Search in description, payee and reference"
 msgid "Sections"
 msgstr "Sections"
 
+#: src/components/AppData.tsx
+msgid "Security"
+msgstr "Security"
+
 #: src/components/Reports.tsx
 msgid "Select a single account to drill down"
 msgstr "Select a single account to drill down"
+
+#: src/components/TradeEditor.tsx
+#: src/components/Trades.tsx
+msgid "Sell"
+msgstr "Sell"
 
 #: src/components/BudgetDetailPanel.tsx
 msgid "Set for this period"
 msgstr "Set for this period"
 
 #: src/components/Shell.tsx
-msgid "Settings (next milestone)"
-msgstr "Settings (next milestone)"
+#~ msgid "Settings (next milestone)"
+#~ msgstr "Settings (next milestone)"
 
 #: src/components/Shell.tsx
 msgid "Show totals"
@@ -1223,6 +1733,15 @@ msgstr "Size"
 #: src/api.ts
 msgid "Something did not work. Try again."
 msgstr "Something did not work. Try again."
+
+#: src/components/AppData.tsx
+#: src/components/TradeEditor.tsx
+msgid "Source"
+msgstr "Source"
+
+#: src/components/TradeEditor.tsx
+msgid "Source portfolio"
+msgstr "Source portfolio"
 
 #: src/components/Reports.tsx
 msgid "Spending by {noun}"
@@ -1263,6 +1782,10 @@ msgstr "Switch to bright"
 msgid "Switch to dark"
 msgstr "Switch to dark"
 
+#: src/components/AppData.tsx
+msgid "Symbol"
+msgstr "Symbol"
+
 #: src/components/Reports.tsx
 msgid "tag"
 msgstr "tag"
@@ -1272,12 +1795,57 @@ msgstr "tag"
 msgid "Tag"
 msgstr "Tag"
 
+#: src/components/AppData.tsx
+msgid "Tag name"
+msgstr "Tag name"
+
+#: src/components/AppData.tsx
 #: src/components/BudgetFilterFields.tsx
 #: src/components/TransactionEditor.tsx
 #: src/components/TransactionPanel.tsx
 #: src/components/Transactions.tsx
 msgid "Tags"
 msgstr "Tags"
+
+#: src/components/TradeEditor.tsx
+msgid "Target portfolio"
+msgstr "Target portfolio"
+
+#: src/api.ts
+msgid "That currency code is already defined."
+msgstr "That currency code is already defined."
+
+#: src/api.ts
+msgid "The asset is not registered on the phone. Add it in App data first."
+msgstr "The asset is not registered on the phone. Add it in App data first."
+
+#: src/api.ts
+#~ msgid "The category has movements; choose where to move them."
+#~ msgstr "The category has movements; choose where to move them."
+
+#: src/components/AppData.tsx
+#~ msgid "The category has movements. Choose where to move them before deleting it."
+#~ msgstr "The category has movements. Choose where to move them before deleting it."
+
+#: src/api.ts
+msgid "The category is in use; choose where to move its data."
+msgstr "The category is in use; choose where to move its data."
+
+#: src/components/AppData.tsx
+msgid "The category is in use. Choose where to move its data before deleting it."
+msgstr "The category is in use. Choose where to move its data before deleting it."
+
+#: src/api.ts
+msgid "The currency is used by an account or a transaction and cannot be deleted."
+msgstr "The currency is used by an account or a transaction and cannot be deleted."
+
+#: src/components/Dashboard.tsx
+msgid "The first buy creates the asset here."
+msgstr "The first buy creates the asset here."
+
+#: src/api.ts
+msgid "The free version tracks one portfolio. More need the Professional licence."
+msgstr "The free version tracks one portfolio. More need the Professional licence."
 
 #: src/components/TransactionPanel.tsx
 msgid "The linked side is deleted too."
@@ -1294,6 +1862,10 @@ msgstr "The phone could not complete the request."
 #: src/components/TransactionEditor.tsx
 msgid "The transaction could not be loaded."
 msgstr "The transaction could not be loaded."
+
+#: src/components/AppData.tsx
+msgid "The tree used by transactions and budgets"
+msgstr "The tree used by transactions and budgets"
 
 #: src/components/Budgets.tsx
 msgid "There is no later period"
@@ -1326,6 +1898,7 @@ msgstr "This month"
 msgid "This year"
 msgstr "This year"
 
+#: src/components/TradeEditor.tsx
 #: src/components/TransactionEditor.tsx
 msgid "Time"
 msgstr "Time"
@@ -1381,6 +1954,7 @@ msgstr "Transaction type"
 #: src/components/Dashboard.tsx
 #: src/components/Reports.tsx
 #: src/components/Shell.tsx
+#: src/components/Trades.tsx
 #: src/components/Transactions.tsx
 msgid "Transactions"
 msgstr "Transactions"
@@ -1395,6 +1969,16 @@ msgstr "Transactions will appear here as soon as you record them in the app."
 msgid "Transfer"
 msgstr "Transfer"
 
+#: src/components/TradeEditor.tsx
+#: src/components/Trades.tsx
+msgid "Transfer in"
+msgstr "Transfer in"
+
+#: src/components/TradeEditor.tsx
+#: src/components/Trades.tsx
+msgid "Transfer out"
+msgstr "Transfer out"
+
 #: src/components/Transactions.tsx
 msgid "Transfers"
 msgstr "Transfers"
@@ -1406,6 +1990,8 @@ msgid "Try again"
 msgstr "Try again"
 
 #: src/components/AccountEditor.tsx
+#: src/components/AppData.tsx
+#: src/components/Trades.tsx
 #: src/components/TransactionEditor.tsx
 #: src/components/Transactions.tsx
 msgid "Type"
@@ -1422,6 +2008,14 @@ msgstr "Unreconciled"
 #: src/components/BudgetEditor.tsx
 msgid "Use as default budget for this account and period"
 msgstr "Use as default budget for this account and period"
+
+#: src/components/TradeEditor.tsx
+msgid "Use HH:mm."
+msgstr "Use HH:mm."
+
+#: src/components/Dashboard.tsx
+msgid "Valuation"
+msgstr "Valuation"
 
 #: src/components/TransactionEditor.tsx
 #: src/components/TransactionPanel.tsx
@@ -1454,6 +2048,15 @@ msgstr "Weekly"
 #: src/components/TransactionEditor.tsx
 msgid "What do you want to add?"
 msgstr "What do you want to add?"
+
+#: src/components/AccountEditor.tsx
+msgid "What to create"
+msgstr "What to create"
+
+#: src/components/TradeEditor.tsx
+#: src/components/Trades.tsx
+msgid "Withdraw"
+msgstr "Withdraw"
 
 #: src/api.ts
 msgid "Wrong password."

@@ -32,7 +32,7 @@ import org.totschnig.myexpenses.MyApplication
 import org.totschnig.myexpenses.R
 import org.totschnig.myexpenses.db2.deleteCategory
 import org.totschnig.myexpenses.db2.ensureCategoryTree
-import org.totschnig.myexpenses.db2.mergeCategories
+import org.totschnig.myexpenses.db2.mergeCategoriesAndUpdateFilters
 import org.totschnig.myexpenses.db2.moveCategory
 import org.totschnig.myexpenses.db2.saveCategory
 import org.totschnig.myexpenses.export.CategoryExporter
@@ -41,7 +41,6 @@ import org.totschnig.myexpenses.model.ExportFormat
 import org.totschnig.myexpenses.model.sort.Sort
 import org.totschnig.myexpenses.model2.CategoryExport
 import org.totschnig.myexpenses.provider.BaseTransactionProvider
-import org.totschnig.myexpenses.provider.BaseTransactionProvider.Companion.ACCOUNTS_MINIMAL_URI_WITH_AGGREGATES
 import org.totschnig.myexpenses.provider.KEY_CATID
 import org.totschnig.myexpenses.provider.KEY_COLOR
 import org.totschnig.myexpenses.provider.KEY_HAS_DESCENDANTS
@@ -54,18 +53,10 @@ import org.totschnig.myexpenses.provider.KEY_PARENTID
 import org.totschnig.myexpenses.provider.KEY_ROWID
 import org.totschnig.myexpenses.provider.KEY_TYPE
 import org.totschnig.myexpenses.provider.KEY_UUID
-import org.totschnig.myexpenses.provider.TABLE_BUDGETS
 import org.totschnig.myexpenses.provider.TransactionProvider
-import org.totschnig.myexpenses.provider.TransactionProvider.BUDGETS_URI
 import org.totschnig.myexpenses.provider.TransactionProvider.CATEGORIES_URI
-import org.totschnig.myexpenses.provider.filter.AndCriterion
-import org.totschnig.myexpenses.provider.filter.CategoryCriterion
-import org.totschnig.myexpenses.provider.filter.Criterion
-import org.totschnig.myexpenses.provider.filter.FilterPersistence
 import org.totschnig.myexpenses.provider.filter.KEY_FILTER
-import org.totschnig.myexpenses.provider.filter.NotCriterion
 import org.totschnig.myexpenses.provider.filter.Operation
-import org.totschnig.myexpenses.provider.filter.OrCriterion
 import org.totschnig.myexpenses.provider.getIntOrNull
 import org.totschnig.myexpenses.provider.getLong
 import org.totschnig.myexpenses.provider.getLongOrNull
@@ -77,7 +68,6 @@ import org.totschnig.myexpenses.util.AppDirHelper
 import org.totschnig.myexpenses.util.crashreporting.CrashHandler
 import org.totschnig.myexpenses.util.failure
 import org.totschnig.myexpenses.util.io.displayName
-import org.totschnig.myexpenses.util.replace
 import org.totschnig.myexpenses.util.safeMessage
 import org.totschnig.myexpenses.viewmodel.data.Category
 import timber.log.Timber
@@ -201,93 +191,10 @@ class ManageCategoriesViewModel(application: Application, savedStateHandle: Save
                 dialogState = merge.copy(saving = true)
                 val idList = merge.categories.map { it.id }.toMutableList()
                 val kept = idList.removeAt(keepIndex)
-                repository.mergeCategories(idList, kept)
-                updateCategoryFilters(idList.toSet(), kept)
-                updateCategoryBudgets(idList.toSet(), kept)
+                repository.mergeCategoriesAndUpdateFilters(idList, kept)
                 dialogState = NoShow
                 _mergeResult.update { }
             }
-        }
-    }
-
-    private suspend fun updateCategoryFilters(old: Set<Long>, new: Long) {
-        contentResolver.query(ACCOUNTS_MINIMAL_URI_WITH_AGGREGATES, null, null, null, null)
-            ?.use { cursor ->
-                updateFilterHelper(old, new, cursor, MyExpensesViewModel::prefNameForCriteria)
-            }
-    }
-
-
-    private suspend fun updateCategoryBudgets(old: Set<Long>, new: Long) {
-        contentResolver.query(
-            BUDGETS_URI,
-            arrayOf("$TABLE_BUDGETS.$KEY_ROWID"),
-            null,
-            null,
-            null
-        )?.use { cursor ->
-            updateFilterHelper(old, new, cursor, BudgetViewModel::prefNameForCriteria)
-        }
-    }
-
-    private suspend fun updateFilterHelper(
-        old: Set<Long>,
-        new: Long,
-        cursor: Cursor,
-        prefNameCreator: (Long) -> String,
-    ) {
-        cursor.moveToFirst()
-        while (!cursor.isAfterLast) {
-            val id = cursor.getLong(KEY_ROWID)
-            val filterKey = prefNameCreator(id)
-            val filterPersistence = FilterPersistence(dataStore, filterKey)
-            filterPersistence.getValue()?.let {
-                val newValue = updateCriterion(it, old, new)
-                if (newValue != it) {
-                    Timber.i("updating categories in filter %s: %s -> %s", filterKey, it, newValue)
-                    filterPersistence.persist(newValue)
-                }
-            }
-            cursor.moveToNext()
-        }
-    }
-
-    private fun updateCriterion(
-        criterion: Criterion,
-        old: Set<Long>,
-        new: Long,
-    ): Criterion {
-        return when (criterion) {
-            is CategoryCriterion -> {
-                val oldSet = criterion.values.toSet()
-                val newSet: Set<Long> = oldSet.replace(old, new)
-                if (oldSet != newSet) {
-                    val labelList = mutableListOf<String>()
-                    contentResolver.query(
-                        CATEGORIES_URI, arrayOf(KEY_LABEL),
-                        "$KEY_ROWID IN (${newSet.joinToString()})", null, null
-                    )?.use {
-                        it.moveToFirst()
-                        while (!it.isAfterLast) {
-                            labelList.add(it.getString(0))
-                            it.moveToNext()
-                        }
-                    }
-                    CategoryCriterion(
-                        labelList.joinToString(","),
-                        *newSet.toLongArray()
-                    )
-                } else criterion
-            }
-
-            is NotCriterion -> NotCriterion(updateCriterion(criterion.criterion, old, new))
-            is AndCriterion -> AndCriterion(criterion.criteria.map { updateCriterion(it, old, new) }
-                .toSet())
-
-            is OrCriterion -> OrCriterion(criterion.criteria.map { updateCriterion(it, old, new) }
-                .toSet())
-
-            else -> criterion
         }
     }
 

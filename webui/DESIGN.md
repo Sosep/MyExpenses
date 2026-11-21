@@ -213,6 +213,10 @@ píxeles como especificación.
   Overview, Transactions, Reports, Budgets, Files; Settings abajo. En móvil se
 convierte en una barra inferior fija con icono y etiqueta, y el contenido reserva
 espacio para no quedar tapado.
+- Con una **cartera** seleccionada (`portfolioRole = CONTAINER`) el rail muestra
+  Overview, Transactions, Reports y Files: Budgets se oculta porque la cartera no
+  usa categorías. El selector de cuenta lista contenedores y cuentas normales,
+  nunca sus subcuentas de efectivo o activo.
 - Contenido: ancho máximo 1440 px; grid de 12 columnas, gap 16 px.
 - Panel lateral de edición: 380-420 px, sticky, con cabecera y pie fijos.
 - Breakpoints: 1280, 1024, 768, 560.
@@ -342,7 +346,8 @@ espacio para no quedar tapado.
 - Ámbito de cada botón:
   - **Totales**: patrimonio del héroe, KPIs del panel y de informes, cabeceras de
     periodo, "N groups · X total", desglose de informes, tooltip del gráfico y
-    resumen, tarjetas y detalle de presupuesto.
+    resumen, tarjetas y detalle de presupuesto, precio de los activos de la
+    cartera e histórico manual de precios.
   - **Transacciones**: importes de fila (lista, últimas del panel, drill-down),
     panel de detalle, partes y total de partes, y el chip de rango de importes.
 - Nunca se tapan los campos de un editor abierto (`TransactionEditor`,
@@ -369,7 +374,11 @@ espacio para no quedar tapado.
   pie sticky con Cancel/Save.
 - Diálogo: solo para confirmaciones destructivas y selectores pequeños; ancho
   máximo 480; nombre del objeto en el título ("Delete split transaction?").
-- `Esc` cierra; foco atrapado; al cerrar, el foco vuelve al disparador.
+  Toda acción de borrado en Datos o en una operación pregunta antes y nombra el
+  objeto; cancelar no toca los datos.
+- `Esc` cierra; foco atrapado; al cerrar, el foco vuelve al disparador. Cada
+  panel es una entrada de historial: atrás lo cierra. Si dos se apilan (detalle
+  y editor), `Esc` y atrás cierran solo el superior.
 - En móvil, el panel pasa a página completa.
 
 ### Toasts y banners
@@ -403,6 +412,51 @@ Page title · period                         Export   New transaction
 - Presupuestos con estado explícito (en curso, en riesgo, sobregirado).
 - Últimas transacciones: 5-8, con enlace a la lista.
 - Si hay varias divisas, el patrimonio se muestra en la divisa base y se avisa.
+
+### Carteras (overview y operaciones)
+
+```text
+Overview · Investments                     Transactions   Refresh
+┌ Valuación (hero) ┬ Efectivo ┬ Activos ┐
+│ €1,100.00        │ €250.00  │ €875.00 │
+└──────────────────┴──────────┴─────────┘
+┌ Activos ──────────────────────────────────────┐
+│ Activo · Cantidad · Precio · Valoración        │
+│ Apple Inc. 3 AAPL   5 EUR     €15.00 ▓░░░░     │
+└───────────────────────────────────────────────┘
+```
+
+- El héroe es la **valoración** (saldo del contenedor + efectivo + activos al
+  último precio guardado); efectivo y activos son las tarjetas de contexto. Las
+  cifras salen de `GET /portfolios/{id}/assets`, nunca de sumar filas aquí.
+- Cada activo muestra cantidad con los dígitos de su divisa, precio real en la
+  divisa de la cartera y una barra fina (`asset-share`) con su peso en la
+  valoración. La valoración y los precios responden a la privacidad `totals`.
+- Las operaciones (`Buy/Sell/Deposit/Withdraw/Transfer`) se listan con palabra,
+  no icono; cantidad y precio en columnas a la derecha; la fila abre el panel de
+  detalle (historial, como la transacción). El importe principal es una magnitud
+  sin signo: la palabra del tipo ya dice la dirección. En móvil se ocultan
+  activo, precio, comisión y contraparte; la tabla no provoca scroll horizontal.
+- El botón `+` abre un panel con segmentado **Account | Portfolio**. Una cartera
+  pide nombre, tipo (default INVESTMENT), divisa y, si la divisa no es la base,
+  cambio fijo o dinámico (sin saldo de apertura ni «excluir de totales»). El
+  aviso `Price of one USD in EUR.` interpola las divisas activas.
+- Las divisas que no son ISO-4217 (AAPL, BTC) se formatean como número + código
+  cuando `Intl` no acepta el estilo de moneda; la cantidad usa los dígitos de la
+  divisa del activo.
+- El **editor de operaciones** (`TradeEditor`) usa el mismo panel lateral que la
+  transacción: segmentado con los seis tipos (Compra, Venta, Depósito,
+  Retirada, Traspaso a otra cartera, Entrada por traspaso), activo con
+  sugerencias, cantidad y precio decimales, importe calculado en una
+  `summary-strip`, comisión y financiación. La financiación desde una cuenta
+  solo ofrece cuentas normales en la divisa de la cartera; un traspaso entre
+  carteras admite cualquier divisa. En edición precarga los valores y
+  añade `Delete` a la izquierda del pie; guardar cierra el panel y refresca.
+  El detalle de la operación gana `Edit` y `Delete`, y el editor se abre encima
+  del detalle para no encadenar entradas de historial. Un cambio de tipo dentro
+  de la familia (compra/venta, depósito/retirada, traspaso) conserva la
+  financiación; no se ofrece cruzar de familia. En una entrada por traspaso el
+  selector nombra la **cartera origen**.
 
 ### Transacciones agrupadas por mes
 
@@ -600,6 +654,28 @@ November 2026                     All budgets
   etiquetas y estado, los mismos cinco criterios que la app Android, y un
   resumen `Sin filtro: toda la cuenta` / `n filtros`. Si el presupuesto trae un
   filtro que la web no puede expresar, el editor lo dice y no lo reescribe.
+
+### Datos de la app
+
+- Vista `?view=datos` con pestañas segmentadas (`Categorías · Métodos ·
+  Etiquetas · Divisas · Precios`) sobre una tarjeta por entidad; el botón de
+  ajustes del rail la abre.
+- Categorías en árbol: sangría por `level`, tipo con texto (Gasto/Ingreso/
+  Neutro), `+ Nueva categoría` en la cabecera. El tipo es la máscara de la app;
+  una subcategoría lo hereda del padre y el selector se desactiva, como en el
+  diálogo de Android. El borrado pregunta antes. Si la rama tiene movimientos,
+  plantillas o asignaciones de presupuesto, el panel «Borrar categoría» pide un
+  destino del mismo tipo con `SearchSelect` antes de mover y borrar; el `409`
+  nunca deja la categoría a medias.
+- Divisas: tabla código/símbolo/dígitos/tipo; el alta pide el código y la
+  edición no (es la clave). Precios: selector de activo (solo no fiat), tabla
+  fecha/valor/fuente y panel fecha+precio; guardar reemplaza el precio manual
+  de esa fecha. La columna de valor responde a la privacidad `totals` (es el
+  mismo dato que la valoración de la cartera); el panel abierto queda legible.
+- En móvil las pestañas hacen wrap y ninguna tabla provoca scroll horizontal:
+  en Divisas se ocultan símbolo y dígitos para que las acciones queden dentro
+  de la tarjeta; en el resto se conservan las columnas con padding compacto. Los
+  paneles son de ancho completo como el resto.
 
 ### Maestros
 

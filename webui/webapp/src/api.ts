@@ -11,15 +11,26 @@ import type {
   BudgetProgress,
   BudgetWrite,
   Category,
+  CategoryWrite,
+  CurrencyEntry,
+  CurrencyWrite,
   FileEntry,
   Group,
   Meta,
   Method,
+  MethodWrite,
   Page,
   Payee,
+  PortfolioAssets,
+  PortfolioWrite,
+  Price,
+  PriceWrite,
   ReportSummary,
   SplitWrite,
   Tag,
+  TagWrite,
+  Trade,
+  TradeWrite,
   Transaction,
   TransactionWrite,
   TransferWrite,
@@ -56,9 +67,29 @@ export function describeError(error: unknown, fallback?: string): string {
       case 'invalid_password':
         return t`Wrong password.`
       case 'not_found':
+      case 'category_not_found':
+      case 'method_not_found':
+      case 'tag_not_found':
+      case 'currency_not_found':
+      case 'price_not_found':
         return t`This item no longer exists on the phone.`
       case 'conflict':
+      case 'unsupported_trade_change':
+      case 'unsupported_move':
         return t`This change is not allowed here.`
+      case 'portfolio_limit_reached':
+        return t`The free version tracks one portfolio. More need the Professional licence.`
+      case 'portfolio_not_found':
+      case 'trade_not_found':
+        return t`This item no longer exists on the phone.`
+      case 'currency_still_used':
+        return t`The currency is used by an account or a transaction and cannot be deleted.`
+      case 'currency_already_defined':
+        return t`That currency code is already defined.`
+      case 'category_in_use':
+        return t`The category is in use; choose where to move its data.`
+      case 'unknown_asset':
+        return t`The asset is not registered on the phone. Add it in App data first.`
       case 'http_error':
         return error.status >= 500
           ? t`The phone could not complete the request.`
@@ -185,6 +216,35 @@ export const createAccount = (payload: AccountWrite) =>
   request<Account>('/accounts', { method: 'POST', body: payload })
 
 export const getAccounts = (signal?: AbortSignal) => request<Account[]>('/accounts', { signal })
+
+export const createPortfolio = (payload: PortfolioWrite) =>
+  request<Account>('/portfolios', { method: 'POST', body: payload })
+
+export const updatePortfolio = (id: number, payload: PortfolioWrite) =>
+  request<Account>(`/portfolios/${id}`, { method: 'PUT', body: payload })
+
+export const getPortfolioAssets = (id: number, signal?: AbortSignal) =>
+  request<PortfolioAssets>(`/portfolios/${id}/assets`, { signal })
+
+export const getTrades = (
+  portfolioId: number,
+  limit: number,
+  offset: number,
+  signal?: AbortSignal,
+) =>
+  request<Page<Trade>>(
+    `/portfolios/${portfolioId}/trades?limit=${limit}&offset=${offset}`,
+    { signal },
+  )
+
+export const getTrade = (portfolioId: number, id: number, signal?: AbortSignal) =>
+  request<Trade>(`/portfolios/${portfolioId}/trades/${id}`, { signal })
+
+export const createTrade = (portfolioId: number, payload: TradeWrite) =>
+  request<Trade>(`/portfolios/${portfolioId}/trades`, { method: 'POST', body: payload })
+
+export const updateTrade = (portfolioId: number, id: number, payload: TradeWrite) =>
+  request<Trade>(`/portfolios/${portfolioId}/trades/${id}`, { method: 'PUT', body: payload })
 
 export const getCategories = (signal?: AbortSignal) =>
   request<Category[]>('/categories', { signal })
@@ -412,3 +472,63 @@ export const getBudgetBreakdown = (
     year !== undefined && second !== undefined ? `?year=${year}&second=${second}` : ''
   return request<BudgetBreakdown>(`/budgets/${id}/breakdown${query}`, { signal })
 }
+
+// ---- App data (settings > data) -----------------------------------------
+
+export const createCategory = (payload: CategoryWrite) =>
+  request<Category>('/categories', { method: 'POST', body: payload })
+
+export const updateCategory = (id: number, payload: CategoryWrite) =>
+  request<Category>(`/categories/${id}`, { method: 'PUT', body: payload })
+
+export const deleteCategory = (id: number, remapTo?: number) =>
+  request<void>(`/categories/${id}${remapTo ? `?remapTo=${remapTo}` : ''}`, {
+    method: 'DELETE',
+  })
+
+export const createMethod = (payload: MethodWrite) =>
+  request<Method>('/methods', { method: 'POST', body: payload })
+
+export const updateMethod = (id: number, payload: MethodWrite) =>
+  request<Method>(`/methods/${id}`, { method: 'PUT', body: payload })
+
+export const deleteMethod = (id: number) =>
+  request<void>(`/methods/${id}`, { method: 'DELETE' })
+
+export const createTag = (payload: TagWrite) =>
+  request<Tag>('/tags', { method: 'POST', body: payload })
+
+export const updateTag = (id: number, payload: TagWrite) =>
+  request<Tag>(`/tags/${id}`, { method: 'PUT', body: payload })
+
+export const deleteTag = (id: number) => request<void>(`/tags/${id}`, { method: 'DELETE' })
+
+export const getCurrencies = (signal?: AbortSignal) =>
+  request<CurrencyEntry[]>('/currencies', { signal })
+
+export const createCurrency = (payload: CurrencyWrite) =>
+  request<CurrencyEntry>('/currencies', { method: 'POST', body: payload })
+
+export const updateCurrency = (code: string, payload: CurrencyWrite) =>
+  request<CurrencyEntry>(`/currencies/${encodeURIComponent(code)}`, {
+    method: 'PUT',
+    body: payload,
+  })
+
+export const deleteCurrency = (code: string) =>
+  request<void>(`/currencies/${encodeURIComponent(code)}`, { method: 'DELETE' })
+
+export const getPrices = (commodity: string, signal?: AbortSignal) =>
+  request<Price[]>(`/prices?commodity=${encodeURIComponent(commodity)}`, { signal })
+
+export const savePrice = (payload: PriceWrite) =>
+  request<Price>('/prices', { method: 'POST', body: payload })
+
+export const updatePrice = (commodity: string, date: string, payload: PriceWrite) =>
+  request<Price>(`/prices/${encodeURIComponent(commodity)}/${date}`, {
+    method: 'PUT',
+    body: payload,
+  })
+
+export const deletePrice = (commodity: string, date: string) =>
+  request<void>(`/prices/${encodeURIComponent(commodity)}/${date}`, { method: 'DELETE' })

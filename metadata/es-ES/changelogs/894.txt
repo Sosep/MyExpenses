@@ -1,0 +1,5 @@
+• App web: carteras con valoración, activos y operaciones
+• App web: gestión de categorías, métodos de pago, etiquetas, divisas e historial de precios
+• App web: atrás/adelante y enlaces directos, con pantallas y tema recordados
+• App web: detalle del presupuesto, filtros de categoría por rama y totales filtrados
+• App web: los importes se pueden ocultar por privacidad

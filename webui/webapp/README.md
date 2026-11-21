@@ -176,6 +176,14 @@ El detalle de una transacción abre una entrada de historial: atrás lo cierra.
 | `?view=budgets&edit=1` | Edita el primer presupuesto |
 | `?view=budgets&edit=1&periodOverride=1` | Prueba el total distinto de este periodo |
 | `?view=files` | Ficheros |
+| `?view=datos` | Datos de la app (categorías, métodos, etiquetas, divisas, precios) |
+| `?view=datos&tab=divisas` | Abre esa pestaña (`métodos`, `etiquetas`, `precios`) |
+| `?view=datos&new=1` | Abre el alta de la pestaña activa |
+| `?view=transactions&accountId=7` | Operaciones de la cartera *Investments* (sin Presupuestos en el rail) |
+| `?accountId=7` | Resumen de la cartera: valoración, efectivo y activos |
+| `?new=1&kind=portfolio` | Alta de cartera (el `+` abre el editor con Cartera preseleccionada) |
+| `?portfolioLimit=1` | El mock responde `409 portfolio_limit_reached` al crear una cartera |
+| `?view=transactions&accountId=7` + `New operation` | Editor de operaciones (Compra/Venta/Depósito/Retirada/Traspaso) |
 | `?panel=split` / `?panel=transfer` | Detalle de dividida / transferencia |
 | `?new=1` | Selector de tipo de alta |
 | `?new=1&kind=transfer` / `&kind=split` | Editor de transferencia / dividida |
@@ -224,7 +232,8 @@ icono y etiqueta. Es el mismo mock y los mismos assets, solo cambia el viewport.
 Sirve para comprobar:
 
 - navegación inferior y espacio reservado al final de la página;
-- tablas que ocultan columnas (`hide-sm`) y botones compactos;
+- tablas que ocultan columnas (`hide-sm`) y botones compactos; en Datos,
+  Divisas esconde símbolo y dígitos para que Editar/Eliminar sigan visibles;
 - editores a ancho completo y dividida apilada;
 - controles de informes y presupuestos que deben hacer wrap.
 
@@ -232,7 +241,12 @@ Sirve para comprobar:
 
 - **Sí**: transacciones simples (`POST/PUT/DELETE`), presupuestos, asignaciones,
   rollover, total por periodo, duplicación, informes, preferencias de la interfaz
-  web (`GET/PUT /ui-preferences`) y descarga de ficheros.
+  web (`GET/PUT /ui-preferences`) y descarga de ficheros; el borrado de
+  categorías respeta también las partes de dividida (`409`).
+- **Sí**: alta/edición de carteras (`POST/PUT /portfolios`) y sus operaciones
+  (`POST/PUT/DELETE /portfolios/{id}/trades`), incluida la subcuenta de efectivo
+  que la app crea con la primera operación; el límite de licencia se simula con
+  `?portfolioLimit=1` (y se desactiva con `?portfolioLimit=0`).
 - **No**: guardar transferencias ni divididas; se abren y editan visualmente,
   pero el guardado se prueba contra el API real del teléfono.
 - Todo vive en memoria: reiniciar el mock vuelve a los datos de ejemplo.

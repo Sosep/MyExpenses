@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { accountFromUrl, searchWithAccount } from './navigation'
+import { accountFromUrl, readView, searchWithAccount } from './navigation'
 
 describe('account in the URL', () => {
   it('reads a usable id and ignores the rest', () => {
@@ -31,5 +31,14 @@ describe('account in the URL', () => {
     expect(replaced.get('accountId')).toBe('3')
     expect(replaced.get('view')).toBe('reports')
     expect(searchWithAccount('?accountId=1', null)).toBe('')
+  })
+})
+
+describe('views', () => {
+  it('reads the app data screen and falls back to the overview', () => {
+    expect(readView('?view=datos')).toBe('datos')
+    expect(readView('?view=transactions')).toBe('transactions')
+    expect(readView('?view=unknown')).toBe('dashboard')
+    expect(readView('')).toBe('dashboard')
   })
 })

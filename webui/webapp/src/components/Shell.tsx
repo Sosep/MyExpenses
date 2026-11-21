@@ -64,6 +64,10 @@ export function Shell({
   const transactionsAction = amounts.transactions
     ? t`Show transaction amounts`
     : t`Hide transaction amounts`
+  // A portfolio shows the asset screens (no budgets); a normal account keeps
+  // the full rail. Budgets need categories a portfolio does not track.
+  const isPortfolio = accounts.find((account) => account.id === accountId)?.portfolioRole ===
+    'CONTAINER'
 
   useEffect(() => {
     if (!menuOpen) return
@@ -103,6 +107,7 @@ export function Shell({
               type="button"
               className="icon-btn"
               onClick={onNewAccount}
+              data-action="new-account"
               aria-label={t`New account`}
               title={t`New account`}
             >
@@ -284,18 +289,20 @@ export function Shell({
             <IconChart />
             <span className="rail-label">{t`Reports`}</span>
           </button>
-          <button
-            type="button"
-            className={`rail-item ${view === 'budgets' ? 'active' : ''}`}
-            data-view="budgets"
-            onClick={() => onView('budgets')}
-            title={t`Budgets`}
-            aria-label={t`Budgets`}
-            aria-current={view === 'budgets' ? 'page' : undefined}
-          >
-            <IconPie />
-            <span className="rail-label">{t`Budgets`}</span>
-          </button>
+          {isPortfolio ? null : (
+            <button
+              type="button"
+              className={`rail-item ${view === 'budgets' ? 'active' : ''}`}
+              data-view="budgets"
+              onClick={() => onView('budgets')}
+              title={t`Budgets`}
+              aria-label={t`Budgets`}
+              aria-current={view === 'budgets' ? 'page' : undefined}
+            >
+              <IconPie />
+              <span className="rail-label">{t`Budgets`}</span>
+            </button>
+          )}
           <button
             type="button"
             className={`rail-item ${view === 'files' ? 'active' : ''}`}
@@ -311,12 +318,15 @@ export function Shell({
           <div className="rail-spacer" />
           <button
             type="button"
-            className="rail-item"
-            disabled
-            title={t`Settings (next milestone)`}
-            aria-label={t`Settings (next milestone)`}
+            className={`rail-item ${view === 'datos' ? 'active' : ''}`}
+            data-view="datos"
+            onClick={() => onView('datos')}
+            title={t`App data`}
+            aria-label={t`App data`}
+            aria-current={view === 'datos' ? 'page' : undefined}
           >
             <IconSettings />
+            <span className="rail-label">{t`Data`}</span>
           </button>
         </nav>
         <main className="main">{children}</main>

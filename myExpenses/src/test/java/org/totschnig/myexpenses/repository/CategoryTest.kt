@@ -5,6 +5,7 @@ import android.content.ContentValues
 import android.database.sqlite.SQLiteConstraintException
 import com.google.common.truth.Truth
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.runBlocking
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -12,10 +13,12 @@ import org.totschnig.myexpenses.BaseTestWithRepository
 import org.totschnig.myexpenses.db2.FLAG_EXPENSE
 import org.totschnig.myexpenses.db2.FLAG_INCOME
 import org.totschnig.myexpenses.db2.budgetAllocation
+import org.totschnig.myexpenses.db2.categoryUsage
 import org.totschnig.myexpenses.db2.deleteCategory
 import org.totschnig.myexpenses.db2.insertTransaction
 import org.totschnig.myexpenses.db2.loadCategory
 import org.totschnig.myexpenses.db2.mergeCategories
+import org.totschnig.myexpenses.db2.mergeCategoriesAndUpdateFilters
 import org.totschnig.myexpenses.db2.moveCategory
 import org.totschnig.myexpenses.db2.saveCategory
 import org.totschnig.myexpenses.model2.Category
@@ -27,6 +30,8 @@ import org.totschnig.myexpenses.provider.KEY_TYPE
 import org.totschnig.myexpenses.provider.TransactionProvider
 import org.totschnig.myexpenses.provider.TransactionProvider.TEMPLATES_URI
 import org.totschnig.myexpenses.provider.TransactionProvider.TRANSACTIONS_URI
+import org.totschnig.myexpenses.provider.filter.CategoryCriterion
+import org.totschnig.myexpenses.provider.filter.FilterPersistence
 import org.totschnig.myexpenses.viewmodel.CategoryViewModel
 import org.totschnig.shared_test.CursorSubject
 
@@ -218,5 +223,51 @@ class CategoryTest : BaseTestWithRepository() {
         Truth.assertThat(
             repository.budgetAllocation(budgetId, main1.id, null)
         ).isEqualTo(500)
+    }
+
+    @Test
+    fun categoryUsageIncludesTransactionsTemplatesAndBudgets() {
+        val accountId = insertAccount("Test account")
+        val main = Category(label = "Main", type = FLAG_EXPENSE).saveCopy
+        val sub = Category(label = "Sub", parentId = main.id).saveCopy
+        repository.insertTransaction(accountId, 100, categoryId = sub.id!!)
+        insertTemplate(accountId, "Template", 100, sub.id)
+        val budgetId = insertBudget(accountId, "Budget", 100)
+        contentResolver.update(
+            budgetAllocationUri(budgetId, sub.id),
+            ContentValues().apply { put(KEY_BUDGET, 500) },
+            null,
+            null
+        )
+
+        with(repository.categoryUsage(listOf(main.id!!))) {
+            assertThat(isUsed).isTrue()
+            assertThat(transactions).isGreaterThan(0L)
+            assertThat(templates).isGreaterThan(0L)
+            assertThat(budgets).isGreaterThan(0L)
+        }
+    }
+
+    @Test
+    fun mergeUpdatesSavedAccountAndBudgetFilters() = runBlocking {
+        val accountId = insertAccount("Test account")
+        val source = Category(label = "Source", type = FLAG_EXPENSE).saveCopy
+        val target = Category(label = "Target", type = FLAG_EXPENSE).saveCopy
+        val budgetId = insertBudget(accountId, "Budget", 100)
+        val sourceId = source.id!!
+        val targetId = target.id!!
+        val accountFilter = FilterPersistence(dataStore, "filter_$accountId")
+        val budgetFilter = FilterPersistence(dataStore, "budgetFilter_$budgetId")
+        accountFilter.persist(CategoryCriterion("Source", sourceId))
+        budgetFilter.persist(CategoryCriterion("Source", sourceId))
+
+        repository.mergeCategoriesAndUpdateFilters(listOf(sourceId), targetId)
+
+        val accountCriterion = accountFilter.getValue() as CategoryCriterion
+        val budgetCriterion = budgetFilter.getValue() as CategoryCriterion
+        assertThat(accountCriterion.values).containsExactly(targetId)
+        assertThat(budgetCriterion.values).containsExactly(targetId)
+        assertThat(accountCriterion.label).isEqualTo("Target")
+        assertThat(budgetCriterion.label).isEqualTo("Target")
     }
 }

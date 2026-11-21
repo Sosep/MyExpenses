@@ -1,5 +1,8 @@
 export type TransactionKind = 'SIMPLE' | 'TRANSFER' | 'SPLIT'
 
+/** Portfolio role of an account, mirroring the app's `is_portfolio` column. */
+export type PortfolioRole = 'NONE' | 'CONTAINER' | 'CASH' | 'ASSET'
+
 export interface Meta {
   appVersion: string
   serverTime: string
@@ -58,6 +61,10 @@ export interface Account {
   sealed: boolean
   color: number
   parentId: number | null
+  portfolioRole: PortfolioRole
+  dynamicExchangeRates: boolean
+  /** Containers only: balance plus child valuation at the latest price. */
+  valuationMinor: number | null
 }
 
 export interface EntityRef {
@@ -361,4 +368,126 @@ export interface BudgetHistoryPoint {
   allocatedMinor: number
   spentMinor: number
   remainingMinor: number
+}
+
+export interface PortfolioWrite {
+  label: string
+  type: string
+  currency: string
+  color?: number
+  dynamicExchangeRates: boolean
+  /** Real rate (major to major); required when fixed and the currency is foreign. */
+  exchangeRate?: number
+}
+
+export interface PortfolioAsset {
+  id: number
+  label: string
+  /** Asset symbol; the "currency" code of the asset sub-account. */
+  symbol: string
+  fractionDigits: number
+  /** Quantity in asset minor units. */
+  quantityMinor: number
+  /** Raw latest price: portfolio minor units per asset minor unit. */
+  priceMinor: number | null
+  valuationMinor: number
+}
+
+export interface PortfolioAssets {
+  portfolioId: number
+  label: string
+  currency: string
+  fractionDigits: number
+  cashAccountId: number | null
+  cashMinor: number
+  valuationMinor: number
+  assets: PortfolioAsset[]
+}
+
+export interface TradeWrite {
+  type: TradeType
+  assetSymbol?: string
+  quantity: string
+  price: string
+  principalMinor?: number | null
+  feeMinor?: number | null
+  feeCategoryId?: number | null
+  fundingSource?: 'PORTFOLIO' | 'ACCOUNT' | 'EXTERNAL'
+  peerAccountId?: number | null
+  comment?: string
+  date: string
+  time?: string | null
+}
+
+export type TradeType = 'BUY' | 'SELL' | 'DEPOSIT' | 'WITHDRAW' | 'TRANSFER_IN' | 'TRANSFER_OUT'
+
+export interface Trade {
+  id: number
+  type: TradeType
+  accountId: number
+  currency: string
+  date: string
+  time: string | null
+  comment: string
+  assetSymbol: string
+  fractionDigits: number
+  quantityMinor: number
+  /** Major-to-major price as a decimal string, or null when quantity is zero. */
+  price: string | null
+  principalMinor: number
+  feeMinor: number | null
+  peerAccountId: number | null
+  peerAccountLabel: string | null
+}
+
+export interface CategoryWrite {
+  parentId?: number | null
+  label: string
+  color?: number | null
+  type?: number | null
+}
+
+export interface MethodWrite {
+  label: string
+  type?: number
+  isNumbered?: boolean
+  accountTypes?: string[]
+}
+
+export interface TagWrite {
+  label: string
+}
+
+export interface CurrencyEntry {
+  code: string
+  label: string | null
+  symbol: string
+  fractionDigits: number
+  /** FIAT, SECURITY, CRYPTO or COMMODITY. */
+  commodityType: string
+  /** Latest raw price to the home currency, if any. */
+  priceMinor: number | null
+}
+
+export interface CurrencyWrite {
+  code?: string
+  label?: string | null
+  symbol?: string
+  fractionDigits?: number
+  commodityType?: string
+}
+
+export interface Price {
+  commodity: string
+  currency: string
+  date: string
+  /** Price of one major commodity unit in major base units. */
+  value: number
+  source: string
+}
+
+export interface PriceWrite {
+  commodity: string
+  date: string
+  value: number
 }

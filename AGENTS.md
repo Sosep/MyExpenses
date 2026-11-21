@@ -11,7 +11,7 @@ Read this before changing code. Detailed sources:
 
 - `/api/v1`: read endpoints plus create/update/delete for simple transactions,
   transfers and splits.
-- API routes covered on the JVM by 73 tests — 57 `ApiRoutesTest`, 7
+- API routes covered on the JVM by 99 tests — 83 `ApiRoutesTest`, 7
   `CategoryBranchTest`, 5 `LoginThrottleTest` and 4 `SessionStoreTest` — with a
   fake `WebApiDataSource` and Ktor `testApplication`.
 - SPA: dashboard, transactions, detail, reports, files, budgets, and the simple,
@@ -29,6 +29,38 @@ Read this before changing code. Detailed sources:
   the **budget's own** spending by category from
   `GET /budgets/{id}/breakdown` (filter + descendants, parents rolled up, split
   parts; zero rows hidden). `Historial` no longer exists as a separate button.
+- Portfolios: `POST/PUT /portfolios` mirror `PortfolioSetupDialog`, with the
+  licence limit on the server (`409 portfolio_limit_reached`); `GET
+  /portfolios/{id}/assets` returns cash, assets and the valuation at the latest
+  stored price, and `GET /portfolios/{id}/trades[/{tid}]` maps
+  `Repository.loadTrades`. `GET /accounts` adds `portfolioRole`,
+  `dynamicExchangeRates` and the container's `valuationMinor`; the SPA hides the
+  sub-accounts (cash/assets) from the picker. The `+` editor is dual (Account |
+  Portfolio), and the rail hides Budgets on a portfolio. The portfolio overview
+  is the valuation hero plus cash/assets; Transacciones lists operations and
+  opens their detail in a side panel. Trade writing goes through
+  `POST/PUT /portfolios/{id}/trades` and the domain extracted from the
+  ViewModel into `db2/RepositoryTrades.kt`, which the Android trade screens
+  use too; the web editor mirrors `TradeIntent` and the mock applies the
+  operation deltas in memory and creates the cash sub-account on the first
+  operation, like the app. Editing an operation keeps its family (buy/sell,
+  deposit/withdraw, transfer) and its funding source, like the Android editor;
+  bank funding is limited to accounts in the portfolio currency, the portfolio
+  needs a fiat currency and an operation a registered non-fiat asset
+  (`422 unknown_asset`). The mock honours `?portfolioLimit=1` with
+  `409 portfolio_limit_reached`.
+- App data: `?view=datos` mirrors Android's Settings > Data with tabs for
+  categories (tree, delete with remap), payment methods, tags, currencies
+  (fiat and custom assets) and the manual price history. The writes go through
+  `POST/PUT/DELETE /categories`, `/methods`, `/tags`, `/currencies` and
+  `/prices` with the repository rules: `409 category_in_use` without
+  `remapTo` (templates and budget allocations count too), same-type remap,
+  `409 currency_still_used`, one manual price per commodity and date. The
+  remap delegates to the app's `mergeCategories` (transactions, split parts,
+  templates, change log, budget allocations) and updates the saved
+  account/budget filters. Destructive deletes ask for confirmation. The rail's
+  settings button opens it. A category's type is the app's mask (1 expense,
+  2 income, 3 neutral) and a child inherits its parent's.
 - Budget filters: `criteria` (categories, payees, methods, tags, states) is read
   and written in the app preference `budgetFilter_<id>`, so a budget created or
   edited from the web is scoped exactly like one from the phone. A filter the web
@@ -42,20 +74,24 @@ Read this before changing code. Detailed sources:
   removes its transactions like the app does, with `409` when it has a sealed
   debt.
 - Navigation: the view lives in the URL (`?view=`), so back/forward walk the app
-  and deep links open a filtered list; the transaction detail is a history entry
-  that back closes. Other panels still open from state. The account travels as
+  and deep links open a filtered list. Every side panel is a history entry
+  (`useHistoryPanel`): transaction detail and editor, report drill-down, the
+  budget panel, the trade detail and editor, and the app-data editors. Back
+  closes them; when two stack (detail + editor) only the top one closes. The
+  account travels as
   `?accountId=` when a screen sends the user somewhere (the budget drill-down
   opens the budget's own account); without it the remembered account wins, and
   the topbar rewrites it with `replaceState` so the two never disagree.
 - Search: `q` folds case and diacritics on both sides (`Cafetería` = `cafeteria`).
 - Privacy: two topbar switches mask money as `€ ••••` (no digits in the DOM) —
-  `totals` for net worth, KPIs, report and budget aggregates and the chart
-  tooltip; `transactions` for row amounts, the detail panel and its parts, period
-  sums, the amount filter chip, report drill-down and budget cards. Only the two
-  booleans are synced through `/ui-preferences`; amounts never leave the local
-  render. Open editors stay readable. Amounts render through
-  `Money`/`useMoney` in `webui/webapp/src/privacy.tsx`; `formatMoney` and
-  `maskedMoney` are in `format.ts`.
+  `totals` for net worth, KPIs, report and budget aggregates, the portfolio
+  price and the manual price history, and the chart tooltip; `transactions` for
+  row amounts, the detail panel and its parts, period sums, the amount filter
+  chip, report drill-down and budget cards. Only the two booleans are synced
+  through `/ui-preferences`; amounts never leave the local render. Open editors
+  stay readable. Amounts render through `Money`/`useMoney` in
+  `webui/webapp/src/privacy.tsx`; `formatMoney` and `maskedMoney` are in
+  `format.ts`.
 - Serialized selections: `theme`, `locale`, `accountId`, `grouping`, the two
   privacy switches and the screen choices (report month/range/breakdown/type/all
   accounts, budget month, transaction type) live in `localStorage` **and** on the
@@ -104,6 +140,9 @@ Read this before changing code. Detailed sources:
   (`firstDate` anchors rows to periods), and the range is just another filter
   (`Historial` by default, plus `Este mes`, `Últimos 3 meses`, `Este año` and a
   custom one).
+- On phones the Datos tables hide the currency symbol and digits so the row
+  actions stay inside the card; the bottom rail keeps all six sections,
+  including Datos.
 - Budgets have month navigation; monthly budgets load that month's progress,
   allocations and period total. Each budget has a 12-month history panel and
   per-category spent/allocated bars. A budget's saved category filter is the
@@ -138,6 +177,16 @@ The host has no JDK or Android SDK. Run Android tasks in Docker:
   Android implementation and the provider stay device-level.
 - Signed universal APK: `BUILD_VARIANT=release docker compose run --rm android-build`
   Output: `myExpenses/build/outputs/apk_from_bundle/externRelease/*universal-signed.apk`
+- Every version bump (`versionCode`/`versionName` in the root `build.gradle`) is
+  accompanied in the same commit by
+  `metadata/en-US/changelogs/<versionCode>.txt` and
+  `metadata/es-ES/changelogs/<versionCode>.txt` (see 892.txt for the format; correct
+  Spanish in es-ES, English in en-US) **and** by the in-app what's-new entry in
+  `myExpenses/src/main/res/values/version_info.xml`: a new
+  `<item><versionCode>;<versionName></item>` at the top of the `versions` array
+  plus a `whats_new_<versionName without dots>` string-array (e.g.
+  `whats_new_416` for 4.1.6). The what's-new dialog reads those resources; a
+  missing array logs "missing change log entry" and the dialog shows no text.
 
 A debug base APK does not contain the dynamic feature. Test the web UI with the
 release universal APK, or install the feature split.
@@ -260,9 +309,18 @@ Update the docs while the change is fresh; do not defer them to a later commit.
 - Device QA remains for the new slices (cookie, PWA, allocations/rollover,
   reports drill-down and all-account aggregation). The mock can be checked at
   390×844 to catch responsive regressions.
-- Every side panel is a history entry (`useHistoryPanel`): transaction detail and
-  editor, report drill-down and the budget panel (detail and editor share one
-  entry). Back closes them; closing from the UI pops the entry.
+- Portfolios need device QA the mock cannot fake: create one from the web and
+  confirm the phone shows it exactly like one created in Android (type, currency,
+  fixed/dynamic rate, colour); confirm the valuation matches `BalanceType.VALUATION`
+  (cash plus assets at the latest stored price) and that the second portfolio
+  answers `409` without the Professional licence. A trade of each kind created
+  from the web must appear in the phone exactly like one created there
+  (quantity, price, fee, funding, transfer between two portfolios) — the
+  `RepositoryTrades` extraction must not change the Android save flow; bank
+  funding from another currency must be rejected. The data screen also needs
+  device QA: a remapped category must move templates, budget allocations and
+  the saved account/budget filters like the Android merge, and an edited price
+  from the web must show in the app at once.
 - Budget detail and its filter need device checks that the mock cannot fake:
   January and a 12-month history (the two contract fixes), a split inside a
   budget counted once, and a budget created from the web with two categories and

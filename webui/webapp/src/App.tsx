@@ -12,6 +12,7 @@ import {
 import type { Locale } from './i18n'
 import { activateLocale, initialLocale, LOCALES } from './i18n'
 import type { Account, Meta, UiPreferences } from './types'
+import { topLevelAccounts } from './accountUi'
 import {
   ApiError,
   describeError,
@@ -30,6 +31,7 @@ import {
   uploadLocalPreferences,
 } from './uiPreferences'
 import { AccountEditor } from './components/AccountEditor'
+import { AppData } from './components/AppData'
 import { Budgets } from './components/Budgets'
 import { Dashboard } from './components/Dashboard'
 import { Files } from './components/Files'
@@ -39,11 +41,14 @@ import { AmountsProvider } from './privacy'
 import { Reports } from './components/Reports'
 import { Shell } from './components/Shell'
 import type { View } from './components/Shell'
+import { TradeEditor } from './components/TradeEditor'
+import { Trades } from './components/Trades'
 import { TransactionEditor } from './components/TransactionEditor'
 import { Transactions } from './components/Transactions'
 
 type Status = 'checking' | 'login' | 'ready'
 type EditorState = { mode: 'create' } | { mode: 'edit'; id: number }
+type TradeEditorState = { mode: 'create' } | { mode: 'edit'; id: number }
 
 const THEME_KEY = STORAGE_KEYS.theme
 const ACCOUNT_KEY = STORAGE_KEYS.accountId
@@ -72,10 +77,14 @@ export default function App({ initialLocale: initial }: { initialLocale: Locale 
   const [view, setViewState] = useState<View>(() => readView(window.location.search))
   const [theme, setTheme] = useState<'light' | 'dark'>(initialTheme)
   const [editor, setEditor] = useState<EditorState | null>(null)
+  const [tradeEditor, setTradeEditor] = useState<TradeEditorState | null>(null)
   const [accountEditor, setAccountEditor] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
   const [locale, setLocale] = useState<Locale>(() => initial ?? initialLocale())
   const wasReady = useRef(false)
+  // A newly created account may not be in the list until the refetch lands;
+  // the auto-selection effect must not bounce back to the first account.
+  const pendingAccount = useRef<number | null>(null)
 
   // Back/forward rehydrate the view from the URL; changing the view pushes an
   // entry so the browser's back button returns to the previous screen. The
@@ -141,6 +150,7 @@ export default function App({ initialLocale: initial }: { initialLocale: Locale 
 
   // Called before the early returns so the hook order never changes.
   const closeEditor = useHistoryPanel(editor !== null, () => setEditor(null))
+  const closeTradeEditor = useHistoryPanel(tradeEditor !== null, () => setTradeEditor(null))
 
   useEffect(() => {
     const onUnauthorized = () => {
@@ -163,7 +173,7 @@ export default function App({ initialLocale: initial }: { initialLocale: Locale 
         if (cancelled) return
         adoptUiPreferences(serverPreferences)
         setMeta(nextMeta)
-        setAccounts(nextAccounts)
+        setAccounts(topLevelAccounts(nextAccounts))
         setStatus('ready')
       })
       .catch((error: unknown) => {
@@ -189,8 +199,14 @@ export default function App({ initialLocale: initial }: { initialLocale: Locale 
 
   useEffect(() => {
     if (accounts.length === 0) return
-    if (accountId === null || !accounts.some((account) => account.id === accountId)) {
+    if (accountId === null) {
       setAccountId(accounts[0].id)
+    } else if (!accounts.some((account) => account.id === accountId)) {
+      // Wait for the refetch that will bring the account just created.
+      if (pendingAccount.current === accountId) return
+      setAccountId(accounts[0].id)
+    } else if (pendingAccount.current === accountId) {
+      pendingAccount.current = null
     }
   }, [accounts, accountId])
 
@@ -226,7 +242,7 @@ export default function App({ initialLocale: initial }: { initialLocale: Locale 
     ])
     adoptUiPreferences(serverPreferences)
     setMeta(nextMeta)
-    setAccounts(nextAccounts)
+    setAccounts(topLevelAccounts(nextAccounts))
     setAuthError(null)
     setStatus('ready')
   }
@@ -243,7 +259,9 @@ export default function App({ initialLocale: initial }: { initialLocale: Locale 
 
   function refreshData(message?: string) {
     void queryClient.invalidateQueries()
-    getAccounts().then(setAccounts).catch(() => {})
+    getAccounts()
+      .then((next) => setAccounts(topLevelAccounts(next)))
+      .catch(() => {})
     if (message) setToast(message)
   }
 
@@ -270,6 +288,10 @@ export default function App({ initialLocale: initial }: { initialLocale: Locale 
   }
 
   const account = accounts.find((candidate) => candidate.id === accountId) ?? accounts[0]
+  // A portfolio shows the operations screens: budgets need categories a
+  // portfolio does not track, so the overview takes their rail slot.
+  const isPortfolio = account?.portfolioRole === 'CONTAINER'
+  const activeView: View = isPortfolio && view === 'budgets' ? 'dashboard' : view
 
   return (
     <AmountsProvider>
@@ -288,7 +310,9 @@ export default function App({ initialLocale: initial }: { initialLocale: Locale 
         onLogout={handleLogout}
         meta={meta}
       >
-        {accounts.length === 0 ? (
+        {activeView === 'datos' ? (
+          <AppData />
+        ) : accounts.length === 0 ? (
           <div className="empty-page">
             <div className="card empty-card">
               <h2>{t`No accounts yet`}</h2>
@@ -296,22 +320,28 @@ export default function App({ initialLocale: initial }: { initialLocale: Locale 
             </div>
           </div>
         ) : account ? (
-          view === 'dashboard' ? (
+          activeView === 'dashboard' ? (
             <Dashboard
               account={account}
               onOpenTransactions={() => setView('transactions')}
               onNewTransaction={() => setEditor({ mode: 'create' })}
             />
-          ) : view === 'reports' ? (
+          ) : activeView === 'reports' ? (
             <Reports account={account} accounts={accounts} />
-          ) : view === 'files' ? (
+          ) : activeView === 'files' ? (
             <Files />
-          ) : view === 'budgets' ? (
+          ) : activeView === 'budgets' ? (
             <Budgets
               accounts={accounts}
               defaultAccountId={account?.id ?? accountId ?? accounts[0]?.id ?? 0}
               onDataChanged={refreshData}
               onNavigate={navigate}
+            />
+          ) : isPortfolio ? (
+            <Trades
+              account={account}
+              onNewTrade={() => setTradeEditor({ mode: 'create' })}
+              onEditTrade={(id) => setTradeEditor({ mode: 'edit', id })}
             />
           ) : (
             <Transactions
@@ -334,11 +364,15 @@ export default function App({ initialLocale: initial }: { initialLocale: Locale 
             ...new Set([...(meta ? [meta.homeCurrency] : []), ...accounts.map((item) => item.currency)]),
           ]}
           defaultCurrency={account?.currency ?? meta?.homeCurrency ?? 'EUR'}
+          homeCurrency={meta?.homeCurrency ?? 'EUR'}
           onClose={() => setAccountEditor(false)}
-          onSaved={(created) => {
+          onSaved={(created, kind) => {
             setAccountEditor(false)
+            pendingAccount.current = created.id
             setAccountId(created.id)
-            refreshData(t`Account created.`)
+            refreshData(
+              kind === 'portfolio' ? t`Portfolio created.` : t`Account created.`,
+            )
           }}
         />
       ) : null}
@@ -346,8 +380,12 @@ export default function App({ initialLocale: initial }: { initialLocale: Locale 
         <button
           type="button"
           className="fab"
-          aria-label={t`New transaction`}
-          onClick={() => setEditor({ mode: 'create' })}
+          aria-label={isPortfolio ? t`New operation` : t`New transaction`}
+          onClick={() =>
+            isPortfolio
+              ? setTradeEditor({ mode: 'create' })
+              : setEditor({ mode: 'create' })
+          }
         >
           <span aria-hidden="true">+</span>
         </button>
@@ -363,6 +401,20 @@ export default function App({ initialLocale: initial }: { initialLocale: Locale 
           onSaved={() => {
             closeEditor()
             refreshData(t`Transaction saved.`)
+          }}
+        />
+      ) : null}
+      {tradeEditor && account ? (
+        <TradeEditor
+          mode={tradeEditor.mode}
+          id={tradeEditor.mode === 'edit' ? tradeEditor.id : undefined}
+          account={account}
+          accounts={accounts}
+          meta={meta}
+          onClose={closeTradeEditor}
+          onSaved={() => {
+            closeTradeEditor()
+            refreshData(t`Operation saved.`)
           }}
         />
       ) : null}

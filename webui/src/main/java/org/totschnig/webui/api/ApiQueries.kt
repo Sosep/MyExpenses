@@ -6,6 +6,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import kotlin.math.abs
+import kotlin.math.roundToLong
 import org.totschnig.myexpenses.db2.Repository
 import org.totschnig.myexpenses.db2.entities.Transaction
 import org.totschnig.myexpenses.db2.getCurrencyUnitForAccount
@@ -28,14 +29,17 @@ import org.totschnig.myexpenses.provider.KEY_BUDGET_ROLLOVER_PREVIOUS
 import org.totschnig.myexpenses.provider.KEY_CATID
 import org.totschnig.myexpenses.provider.KEY_COLOR
 import org.totschnig.myexpenses.provider.KEY_COMMENT
+import org.totschnig.myexpenses.provider.KEY_COMMODITY
 import org.totschnig.myexpenses.provider.KEY_CR_STATUS
 import org.totschnig.myexpenses.provider.KEY_CURRENCY
 import org.totschnig.myexpenses.provider.KEY_CURRENT_BALANCE
 import org.totschnig.myexpenses.provider.KEY_DATE
 import org.totschnig.myexpenses.provider.KEY_DISPLAY_AMOUNT
+import org.totschnig.myexpenses.provider.KEY_DYNAMIC
 import org.totschnig.myexpenses.provider.KEY_EXCLUDE_FROM_TOTALS
 import org.totschnig.myexpenses.provider.KEY_FIRST_DATE
 import org.totschnig.myexpenses.provider.KEY_IS_NUMBERED
+import org.totschnig.myexpenses.provider.KEY_IS_PORTFOLIO
 import org.totschnig.myexpenses.provider.KEY_LABEL
 import org.totschnig.myexpenses.provider.KEY_LEVEL
 import org.totschnig.myexpenses.provider.KEY_METHODID
@@ -59,7 +63,12 @@ import org.totschnig.myexpenses.provider.KEY_TRANSACTIONID
 import org.totschnig.myexpenses.provider.KEY_TRANSFER_ACCOUNT
 import org.totschnig.myexpenses.provider.KEY_TYPE
 import org.totschnig.myexpenses.provider.KEY_TYPE_SORT_KEY
+import org.totschnig.myexpenses.provider.KEY_VALUE
 import org.totschnig.myexpenses.provider.KEY_YEAR
+import org.totschnig.myexpenses.provider.PORTFOLIO_ASSET
+import org.totschnig.myexpenses.provider.PORTFOLIO_CASH
+import org.totschnig.myexpenses.provider.PORTFOLIO_CONTAINER
+import org.totschnig.myexpenses.provider.PORTFOLIO_NONE
 import org.totschnig.myexpenses.provider.SPLIT_CATID
 import org.totschnig.myexpenses.provider.SplitStrategy
 import org.totschnig.myexpenses.provider.TABLE_TRANSACTIONS
@@ -69,6 +78,7 @@ import org.totschnig.myexpenses.provider.TransactionProvider.QUERY_PARAMETER_GRO
 import org.totschnig.myexpenses.provider.VIEW_EXTENDED
 import org.totschnig.myexpenses.provider.filter.Criterion
 import org.totschnig.myexpenses.provider.getBoolean
+import org.totschnig.myexpenses.provider.getDouble
 import org.totschnig.myexpenses.provider.getInt
 import org.totschnig.myexpenses.provider.getIntIfExists
 import org.totschnig.myexpenses.provider.getLong
@@ -79,6 +89,20 @@ import org.totschnig.myexpenses.provider.getString
 import org.totschnig.myexpenses.provider.getStringOrNull
 import org.totschnig.myexpenses.provider.useAndMapToList
 import org.totschnig.myexpenses.provider.withLimit
+
+/**
+ * One account row of the full-projection query, plus the raw fields the
+ * portfolio valuation needs.
+ */
+internal data class AccountRow(
+    val dto: AccountDto,
+    val currency: String,
+    val currentBalanceMinor: Long,
+    val parentId: Long?,
+    /** Raw `is_portfolio` value: PORTFOLIO_NONE / CONTAINER / ASSET / CASH. */
+    val portfolioRole: Int,
+    val dynamicExchangeRates: Boolean
+)
 
 internal fun Repository.queryAccounts(
     currencyContext: CurrencyContext,
@@ -95,11 +119,38 @@ internal fun Repository.queryAccounts(
     // write endpoints can answer 409 for a sealed debt instead of a 404.
     val selection = if (id == null) "$KEY_SEALED = 0" else "$KEY_ROWID = ?"
     val args = if (id == null) null else arrayOf(id.toString())
-    return contentResolver.query(uri, null, selection, args, null)
-        ?.useAndMapToList { cursor ->
-            val currency = cursor.getString(KEY_CURRENCY)
-            val rawType = cursor.getStringOrNull(KEY_ACCOUNT_TYPE_LABEL).orEmpty()
-            AccountDto(
+    val rows = queryAccountRows(uri, selection, args, currencyContext, fractionDigits)
+    // A single container still needs its children to compute the valuation;
+    // the children are not part of the response, only the input of the sum.
+    val valuationRows = if (id == null) {
+        rows
+    } else {
+        queryAccountRows(uri, "$KEY_SEALED = 0", null, currencyContext, fractionDigits)
+    }
+    val prices = queryLatestPrices()
+    return rows.map { row ->
+        val valuation = if (row.portfolioRole == PORTFOLIO_CONTAINER) {
+            containerValuation(row, valuationRows, prices)
+        } else {
+            null
+        }
+        row.dto.copy(valuationMinor = valuation)
+    }
+}
+
+private fun Repository.queryAccountRows(
+    uri: Uri,
+    selection: String?,
+    args: Array<String>?,
+    currencyContext: CurrencyContext,
+    fractionDigits: MutableMap<String, Int>
+): List<AccountRow> = contentResolver.query(uri, null, selection, args, null)
+    ?.useAndMapToList { cursor ->
+        val currency = cursor.getString(KEY_CURRENCY)
+        val rawType = cursor.getStringOrNull(KEY_ACCOUNT_TYPE_LABEL).orEmpty()
+        val portfolioRole = cursor.getIntIfExists(KEY_IS_PORTFOLIO) ?: PORTFOLIO_NONE
+        AccountRow(
+            dto = AccountDto(
                 id = cursor.getLong(KEY_ROWID),
                 label = cursor.getString(KEY_LABEL),
                 type = cursor.getStringOrNull(KEY_TYPE).orEmpty(),
@@ -118,9 +169,84 @@ internal fun Repository.queryAccounts(
                 excludeFromTotals = cursor.getBoolean(KEY_EXCLUDE_FROM_TOTALS),
                 sealed = cursor.getBoolean(KEY_SEALED),
                 color = cursor.getIntIfExists(KEY_COLOR) ?: 0,
-                parentId = cursor.getLongOrNull(KEY_PARENTID)
-            )
-        } ?: emptyList()
+                parentId = cursor.getLongOrNull(KEY_PARENTID),
+                portfolioRole = when (portfolioRole) {
+                    PORTFOLIO_CONTAINER -> "CONTAINER"
+                    PORTFOLIO_ASSET -> "ASSET"
+                    PORTFOLIO_CASH -> "CASH"
+                    else -> "NONE"
+                },
+                dynamicExchangeRates = cursor.getBoolean(KEY_DYNAMIC)
+            ),
+            currency = currency,
+            currentBalanceMinor = cursor.getLongIfExistsOr0(KEY_CURRENT_BALANCE),
+            parentId = cursor.getLongOrNull(KEY_PARENTID),
+            portfolioRole = portfolioRole,
+            dynamicExchangeRates = cursor.getBoolean(KEY_DYNAMIC)
+        )
+    } ?: emptyList()
+
+/**
+ * Latest stored price per (commodity, base currency) pair, the same mapping
+ * the app feeds into `FullAccount.enrich`: the raw table value relates minor
+ * units of the two currencies.
+ */
+internal fun Repository.queryLatestPrices(): Map<Pair<String, String>, Double> =
+    contentResolver.query(
+        TransactionProvider.LATEST_PRICES_URI,
+        arrayOf(KEY_COMMODITY, KEY_CURRENCY, KEY_VALUE),
+        null,
+        null,
+        null
+    )?.useAndMapToList { cursor ->
+        Triple(
+            cursor.getString(KEY_COMMODITY),
+            cursor.getString(KEY_CURRENCY),
+            cursor.getDouble(KEY_VALUE)
+        )
+    }?.associate { (commodity, base, value) -> (commodity to base) to value }
+        ?: emptyMap()
+
+/**
+ * Valuation of a portfolio container: its own balance plus every child
+ * converted at the latest price, exactly `FullAccount.effectiveBalance`.
+ * A child in the portfolio's currency counts 1:1; an asset child uses the
+ * latest stored price and falls back to 1.0 when none is stored, the same
+ * fallback the app applies to asset sub-accounts.
+ */
+internal fun containerValuation(
+    container: AccountRow,
+    rows: List<AccountRow>,
+    prices: Map<Pair<String, String>, Double>
+): Long {
+    val children = rows.filter { it.parentId == container.dto.id }
+    val childrenValuation = children.sumOf { child ->
+        (
+            child.currentBalanceMinor *
+                conversionRate(
+                    child.currency,
+                    child.dynamicExchangeRates,
+                    container.currency,
+                    prices
+                )
+            ).roundToLong()
+    }
+    return container.currentBalanceMinor + childrenValuation
+}
+
+internal fun conversionRate(
+    childCurrency: String,
+    childDynamic: Boolean,
+    parentCurrency: String,
+    prices: Map<Pair<String, String>, Double>
+): Double = when {
+    childCurrency == parentCurrency -> 1.0
+
+    // Asset sub-accounts are always dynamic; without a stored price the app
+    // falls back to an exchange rate of 1.0 (`FullAccount.enrich`).
+    childDynamic -> prices[childCurrency to parentCurrency] ?: 1.0
+
+    else -> 1.0
 }
 
 internal fun Repository.queryAccountTypes(): List<AccountTypeDto> =

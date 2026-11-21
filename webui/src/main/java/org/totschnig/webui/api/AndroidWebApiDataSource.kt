@@ -5,6 +5,7 @@ import android.content.ContentValues
 import android.net.Uri
 import com.google.gson.Gson
 import io.ktor.http.HttpStatusCode
+import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
@@ -12,54 +13,90 @@ import java.time.ZoneId
 import java.time.format.DateTimeParseException
 import java.util.Locale
 import kotlin.math.abs
+import kotlin.math.roundToLong
 import kotlinx.coroutines.flow.StateFlow
 import org.totschnig.myexpenses.db2.Repository
 import org.totschnig.myexpenses.db2.RepositoryTransaction
 import org.totschnig.myexpenses.db2.budgetAllocation
 import org.totschnig.myexpenses.db2.budgetCriteria
+import org.totschnig.myexpenses.db2.categoryUsage
 import org.totschnig.myexpenses.db2.createAccount
+import org.totschnig.myexpenses.db2.createPaymentMethod
 import org.totschnig.myexpenses.db2.createTransaction
 import org.totschnig.myexpenses.db2.deleteAccount
 import org.totschnig.myexpenses.db2.deleteBudget
+import org.totschnig.myexpenses.db2.deleteCategory
+import org.totschnig.myexpenses.db2.deleteCurrency
+import org.totschnig.myexpenses.db2.deleteMethod
+import org.totschnig.myexpenses.db2.deletePrice
 import org.totschnig.myexpenses.db2.entities.Transaction
+import org.totschnig.myexpenses.db2.getCategoryPath
 import org.totschnig.myexpenses.db2.getCurrencyUnitForAccount
+import org.totschnig.myexpenses.db2.insertCurrency
+import org.totschnig.myexpenses.db2.isCurrencyUsed
+import org.totschnig.myexpenses.db2.loadAccount
 import org.totschnig.myexpenses.db2.loadAccountType
 import org.totschnig.myexpenses.db2.loadBudget
 import org.totschnig.myexpenses.db2.loadBudgetProgress
+import org.totschnig.myexpenses.db2.loadTrade
+import org.totschnig.myexpenses.db2.loadTrades
 import org.totschnig.myexpenses.db2.loadTransaction
+import org.totschnig.myexpenses.db2.mergeCategoriesAndUpdateFilters
 import org.totschnig.myexpenses.db2.saveBudget
 import org.totschnig.myexpenses.db2.saveBudgetCriteria
+import org.totschnig.myexpenses.db2.saveCategory
+import org.totschnig.myexpenses.db2.savePrice
+import org.totschnig.myexpenses.db2.saveTrade
 import org.totschnig.myexpenses.db2.saveWebUiPreferences
+import org.totschnig.myexpenses.db2.storeExchangeRate
 import org.totschnig.myexpenses.db2.updateAccount
+import org.totschnig.myexpenses.db2.updateCurrency
+import org.totschnig.myexpenses.db2.updatePaymentMethod
 import org.totschnig.myexpenses.db2.updateTransaction
 import org.totschnig.myexpenses.db2.webUiPreferences
+import org.totschnig.myexpenses.model.ContribFeature
 import org.totschnig.myexpenses.model.CrStatus
 import org.totschnig.myexpenses.model.CurrencyContext
 import org.totschnig.myexpenses.model.Grouping
+import org.totschnig.myexpenses.model.Money
 import org.totschnig.myexpenses.model.generateUuid
+import org.totschnig.myexpenses.model.sort.SortDirection
 import org.totschnig.myexpenses.model2.Account as AccountModel
 import org.totschnig.myexpenses.preference.PrefHandler
 import org.totschnig.myexpenses.preference.PrefKey
 import org.totschnig.myexpenses.provider.BaseTransactionProvider.Companion.budgetAllocationUri
+import org.totschnig.myexpenses.provider.DataBaseAccount
+import org.totschnig.myexpenses.provider.DatabaseConstants.WHERE_NOT_SPLIT_PART
 import org.totschnig.myexpenses.provider.KEY_ACCOUNTID
 import org.totschnig.myexpenses.provider.KEY_BUDGET
 import org.totschnig.myexpenses.provider.KEY_BUDGETID
 import org.totschnig.myexpenses.provider.KEY_BUDGET_ROLLOVER_NEXT
 import org.totschnig.myexpenses.provider.KEY_BUDGET_ROLLOVER_PREVIOUS
 import org.totschnig.myexpenses.provider.KEY_CATID
+import org.totschnig.myexpenses.provider.KEY_CODE
 import org.totschnig.myexpenses.provider.KEY_COLOR
+import org.totschnig.myexpenses.provider.KEY_COMMODITY
+import org.totschnig.myexpenses.provider.KEY_COMMODITY_TYPE
 import org.totschnig.myexpenses.provider.KEY_CURRENCY
+import org.totschnig.myexpenses.provider.KEY_DATE
+import org.totschnig.myexpenses.provider.KEY_DYNAMIC
 import org.totschnig.myexpenses.provider.KEY_EXCLUDE_FROM_TOTALS
+import org.totschnig.myexpenses.provider.KEY_FRACTION_DIGITS
 import org.totschnig.myexpenses.provider.KEY_LABEL
 import org.totschnig.myexpenses.provider.KEY_ONE_TIME
 import org.totschnig.myexpenses.provider.KEY_OPENING_BALANCE
 import org.totschnig.myexpenses.provider.KEY_PARENTID
 import org.totschnig.myexpenses.provider.KEY_ROWID
 import org.totschnig.myexpenses.provider.KEY_SECOND_GROUP
+import org.totschnig.myexpenses.provider.KEY_SOURCE
+import org.totschnig.myexpenses.provider.KEY_SYMBOL
 import org.totschnig.myexpenses.provider.KEY_TITLE
 import org.totschnig.myexpenses.provider.KEY_TYPE
+import org.totschnig.myexpenses.provider.KEY_VALUE
 import org.totschnig.myexpenses.provider.KEY_YEAR
+import org.totschnig.myexpenses.provider.PORTFOLIO_CONTAINER
 import org.totschnig.myexpenses.provider.SPLIT_CATID
+import org.totschnig.myexpenses.provider.TransactionProvider
 import org.totschnig.myexpenses.provider.TransactionProvider.BUDGETS_URI
 import org.totschnig.myexpenses.provider.TransactionProvider.BUDGET_ALLOCATIONS_URI
 import org.totschnig.myexpenses.provider.TransactionProvider.CATEGORIES_URI
@@ -74,9 +111,25 @@ import org.totschnig.myexpenses.provider.filter.Criterion
 import org.totschnig.myexpenses.provider.filter.MethodCriterion
 import org.totschnig.myexpenses.provider.filter.PayeeCriterion
 import org.totschnig.myexpenses.provider.filter.TagCriterion
+import org.totschnig.myexpenses.provider.getDouble
+import org.totschnig.myexpenses.provider.getIntIfExists
+import org.totschnig.myexpenses.provider.getString
+import org.totschnig.myexpenses.provider.getStringOrNull
+import org.totschnig.myexpenses.provider.useAndMapToList
+import org.totschnig.myexpenses.provider.withLimit
+import org.totschnig.myexpenses.retrofit.ExchangeRateSource
+import org.totschnig.myexpenses.util.calculateRawExchangeRate
+import org.totschnig.myexpenses.util.calculateRealExchangeRate
 import org.totschnig.myexpenses.util.epoch2ZonedDateTime
+import org.totschnig.myexpenses.util.licence.LicenceHandler
 import org.totschnig.myexpenses.util.toEpoch
 import org.totschnig.myexpenses.viewmodel.data.Budget
+import org.totschnig.myexpenses.viewmodel.data.CostLeg
+import org.totschnig.myexpenses.viewmodel.data.FullAccount
+import org.totschnig.myexpenses.viewmodel.data.FundingSource
+import org.totschnig.myexpenses.viewmodel.data.Trade
+import org.totschnig.myexpenses.viewmodel.data.TradeIntent
+import org.totschnig.myexpenses.viewmodel.data.TradeType
 
 class AndroidWebApiDataSource(
     private val repository: Repository,
@@ -84,6 +137,7 @@ class AndroidWebApiDataSource(
     private val currencyContext: CurrencyContext,
     private val payeeMap: StateFlow<Map<Long, String>>,
     private val tagMap: StateFlow<Map<Long, String>>,
+    private val licenceHandler: LicenceHandler,
     private val appVersion: String
 ) : WebApiDataSource {
     private val gson = Gson()
@@ -254,6 +308,72 @@ class AndroidWebApiDataSource(
                 "validation_failed",
                 "Unknown currency",
                 mapOf("currency" to "Unknown")
+            )
+        }
+    }
+
+    /**
+     * The commodity type the app has registered for a code, or null when the
+     * code is not a currency of the app. Fiat rows keep the column empty, which
+     * the app reads as `CommodityType.FIAT`.
+     */
+    private fun currencyCommodityType(code: String): String? =
+        repository.contentResolver.query(
+            TransactionProvider.CURRENCIES_URI,
+            arrayOf(KEY_COMMODITY_TYPE),
+            "$KEY_CODE = ?",
+            arrayOf(code),
+            null
+        )?.use { cursor ->
+            if (cursor.moveToFirst()) {
+                cursor.getStringOrNull(KEY_COMMODITY_TYPE) ?: "FIAT"
+            } else {
+                null
+            }
+        }
+
+    /**
+     * A portfolio is an account whose currency is money: the app only offers
+     * fiat currencies in its setup dialog, and a commodity would have no
+     * meaningful exchange rate.
+     */
+    private fun requirePortfolioCurrency(currency: String?): String {
+        val code = requireCurrency(currency)
+        val commodityType = currencyCommodityType(code) ?: throw ApiException(
+            HttpStatusCode.UnprocessableEntity,
+            "validation_failed",
+            "Unknown currency",
+            mapOf("currency" to "Unknown")
+        )
+        if (!commodityType.equals("FIAT", ignoreCase = true)) {
+            throw ApiException(
+                HttpStatusCode.UnprocessableEntity,
+                "validation_failed",
+                "A portfolio needs a fiat currency",
+                mapOf("currency" to "Must be fiat")
+            )
+        }
+        return code
+    }
+
+    /**
+     * A buy, sell or transfer holds a real commodity: the app only lists the
+     * non fiat currencies registered in Settings > Data, and an unknown code
+     * would create a sub-account without a currency row.
+     */
+    private fun requireTradableAsset(code: String) {
+        val commodityType = currencyCommodityType(code) ?: throw ApiException(
+            HttpStatusCode.UnprocessableEntity,
+            "unknown_asset",
+            "The asset is not defined in the app",
+            mapOf("assetSymbol" to "Add it in App data first")
+        )
+        if (commodityType.equals("FIAT", ignoreCase = true)) {
+            throw ApiException(
+                HttpStatusCode.UnprocessableEntity,
+                "unknown_asset",
+                "A fiat currency cannot be held as an asset",
+                mapOf("assetSymbol" to "Must be a security, crypto or commodity")
             )
         }
     }
@@ -1663,6 +1783,1054 @@ class AndroidWebApiDataSource(
         )
     }
 
+    // ---- Portfolios -------------------------------------------------------
+
+    override suspend fun createPortfolio(body: PortfolioWriteDto): AccountDto {
+        val label = requirePortfolioLabel(body.label)
+        val currency = requirePortfolioCurrency(body.currency)
+        val type = repository.loadAccountType(parseAccountTypeId(body.type))
+        val dynamic = body.dynamicExchangeRates ?: false
+        val homeCurrency = currencyContext.homeCurrencyUnit
+        val isFx = currency != homeCurrency.code
+        val exchangeRate = portfolioExchangeRate(body.exchangeRate, currency, dynamic, isFx)
+        requirePortfolioLicence()
+        val account = AccountModel(
+            label = label,
+            currency = currency,
+            type = type,
+            color = body.color ?: AccountModel.DEFAULT_COLOR,
+            portfolioRole = PORTFOLIO_CONTAINER,
+            dynamicExchangeRates = dynamic,
+            exchangeRate = exchangeRate
+        )
+        val created = repository.createAccount(account)
+        if (isFx) {
+            // Same flow as the app's `createPortfolio`: the fixed rate is stored
+            // on the account so the provider can convert it.
+            repository.storeExchangeRate(created.id, exchangeRate, currency, homeCurrency.code)
+        }
+        return account(created.id) ?: throw ApiException(
+            HttpStatusCode.InternalServerError,
+            "save_failed",
+            "Could not create the portfolio"
+        )
+    }
+
+    override suspend fun updatePortfolio(id: Long, body: PortfolioWriteDto): AccountDto {
+        val existing = account(id) ?: throw ApiException(
+            HttpStatusCode.NotFound,
+            "portfolio_not_found",
+            "Portfolio not found"
+        )
+        if (existing.portfolioRole != "CONTAINER") {
+            throw ApiException(
+                HttpStatusCode.NotFound,
+                "portfolio_not_found",
+                "Portfolio not found"
+            )
+        }
+        val label = requirePortfolioLabel(body.label)
+        val currency = requirePortfolioCurrency(body.currency)
+        val dynamic = body.dynamicExchangeRates ?: false
+        val values = ContentValues().apply {
+            put(KEY_LABEL, label)
+            put(KEY_CURRENCY, currency)
+            put(KEY_COLOR, body.color ?: existing.color)
+            put(KEY_DYNAMIC, dynamic)
+            put(KEY_TYPE, parseAccountTypeId(body.type))
+        }
+        val homeCurrency = currencyContext.homeCurrencyUnit
+        val isFx = currency != homeCurrency.code
+        if (currency != existing.currency && accountHasTransactions(id)) {
+            throw ApiException(
+                HttpStatusCode.UnprocessableEntity,
+                "unsupported_account_change",
+                "The currency of a portfolio with transactions cannot change"
+            )
+        }
+        val exchangeRate = portfolioExchangeRate(body.exchangeRate, currency, dynamic, isFx)
+        repository.updateAccount(id) { putAll(values) }
+        if (isFx && !dynamic) {
+            repository.storeExchangeRate(id, exchangeRate, currency, homeCurrency.code)
+        }
+        return account(id)!!
+    }
+
+    override suspend fun portfolioAssets(id: Long): PortfolioAssetsDto {
+        val rows = repository.queryAccounts(currencyContext)
+        val container = rows.firstOrNull { it.id == id } ?: throw ApiException(
+            HttpStatusCode.NotFound,
+            "portfolio_not_found",
+            "Portfolio not found"
+        )
+        if (container.portfolioRole != "CONTAINER") {
+            throw ApiException(
+                HttpStatusCode.NotFound,
+                "portfolio_not_found",
+                "Portfolio not found"
+            )
+        }
+        val prices = repository.queryLatestPrices()
+        val children = rows.filter { it.parentId == id }
+        val cash = children.firstOrNull { it.portfolioRole == "CASH" }
+        val assets = children.filter { it.portfolioRole == "ASSET" }.map { child ->
+            val rate = conversionRate(
+                child.currency,
+                child.dynamicExchangeRates,
+                container.currency,
+                prices
+            )
+            AssetDto(
+                id = child.id,
+                label = child.label,
+                symbol = child.currency,
+                fractionDigits = child.fractionDigits,
+                quantityMinor = child.currentBalanceMinor,
+                priceMinor = prices[child.currency to container.currency],
+                valuationMinor = (child.currentBalanceMinor * rate).roundToLong()
+            )
+        }
+        return PortfolioAssetsDto(
+            portfolioId = id,
+            label = container.label,
+            currency = container.currency,
+            fractionDigits = container.fractionDigits,
+            cashAccountId = cash?.id,
+            cashMinor = cash?.currentBalanceMinor ?: 0,
+            valuationMinor = container.valuationMinor ?: container.currentBalanceMinor,
+            assets = assets
+        )
+    }
+
+    override fun tradePage(portfolioId: Long, limit: Int, offset: Int): PageDto<TradeDto> {
+        requirePortfolioContainer(portfolioId)
+        val uri = TRANSACTIONS_URI.buildUpon()
+            .appendQueryParameter(KEY_ACCOUNTID, portfolioId.toString())
+            .appendQueryParameter(TransactionProvider.QUERY_PARAMETER_SEARCH, "1")
+            .build()
+        // Same query shape as the app's `TradePagingSource`: the trade parents
+        // of the portfolio account, newest first, then the domain loader.
+        val total = repository.contentResolver.query(
+            uri,
+            arrayOf("count(*)"),
+            WHERE_NOT_SPLIT_PART,
+            null,
+            null
+        )?.use { if (it.moveToFirst()) it.getLong(0) else 0L } ?: 0L
+        val ids = repository.contentResolver.query(
+            uri.withLimit(limit, offset),
+            arrayOf(KEY_ROWID),
+            WHERE_NOT_SPLIT_PART,
+            null,
+            DataBaseAccount.sortOrder(KEY_DATE, SortDirection.DESC)
+        )?.use { cursor ->
+            buildList {
+                while (cursor.moveToNext()) add(cursor.getLong(0))
+            }
+        } ?: emptyList()
+        val withTime = prefHandler.getBoolean(PrefKey.TRANSACTION_WITH_TIME, false)
+        return PageDto(
+            items = repository.loadTrades(ids).map { it.toTradeDto(withTime) },
+            total = total,
+            limit = limit,
+            offset = offset
+        )
+    }
+
+    override fun trade(portfolioId: Long, transactionId: Long): TradeDto? {
+        requirePortfolioContainer(portfolioId)
+        val withTime = prefHandler.getBoolean(PrefKey.TRANSACTION_WITH_TIME, false)
+        return repository.loadTrade(transactionId)
+            ?.takeIf { it.portfolioId == portfolioId }
+            ?.let { it.toTradeDto(withTime) }
+    }
+
+    override suspend fun createTrade(portfolioId: Long, body: TradeWriteDto): TradeDto {
+        val account = requirePortfolioAccount(portfolioId)
+        val intent = body.toTradeIntent(account, tradeId = null)
+        val id = repository.saveTrade(account, intent)
+        return repository.loadTrade(id)?.toTradeDto(
+            prefHandler.getBoolean(PrefKey.TRANSACTION_WITH_TIME, false)
+        ) ?: throw ApiException(
+            HttpStatusCode.InternalServerError,
+            "save_failed",
+            "Could not load the saved operation"
+        )
+    }
+
+    override suspend fun updateTrade(
+        portfolioId: Long,
+        transactionId: Long,
+        body: TradeWriteDto
+    ): TradeDto {
+        val account = requirePortfolioAccount(portfolioId)
+        val existing = repository.loadTrade(transactionId)
+            ?.takeIf { it.portfolioId == portfolioId }
+            ?: throw ApiException(
+                HttpStatusCode.NotFound,
+                "trade_not_found",
+                "Trade not found"
+            )
+        val intent = body.toTradeIntent(account, tradeId = transactionId)
+        // The app's editor only offers the same kind when editing (buy/sell,
+        // deposit/withdraw, transfer); crossing it would leave the other leg
+        // of a transfer behind or reuse an unrelated split.
+        if (tradeKind(existing.type) != tradeKind(intent.type)) {
+            throw ApiException(
+                HttpStatusCode.UnprocessableEntity,
+                "unsupported_trade_change",
+                "Changing the kind of an operation is not supported",
+                mapOf("type" to "Must keep the current kind")
+            )
+        }
+        repository.saveTrade(account, intent)
+        return repository.loadTrade(transactionId)?.toTradeDto(
+            prefHandler.getBoolean(PrefKey.TRANSACTION_WITH_TIME, false)
+        ) ?: throw ApiException(
+            HttpStatusCode.InternalServerError,
+            "save_failed",
+            "Could not load the saved operation"
+        )
+    }
+
+    private fun requirePortfolioAccount(portfolioId: Long): FullAccount {
+        val account = try {
+            repository.loadAccount(portfolioId)
+        } catch (_: IllegalArgumentException) {
+            null
+        }
+        if (account == null || account.portfolioRole != PORTFOLIO_CONTAINER) {
+            throw ApiException(
+                HttpStatusCode.NotFound,
+                "portfolio_not_found",
+                "Portfolio not found"
+            )
+        }
+        val type = account.type ?: throw ApiException(
+            HttpStatusCode.UnprocessableEntity,
+            "portfolio_not_found",
+            "Portfolio not found"
+        )
+        return FullAccount(
+            id = account.id,
+            label = account.label,
+            currencyUnit = currencyContext[account.currency],
+            color = account.color,
+            type = type,
+            portfolioRole = account.portfolioRole,
+            parentId = account.parentId
+        )
+    }
+
+    private fun TradeWriteDto.toTradeIntent(
+        account: FullAccount,
+        tradeId: Long?
+    ): TradeIntent {
+        val tradeType = parseTradeType(type)
+        val date = this.date.requireDate("date")
+        val time = this.time?.takeIf { it.isNotBlank() }?.let { parseTime(it, "time") }
+        val dateTime = time?.let { LocalDateTime.of(date, it) } ?: date.atStartOfDay()
+        val portfolioCurrency = account.currencyUnit
+        val isCashMovement = tradeType is TradeType.CashMovement
+        val isTransfer = tradeType is TradeType.Transfer
+        val assetCode = when {
+            isCashMovement -> account.currency
+
+            else -> assetSymbol?.trim()?.uppercase(Locale.ROOT)?.takeIf { it.isNotBlank() }
+                ?: throw ApiException(
+                    HttpStatusCode.UnprocessableEntity,
+                    "validation_failed",
+                    "Missing assetSymbol",
+                    mapOf("assetSymbol" to "Required")
+                )
+        }
+        if (!isCashMovement) requireTradableAsset(assetCode)
+        val assetUnit = currencyContext[assetCode]
+        val quantityMajor = quantity.requireDecimal("quantity")
+        if (quantityMajor <= BigDecimal.ZERO) {
+            throw ApiException(
+                HttpStatusCode.UnprocessableEntity,
+                "validation_failed",
+                "Quantity must be positive",
+                mapOf("quantity" to "Must be positive")
+            )
+        }
+        val priceMajor = if (isCashMovement) {
+            BigDecimal.ONE
+        } else {
+            val value = price.requireDecimal("price")
+            if (value <= BigDecimal.ZERO) {
+                throw ApiException(
+                    HttpStatusCode.UnprocessableEntity,
+                    "validation_failed",
+                    "Price must be positive",
+                    mapOf("price" to "Must be positive")
+                )
+            }
+            value
+        }
+        val quantityMoney = Money.buildWithMajor(assetUnit, quantityMajor).getOrNull()
+            ?: throw ApiException(
+                HttpStatusCode.UnprocessableEntity,
+                "validation_failed",
+                "Invalid quantity",
+                mapOf("quantity" to "Out of range")
+            )
+        if (abs(quantityMoney.amountMinor) > MAX_AMOUNT_MINOR) {
+            throw ApiException(
+                HttpStatusCode.UnprocessableEntity,
+                "validation_failed",
+                "Invalid quantity",
+                mapOf("quantity" to "Out of range")
+            )
+        }
+        val principal = principalMinor?.let { minor ->
+            if (minor <= 0L) {
+                throw ApiException(
+                    HttpStatusCode.UnprocessableEntity,
+                    "validation_failed",
+                    "Principal must be positive",
+                    mapOf("principalMinor" to "Must be positive")
+                )
+            }
+            Money(portfolioCurrency, minor)
+        } ?: run {
+            val major = quantityMajor.multiply(priceMajor)
+            Money.buildWithMajor(portfolioCurrency, major).getOrNull()
+                ?: throw ApiException(
+                    HttpStatusCode.UnprocessableEntity,
+                    "validation_failed",
+                    "Invalid principal",
+                    mapOf("principalMinor" to "Out of range")
+                )
+        }
+        if (principal.amountMinor > MAX_AMOUNT_MINOR) {
+            throw ApiException(
+                HttpStatusCode.UnprocessableEntity,
+                "validation_failed",
+                "Invalid principal",
+                mapOf("principalMinor" to "Out of range")
+            )
+        }
+        val feeMinor = this.feeMinor ?: 0L
+        if (feeMinor < 0L || feeMinor > MAX_AMOUNT_MINOR) {
+            throw ApiException(
+                HttpStatusCode.UnprocessableEntity,
+                "validation_failed",
+                "Invalid fee",
+                mapOf("feeMinor" to "Out of range")
+            )
+        }
+        val funding = when {
+            isTransfer -> FundingSource.EXTERNAL
+
+            isCashMovement -> {
+                val source = (fundingSource ?: "ACCOUNT").uppercase(Locale.ROOT)
+                if (source == "PORTFOLIO") {
+                    throw ApiException(
+                        HttpStatusCode.UnprocessableEntity,
+                        "validation_failed",
+                        "Deposits and withdrawals cannot be funded by the portfolio cash",
+                        mapOf("fundingSource" to "Must be ACCOUNT or EXTERNAL")
+                    )
+                }
+                parseFundingSource(source)
+            }
+
+            else -> parseFundingSource(fundingSource ?: "PORTFOLIO")
+        }
+        val peerAccountId = when {
+            isTransfer -> {
+                val peer = this.peerAccountId.requirePositive("peerAccountId")
+                if (peer == account.id) {
+                    throw ApiException(
+                        HttpStatusCode.UnprocessableEntity,
+                        "validation_failed",
+                        "The target portfolio must differ from the source",
+                        mapOf("peerAccountId" to "Must differ from the portfolio")
+                    )
+                }
+                val target = try {
+                    repository.loadAccount(peer)
+                } catch (_: IllegalArgumentException) {
+                    null
+                }
+                if (target == null || target.portfolioRole != PORTFOLIO_CONTAINER) {
+                    throw ApiException(
+                        HttpStatusCode.UnprocessableEntity,
+                        "invalid_peerAccountId",
+                        "The target portfolio does not exist",
+                        mapOf("peerAccountId" to "Does not exist")
+                    )
+                }
+                peer
+            }
+
+            funding == FundingSource.ACCOUNT -> {
+                val fundingAccountId = this.peerAccountId.requirePositive("peerAccountId")
+                validateAccount(fundingAccountId)
+                val fundingCurrency = repository.getCurrencyUnitForAccount(fundingAccountId)
+                if (fundingCurrency?.code != portfolioCurrency.code) {
+                    throw ApiException(
+                        HttpStatusCode.UnprocessableEntity,
+                        "validation_failed",
+                        "The funding account must use the portfolio currency",
+                        mapOf("peerAccountId" to "Must use ${portfolioCurrency.code}")
+                    )
+                }
+                fundingAccountId
+            }
+
+            else -> null
+        }
+        val additionalCosts = if (feeMinor > 0L) {
+            val category = feeCategoryId?.takeIf { it > 0 }?.let { categoryId ->
+                validateOptional("feeCategoryId", "category", categoryId, CATEGORIES_URI)
+                org.totschnig.myexpenses.viewmodel.data.CategoryRef(
+                    categoryId,
+                    repository.getCategoryPath(categoryId).orEmpty()
+                )
+            }
+            listOf(CostLeg(Money(portfolioCurrency, feeMinor), category))
+        } else {
+            emptyList()
+        }
+        return TradeIntent(
+            targetAsset = assetUnit,
+            type = tradeType,
+            date = dateTime,
+            quantity = quantityMoney,
+            price = priceMajor,
+            principal = principal,
+            fundingSource = if (isTransfer) FundingSource.EXTERNAL else funding,
+            peerAccountId = peerAccountId,
+            additionalCosts = additionalCosts,
+            comment = comment.orEmpty(),
+            tradeId = tradeId
+        )
+    }
+
+    private fun parseTradeType(raw: String?): TradeType = when (
+        raw?.trim()?.uppercase(Locale.ROOT)
+    ) {
+        "BUY" -> TradeType.AssetTrade.BUY
+
+        "SELL" -> TradeType.AssetTrade.SELL
+
+        "DEPOSIT" -> TradeType.CashMovement.DEPOSIT
+
+        "WITHDRAW" -> TradeType.CashMovement.WITHDRAW
+
+        "TRANSFER_IN" -> TradeType.Transfer(true)
+
+        "TRANSFER_OUT" -> TradeType.Transfer(false)
+
+        else -> throw ApiException(
+            HttpStatusCode.UnprocessableEntity,
+            "validation_failed",
+            "type must be BUY, SELL, DEPOSIT, WITHDRAW, TRANSFER_IN or TRANSFER_OUT",
+            mapOf("type" to "Invalid value")
+        )
+    }
+
+    private fun tradeKind(type: TradeType): String = when (type) {
+        is TradeType.AssetTrade -> "ASSET"
+        is TradeType.CashMovement -> "CASH"
+        is TradeType.Transfer -> "TRANSFER"
+    }
+
+    private fun parseFundingSource(raw: String): FundingSource = when (raw) {
+        "PORTFOLIO" -> FundingSource.PORTFOLIO
+
+        "ACCOUNT" -> FundingSource.ACCOUNT
+
+        "EXTERNAL" -> FundingSource.EXTERNAL
+
+        else -> throw ApiException(
+            HttpStatusCode.UnprocessableEntity,
+            "validation_failed",
+            "fundingSource must be PORTFOLIO, ACCOUNT or EXTERNAL",
+            mapOf("fundingSource" to "Invalid value")
+        )
+    }
+
+    // ---- App data (settings > data) ---------------------------------------
+
+    override suspend fun createCategory(body: CategoryWriteDto): CategoryDto {
+        val label = requireLabel(body.label, "label")
+        val parentId = body.parentId?.takeIf { it > 0 }
+        val parentType = parentId?.let { parent ->
+            repository.queryCategories().firstOrNull { it.id == parent }?.type
+                ?: throw ApiException(
+                    HttpStatusCode.UnprocessableEntity,
+                    "invalid_parentId",
+                    "The parent category does not exist",
+                    mapOf("parentId" to "Does not exist")
+                )
+        }
+        val type = parentType ?: body.type?.takeIf { it in setOf(1, 2, 3) } ?: 1
+        val created = repository.saveCategory(
+            org.totschnig.myexpenses.model2.Category(
+                parentId = parentId,
+                label = label,
+                color = body.color,
+                type = type.toByte()
+            )
+        ) ?: throw ApiException(
+            HttpStatusCode.InternalServerError,
+            "save_failed",
+            "Could not create the category"
+        )
+        return repository.queryCategories().firstOrNull { it.id == created }
+            ?: throw ApiException(
+                HttpStatusCode.InternalServerError,
+                "save_failed",
+                "Could not load the saved category"
+            )
+    }
+
+    override suspend fun updateCategory(id: Long, body: CategoryWriteDto): CategoryDto {
+        val existing = repository.queryCategories().firstOrNull { it.id == id }
+            ?: throw ApiException(
+                HttpStatusCode.NotFound,
+                "category_not_found",
+                "Category not found"
+            )
+        val label = requireLabel(body.label, "label")
+        if (body.parentId != null && body.parentId != existing.parentId) {
+            throw ApiException(
+                HttpStatusCode.UnprocessableEntity,
+                "unsupported_move",
+                "Moving a category is not supported from the web"
+            )
+        }
+        repository.saveCategory(
+            org.totschnig.myexpenses.model2.Category(
+                id = id,
+                parentId = existing.parentId,
+                label = label,
+                color = body.color ?: existing.color,
+                // Same range as the app: 1 expense, 2 income, 3 neutral. A
+                // sub-category takes its parent's type, as in `saveCategory`.
+                type = (body.type?.takeIf { it in 1..3 } ?: existing.type ?: 1).toByte()
+            )
+        )
+        return repository.queryCategories().firstOrNull { it.id == id }
+            ?: throw ApiException(
+                HttpStatusCode.InternalServerError,
+                "save_failed",
+                "Could not load the saved category"
+            )
+    }
+
+    override suspend fun deleteCategory(id: Long, remapTo: Long?): Boolean {
+        val categories = repository.queryCategories()
+        val category = categories.firstOrNull { it.id == id } ?: return false
+        val branch = categoryBranchIds(listOf(id), categories.associate { it.id to it.parentId })
+        // The provider expands the tree from the selected root, like the app.
+        val usage = repository.categoryUsage(listOf(id))
+        if (!usage.isUsed && remapTo == null) {
+            return repository.deleteCategory(id)
+        }
+        val target = remapTo ?: throw ApiException(
+            HttpStatusCode.Conflict,
+            "category_in_use",
+            "The category is in use; choose a category to move its data to"
+        )
+        if (target in branch) {
+            throw ApiException(
+                HttpStatusCode.UnprocessableEntity,
+                "invalid_remapTo",
+                "Data cannot be moved into the category being deleted",
+                mapOf("remapTo" to "Must be outside the deleted branch")
+            )
+        }
+        val targetCategory = categories.firstOrNull { it.id == target }
+            ?: throw ApiException(
+                HttpStatusCode.UnprocessableEntity,
+                "invalid_remapTo",
+                "The target category does not exist",
+                mapOf("remapTo" to "Does not exist")
+            )
+        // The provider's merge requires one type across the branch; the app
+        // never moves expense movements into an income category.
+        if (targetCategory.type != category.type ||
+            categories.any { it.id in branch && it.type != category.type }
+        ) {
+            throw ApiException(
+                HttpStatusCode.UnprocessableEntity,
+                "invalid_remapTo",
+                "Source and target categories must have the same type",
+                mapOf("remapTo" to "Must have the same type")
+            )
+        }
+        repository.mergeCategoriesAndUpdateFilters(branch, target)
+        return true
+    }
+
+    override suspend fun createMethod(body: MethodWriteDto): MethodDto {
+        val label = requireLabel(body.label, "label")
+        val created = repository.createPaymentMethod(
+            null,
+            org.totschnig.myexpenses.model2.PaymentMethod(
+                label = label,
+                type = body.type ?: 0,
+                isNumbered = body.isNumbered ?: false,
+                accountTypes = parseAccountTypes(body.accountTypes)
+            )
+        )
+        return repository.queryMethods().firstOrNull { it.id == created.id }
+            ?: throw ApiException(
+                HttpStatusCode.InternalServerError,
+                "save_failed",
+                "Could not load the saved method"
+            )
+    }
+
+    override suspend fun updateMethod(id: Long, body: MethodWriteDto): MethodDto {
+        val existing = repository.queryMethods().firstOrNull { it.id == id }
+            ?: throw ApiException(
+                HttpStatusCode.NotFound,
+                "method_not_found",
+                "Method not found"
+            )
+        val label = requireLabel(body.label, "label")
+        repository.updatePaymentMethod(
+            repository.context,
+            org.totschnig.myexpenses.model2.PaymentMethod(
+                id = id,
+                label = label,
+                type = body.type ?: existing.type,
+                isNumbered = body.isNumbered ?: existing.isNumbered,
+                // An explicit empty list clears the restriction; an absent
+                // field keeps the stored one.
+                accountTypes = body.accountTypes?.let { parseAccountTypes(it) }
+                    ?: existing.accountTypes.mapNotNull { it.toLongOrNull() }
+            )
+        )
+        return repository.queryMethods().firstOrNull { it.id == id }
+            ?: throw ApiException(
+                HttpStatusCode.InternalServerError,
+                "save_failed",
+                "Could not load the saved method"
+            )
+    }
+
+    override suspend fun deleteMethod(id: Long): Boolean {
+        if (repository.queryMethods().none { it.id == id }) return false
+        repository.deleteMethod(id)
+        return true
+    }
+
+    override suspend fun createTag(body: TagWriteDto): TagDto {
+        val label = requireLabel(body.label, "label")
+        val uri = repository.contentResolver.insert(
+            TAGS_URI,
+            ContentValues().apply { put(KEY_LABEL, label) }
+        ) ?: throw ApiException(
+            HttpStatusCode.InternalServerError,
+            "save_failed",
+            "Could not create the tag"
+        )
+        val id = android.content.ContentUris.parseId(uri)
+        return repository.queryTags().firstOrNull { it.id == id }
+            ?: throw ApiException(
+                HttpStatusCode.InternalServerError,
+                "save_failed",
+                "Could not load the saved tag"
+            )
+    }
+
+    override suspend fun updateTag(id: Long, body: TagWriteDto): TagDto {
+        if (repository.queryTags().none { it.id == id }) {
+            throw ApiException(
+                HttpStatusCode.NotFound,
+                "tag_not_found",
+                "Tag not found"
+            )
+        }
+        val label = requireLabel(body.label, "label")
+        repository.contentResolver.update(
+            android.content.ContentUris.withAppendedId(TAGS_URI, id),
+            ContentValues().apply { put(KEY_LABEL, label) },
+            null,
+            null
+        )
+        return repository.queryTags().firstOrNull { it.id == id }
+            ?: throw ApiException(
+                HttpStatusCode.InternalServerError,
+                "save_failed",
+                "Could not load the saved tag"
+            )
+    }
+
+    override suspend fun deleteTag(id: Long): Boolean {
+        if (repository.queryTags().none { it.id == id }) return false
+        repository.contentResolver.delete(
+            android.content.ContentUris.withAppendedId(TAGS_URI, id),
+            null,
+            null
+        )
+        return true
+    }
+
+    override suspend fun currencies(): List<CurrencyDto> {
+        val prices = repository.queryLatestPrices()
+        return repository.contentResolver.query(
+            TransactionProvider.CURRENCIES_URI,
+            arrayOf(
+                KEY_CODE,
+                KEY_LABEL,
+                KEY_SYMBOL,
+                KEY_FRACTION_DIGITS,
+                KEY_COMMODITY_TYPE
+            ),
+            null,
+            null,
+            KEY_CODE
+        )?.useAndMapToList { cursor ->
+            val code = cursor.getString(KEY_CODE)
+            CurrencyDto(
+                code = code,
+                label = cursor.getStringOrNull(KEY_LABEL),
+                symbol = cursor.getStringOrNull(KEY_SYMBOL) ?: code,
+                fractionDigits = cursor.getIntIfExists(KEY_FRACTION_DIGITS) ?: 2,
+                commodityType = cursor.getStringOrNull(KEY_COMMODITY_TYPE) ?: "FIAT",
+                priceMinor = prices[code to currencyContext.homeCurrencyString]
+            )
+        } ?: emptyList()
+    }
+
+    override suspend fun createCurrency(body: CurrencyWriteDto): CurrencyDto {
+        val code = body.code?.trim()?.uppercase(Locale.ROOT)?.takeIf { it.isNotBlank() }
+            ?: throw ApiException(
+                HttpStatusCode.UnprocessableEntity,
+                "validation_failed",
+                "Missing code",
+                mapOf("code" to "Required")
+            )
+        if (currencies().any { it.code == code }) {
+            throw ApiException(
+                HttpStatusCode.Conflict,
+                "currency_already_defined",
+                "The currency is already defined"
+            )
+        }
+        repository.insertCurrency(
+            code = code,
+            symbol = body.symbol?.trim()?.takeIf { it.isNotBlank() } ?: code,
+            label = body.label?.trim()?.takeIf { it.isNotBlank() },
+            fractionDigits = requireFractionDigits(body.fractionDigits),
+            type = parseCommodityType(body.commodityType)
+        ) ?: throw ApiException(
+            HttpStatusCode.InternalServerError,
+            "save_failed",
+            "Could not create the currency"
+        )
+        currencyContext.invalidate(code)
+        val created = currencies().firstOrNull { it.code == code }
+        if (created == null) {
+            throw ApiException(
+                HttpStatusCode.InternalServerError,
+                "save_failed",
+                "Could not load the saved currency"
+            )
+        }
+        return created
+    }
+
+    override suspend fun updateCurrency(code: String, body: CurrencyWriteDto): CurrencyDto {
+        val existing = currencies().firstOrNull { it.code == code }
+            ?: throw ApiException(
+                HttpStatusCode.NotFound,
+                "currency_not_found",
+                "Currency not found"
+            )
+        val id = repository.contentResolver.query(
+            TransactionProvider.CURRENCIES_URI,
+            arrayOf(KEY_ROWID),
+            "$KEY_CODE = ?",
+            arrayOf(code),
+            null
+        )?.use { if (it.moveToFirst()) it.getLong(0) else 0L } ?: 0L
+        if (id == 0L) {
+            throw ApiException(
+                HttpStatusCode.NotFound,
+                "currency_not_found",
+                "Currency not found"
+            )
+        }
+        repository.updateCurrency(
+            id = id,
+            code = code,
+            symbol = body.symbol?.trim()?.takeIf { it.isNotBlank() } ?: existing.symbol,
+            label = body.label?.trim() ?: existing.label,
+            fractionDigits = body.fractionDigits ?: existing.fractionDigits,
+            oldCode = code,
+            commodityType = body.commodityType?.let { parseCommodityType(it) },
+            oldFractionDigits = existing.fractionDigits
+        )
+        currencyContext.invalidate(code)
+        return currencies().firstOrNull { it.code == code }
+            ?: throw ApiException(
+                HttpStatusCode.InternalServerError,
+                "save_failed",
+                "Could not load the saved currency"
+            )
+    }
+
+    override suspend fun deleteCurrency(code: String): Boolean {
+        if (currencies().none { it.code == code }) return false
+        if (repository.isCurrencyUsed(code)) {
+            throw ApiException(
+                HttpStatusCode.Conflict,
+                "currency_still_used",
+                "The currency is still used by an account or a transaction"
+            )
+        }
+        repository.deleteCurrency(code)
+        return true
+    }
+
+    override suspend fun prices(commodity: String): List<PriceDto> {
+        val base = currencyContext.homeCurrencyUnit
+        val commodityUnit = try {
+            currencyContext[commodity]
+        } catch (_: Exception) {
+            throw ApiException(
+                HttpStatusCode.UnprocessableEntity,
+                "validation_failed",
+                "Unknown commodity",
+                mapOf("commodity" to "Does not exist")
+            )
+        }
+        return repository.contentResolver.query(
+            TransactionProvider.PRICES_URI.buildUpon()
+                .appendQueryParameter(KEY_COMMODITY, commodity)
+                .appendQueryParameter(KEY_CURRENCY, base.code)
+                .build(),
+            arrayOf(KEY_DATE, KEY_SOURCE, KEY_VALUE),
+            null,
+            null,
+            "$KEY_DATE DESC"
+        )?.useAndMapToList { cursor ->
+            PriceDto(
+                commodity = commodity,
+                currency = base.code,
+                date = cursor.getString(KEY_DATE),
+                value = calculateRealExchangeRate(
+                    cursor.getDouble(KEY_VALUE),
+                    commodityUnit,
+                    base
+                ).toDouble(),
+                // The table stores the app's lowercase source names; the API
+                // exposes the uppercase token the client reasons about.
+                source = cursor.getStringOrNull(KEY_SOURCE)?.uppercase(Locale.ROOT)
+                    ?: "USER"
+            )
+        } ?: emptyList()
+    }
+
+    override suspend fun savePrice(body: PriceWriteDto): PriceDto {
+        val commodity = body.commodity?.trim()?.uppercase(Locale.ROOT)
+            ?.takeIf { it.isNotBlank() } ?: throw ApiException(
+            HttpStatusCode.UnprocessableEntity,
+            "validation_failed",
+            "Missing commodity",
+            mapOf("commodity" to "Required")
+        )
+        val date = body.date.requireDate("date")
+        val value = body.value ?: throw ApiException(
+            HttpStatusCode.UnprocessableEntity,
+            "validation_failed",
+            "Missing value",
+            mapOf("value" to "Required")
+        )
+        if (value <= 0.0) {
+            throw ApiException(
+                HttpStatusCode.UnprocessableEntity,
+                "validation_failed",
+                "The price must be above zero",
+                mapOf("value" to "Must be positive")
+            )
+        }
+        val commodityUnit = try {
+            currencyContext[commodity]
+        } catch (_: Exception) {
+            throw ApiException(
+                HttpStatusCode.UnprocessableEntity,
+                "validation_failed",
+                "Unknown commodity",
+                mapOf("commodity" to "Does not exist")
+            )
+        }
+        val base = currencyContext.homeCurrencyUnit
+        // A manual price is unique per commodity and date: replace the entry.
+        repository.deletePrice(date, ExchangeRateSource.User, base.code, commodity)
+        repository.savePrice(
+            base,
+            commodityUnit,
+            date,
+            ExchangeRateSource.User,
+            BigDecimal.valueOf(value)
+        )
+        return PriceDto(
+            commodity = commodity,
+            currency = base.code,
+            date = date.toString(),
+            value = value,
+            source = "USER"
+        )
+    }
+
+    override suspend fun deletePrice(commodity: String, date: String): Boolean {
+        val parsed = date.requireDate("date")
+        val base = currencyContext.homeCurrencyUnit
+        val deleted = repository.deletePrice(
+            parsed,
+            ExchangeRateSource.User,
+            base.code,
+            commodity.uppercase(Locale.ROOT)
+        )
+        return deleted > 0
+    }
+
+    private fun requireLabel(value: String?, field: String): String {
+        val label = value?.trim().orEmpty()
+        if (label.isBlank()) {
+            throw ApiException(
+                HttpStatusCode.UnprocessableEntity,
+                "validation_failed",
+                "Missing $field",
+                mapOf(field to "Required")
+            )
+        }
+        return label
+    }
+
+    private fun requireFractionDigits(value: Int?): Int {
+        if (value == null || value < 0 || value > 8) {
+            throw ApiException(
+                HttpStatusCode.UnprocessableEntity,
+                "validation_failed",
+                "fractionDigits must be between 0 and 8",
+                mapOf("fractionDigits" to "Out of range")
+            )
+        }
+        return value
+    }
+
+    private fun parseCommodityType(
+        raw: String?
+    ): org.totschnig.myexpenses.model.CommodityType = try {
+        org.totschnig.myexpenses.model.CommodityType.valueOf(
+            (raw ?: "FIAT").trim().uppercase(Locale.ROOT)
+        )
+    } catch (_: IllegalArgumentException) {
+        throw ApiException(
+            HttpStatusCode.UnprocessableEntity,
+            "validation_failed",
+            "commodityType must be FIAT, SECURITY, CRYPTO or COMMODITY",
+            mapOf("commodityType" to "Invalid value")
+        )
+    }
+
+    private fun parseAccountTypes(values: List<String>?): List<Long> =
+        values.orEmpty().mapNotNull { it.trim().toLongOrNull()?.takeIf { id -> id > 0 } }
+
+    private fun requirePortfolioContainer(portfolioId: Long) {
+        val container = try {
+            repository.loadAccount(portfolioId)
+        } catch (_: IllegalArgumentException) {
+            null
+        }
+        if (container == null || container.portfolioRole != PORTFOLIO_CONTAINER) {
+            throw ApiException(
+                HttpStatusCode.NotFound,
+                "portfolio_not_found",
+                "Portfolio not found"
+            )
+        }
+    }
+
+    private fun requirePortfolioLicence() {
+        val existing = repository.queryAccounts(currencyContext).count {
+            it.portfolioRole == "CONTAINER"
+        }
+        if (existing > 0 && !licenceHandler.hasAccessTo(ContribFeature.PORTFOLIO)) {
+            throw ApiException(
+                HttpStatusCode.Conflict,
+                "portfolio_limit_reached",
+                "A licence is needed for more than one portfolio"
+            )
+        }
+    }
+
+    private fun requirePortfolioLabel(label: String?): String {
+        val value = label?.trim().orEmpty()
+        if (value.isBlank()) {
+            throw ApiException(
+                HttpStatusCode.UnprocessableEntity,
+                "validation_failed",
+                "Missing label",
+                mapOf("label" to "Required")
+            )
+        }
+        return value
+    }
+
+    /**
+     * The rate travels as a real (major to major) rate and is stored raw, like
+     * the app's `PortfolioSetupDialog` does before calling `createPortfolio`.
+     */
+    private fun portfolioExchangeRate(
+        exchangeRate: Double?,
+        currency: String,
+        dynamic: Boolean,
+        isFx: Boolean
+    ): Double {
+        if (!isFx || dynamic) return 1.0
+        if (exchangeRate == null || exchangeRate <= 0.0) {
+            throw ApiException(
+                HttpStatusCode.UnprocessableEntity,
+                "missing_exchangeRate",
+                "A fixed exchange rate above zero is required for a foreign currency",
+                mapOf("exchangeRate" to "Required")
+            )
+        }
+        return calculateRawExchangeRate(
+            BigDecimal.valueOf(exchangeRate),
+            currencyContext[currency],
+            currencyContext.homeCurrencyUnit
+        )
+    }
+
+    private fun Trade.toTradeDto(withTime: Boolean) = TradeDto(
+        id = id,
+        type = when (val tradeType = type) {
+            TradeType.AssetTrade.BUY -> "BUY"
+            TradeType.AssetTrade.SELL -> "SELL"
+            TradeType.CashMovement.DEPOSIT -> "DEPOSIT"
+            TradeType.CashMovement.WITHDRAW -> "WITHDRAW"
+            is TradeType.Transfer -> if (tradeType.isIncoming) "TRANSFER_IN" else "TRANSFER_OUT"
+        },
+        accountId = portfolioId,
+        currency = currency,
+        date = date.toLocalDate().toString(),
+        time = if (withTime) date.toLocalTime().toString() else null,
+        comment = comment.orEmpty(),
+        assetSymbol = assetSymbol,
+        fractionDigits = runCatching {
+            currencyContext[assetSymbol].fractionDigits
+        }.getOrDefault(2),
+        quantityMinor = quantity.amountMinor,
+        price = if (quantity.amountMinor == 0L) null else price.toPlainString(),
+        principalMinor = principal.amountMinor,
+        feeMinor = fee?.takeIf { it.amountMinor != 0L }?.amountMinor,
+        peerAccountId = peerAccount?.first,
+        peerAccountLabel = peerAccount?.second
+    )
+
     private fun validateAccount(accountId: Long) {
         if (repository.getCurrencyUnitForAccount(accountId) == null) {
             throw ApiException(
@@ -1756,6 +2924,25 @@ private fun budgetDuration(
         )
     }
     return start to end
+}
+
+private fun String?.requireDecimal(field: String): BigDecimal {
+    val value = this?.trim()?.replace(',', '.')?.takeIf { it.isNotBlank() } ?: throw ApiException(
+        HttpStatusCode.UnprocessableEntity,
+        "validation_failed",
+        "Missing $field",
+        mapOf(field to "Required")
+    )
+    return try {
+        BigDecimal(value)
+    } catch (_: NumberFormatException) {
+        throw ApiException(
+            HttpStatusCode.UnprocessableEntity,
+            "validation_failed",
+            "Invalid $field",
+            mapOf(field to "Expected a decimal number")
+        )
+    }
 }
 
 private fun Long?.requirePositive(field: String): Long {

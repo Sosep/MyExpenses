@@ -6,7 +6,7 @@ import { useCallback, useEffect, useRef } from 'react'
  * reload keeps the user where they were. Screen filters are written by each
  * screen and preserved here.
  */
-export const VIEWS = ['dashboard', 'transactions', 'reports', 'budgets', 'files'] as const
+export const VIEWS = ['dashboard', 'transactions', 'reports', 'budgets', 'files', 'datos'] as const
 export type View = (typeof VIEWS)[number]
 
 export function readView(search: string): View {
@@ -51,25 +51,35 @@ export function searchWithAccount(search: string, accountId: number | null): str
   return query ? `?${query}` : ''
 }
 
+let nextPanelId = 0
+
 /**
  * Keeps a panel and the history in sync: opening pushes an entry, the browser's
  * back closes the panel, and closing it from the UI pops that entry so the two
- * never drift. Returns the close handler the panel must use.
+ * never drift. Returns the close handler the panel must use. Stacked panels get
+ * their own id so only the popped one closes.
  */
 export function useHistoryPanel(open: boolean, close: () => void): () => void {
   const closeRef = useRef(close)
   closeRef.current = close
+  const idRef = useRef<number | null>(null)
+  if (idRef.current === null) idRef.current = nextPanelId++
+  const id = idRef.current
 
   useEffect(() => {
     if (!open) return
-    window.history.pushState({ panel: true }, '', window.location.href)
-    const onPopState = () => closeRef.current()
+    // Every panel owns its entry. A stacked panel (the operation editor over
+    // its detail) must not close when the other entry is popped.
+    window.history.pushState({ panel: true, panelId: id }, '', window.location.href)
+    const onPopState = () => {
+      if (window.history.state?.panelId !== id) closeRef.current()
+    }
     window.addEventListener('popstate', onPopState)
     return () => window.removeEventListener('popstate', onPopState)
-  }, [open])
+  }, [open, id])
 
   return useCallback(() => {
-    if (window.history.state?.panel) window.history.back()
+    if (window.history.state?.panelId === id) window.history.back()
     else closeRef.current()
-  }, [])
+  }, [id])
 }

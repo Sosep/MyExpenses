@@ -35,6 +35,9 @@ const accounts: Account[] = [
     sealed: false,
     color: 0,
     parentId: null,
+    portfolioRole: 'NONE',
+    dynamicExchangeRates: false,
+    valuationMinor: null,
   },
 ]
 
