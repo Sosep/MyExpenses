@@ -3,12 +3,18 @@
   <ManuallySuppressedIssues/>
   <CurrentIssues>
     <ID>CyclomaticComplexMethod:AndroidWebApiDataSource.kt:AndroidWebApiDataSource$override suspend fun updateBudgetAllocations: List&lt;BudgetAllocationDto&gt;</ID>
+    <ID>CyclomaticComplexMethod:AndroidWebApiDataSource.kt:AndroidWebApiDataSource$private fun TradeWriteDto.toTradeIntent: TradeIntent</ID>
     <ID>CyclomaticComplexMethod:AndroidWebApiDataSource.kt:private fun Criterion.toBudgetCriteria: BudgetCriteriaDto?</ID>
+    <ID>CyclomaticComplexMethod:ApiQueries.kt:private fun costBasis: CostBasis</ID>
     <ID>CyclomaticComplexMethod:ApiQueries.kt:private fun transactionSelection: Pair&lt;String, Array&lt;String&gt;?&gt;</ID>
     <ID>CyclomaticComplexMethod:ApiRoutes.kt:ApiRoutes$fun register</ID>
     <ID>CyclomaticComplexMethod:ApiRoutes.kt:private fun ApplicationCall.transactionFilters: TransactionQueryFilters</ID>
+    <ID>CyclomaticComplexMethod:UiPreferencesValidation.kt:fun UiPreferencesDto.mergedWith</ID>
+    <ID>CyclomaticComplexMethod:UiPreferencesValidation.kt:fun UiPreferencesDto.validationFields: Map&lt;String, String&gt;</ID>
     <ID>CyclomaticComplexMethod:WebInputService.kt:WebInputService$override fun onStartCommand: Int</ID>
     <ID>LargeClass:AndroidWebApiDataSource.kt:AndroidWebApiDataSource : WebApiDataSource</ID>
+    <ID>LargeClass:ApiRoutes.kt:ApiRoutes</ID>
+    <ID>LargeClass:ApiRoutesTest.kt:ApiRoutesTest</ID>
     <ID>LongMethod:AndroidWebApiDataSource.kt:AndroidWebApiDataSource$override fun createSplit: TransactionDto</ID>
     <ID>LongMethod:AndroidWebApiDataSource.kt:AndroidWebApiDataSource$override fun updateSplit: TransactionDto</ID>
     <ID>LongMethod:AndroidWebApiDataSource.kt:AndroidWebApiDataSource$override fun updateTransfer: TransactionDto</ID>
@@ -16,13 +22,22 @@
     <ID>LongMethod:AndroidWebApiDataSource.kt:AndroidWebApiDataSource$override suspend fun createBudget: BudgetDto</ID>
     <ID>LongMethod:AndroidWebApiDataSource.kt:AndroidWebApiDataSource$override suspend fun updateBudget: BudgetDto</ID>
     <ID>LongMethod:AndroidWebApiDataSource.kt:AndroidWebApiDataSource$override suspend fun updateBudgetAllocations: List&lt;BudgetAllocationDto&gt;</ID>
+    <ID>LongMethod:AndroidWebApiDataSource.kt:AndroidWebApiDataSource$private fun TradeWriteDto.toTradeIntent: TradeIntent</ID>
+    <ID>LongMethod:ApiQueries.kt:internal fun Repository.queryBalanceSeries: BalanceSeriesDto</ID>
+    <ID>LongMethod:ApiQueries.kt:internal fun Repository.queryInvestments: InvestmentsDto</ID>
+    <ID>LongMethod:ApiQueries.kt:internal fun Repository.queryReportSummary: ReportSummaryDto</ID>
     <ID>LongMethod:ApiQueries.kt:private fun transactionSelection: Pair&lt;String, Array&lt;String&gt;?&gt;</ID>
     <ID>LongMethod:ApiRoutes.kt:ApiRoutes$fun register</ID>
     <ID>LongMethod:ApiRoutes.kt:private fun ApplicationCall.transactionFilters: TransactionQueryFilters</ID>
     <ID>LongMethod:WebInputService.kt:WebInputService$override fun onStartCommand: Int</ID>
     <ID>MagicNumber:AndroidWebApiDataSource.kt:AndroidWebApiDataSource$12</ID>
+    <ID>MagicNumber:AndroidWebApiDataSource.kt:AndroidWebApiDataSource$3</ID>
+    <ID>MagicNumber:AndroidWebApiDataSource.kt:AndroidWebApiDataSource$8</ID>
     <ID>MagicNumber:ApiQueries.kt:3</ID>
     <ID>MagicNumber:ApiRoutes.kt:200</ID>
+    <ID>MagicNumber:BalanceMath.kt:30</ID>
+    <ID>MagicNumber:BalanceMath.kt:31L</ID>
+    <ID>MagicNumber:BalanceMath.kt:70</ID>
     <ID>MagicNumber:Certificates.kt:0x0500</ID>
     <ID>MagicNumber:Certificates.kt:0x10</ID>
     <ID>MagicNumber:Certificates.kt:0x17</ID>
@@ -46,6 +61,7 @@
     <ID>MagicNumber:SessionStore.kt:SessionStore$7</ID>
     <ID>MagicNumber:WebInputService.kt:WebInputService$9000</ID>
     <ID>MagicNumber:WebInputService.kt:WebInputService$9050</ID>
+    <ID>MatchingDeclarationName:ApiQueries.kt:AccountRow</ID>
     <ID>MatchingDeclarationName:SessionAuth.kt:SessionAuthenticationProvider : AuthenticationProvider</ID>
     <ID>MaxLineLength:ApiRoutesTest.kt:ApiRoutesTest$"""{"accountId":1,"amountMinor":-10000,"date":"2026-11-17","parts":[{"amountMinor":-10000,"categoryId":2}]}"""</ID>
     <ID>MaxLineLength:ApiRoutesTest.kt:ApiRoutesTest$"""{"accountId":1,"amountMinor":-10000,"date":"2026-11-17","parts":[{"amountMinor":-9000,"categoryId":2}]}"""</ID>
@@ -55,18 +71,31 @@
     <ID>ReturnCount:AndroidWebApiDataSource.kt:AndroidWebApiDataSource$override suspend fun budgetBreakdown: BudgetBreakdownDto?</ID>
     <ID>ReturnCount:AndroidWebApiDataSource.kt:AndroidWebApiDataSource$override suspend fun budgetHistory: List&lt;BudgetHistoryPointDto&gt;</ID>
     <ID>ReturnCount:AndroidWebApiDataSource.kt:AndroidWebApiDataSource$override suspend fun budgetProgress: BudgetProgressDto?</ID>
+    <ID>ReturnCount:AndroidWebApiDataSource.kt:AndroidWebApiDataSource$override suspend fun deleteCategory: Boolean</ID>
     <ID>ReturnCount:AndroidWebApiDataSource.kt:private fun Criterion.toBudgetCriteria: BudgetCriteriaDto?</ID>
     <ID>ReturnCount:ApiMappers.kt:private fun Transaction.categoryRef: CategoryRef?</ID>
+    <ID>ReturnCount:ApiQueries.kt:fun typeOf: Int?</ID>
     <ID>ReturnCount:ApiRoutes.kt:private suspend fun ApplicationCall.budgetPeriod: Pair&lt;Int, Int&gt;?</ID>
+    <ID>ReturnCount:BalanceMath.kt:fun bucketDates: List&lt;LocalDate&gt;</ID>
+    <ID>ReturnCount:BalanceMath.kt:fun resolveBalanceGranularity: Pair&lt;BalanceGranularity, Boolean&gt;</ID>
     <ID>ReturnCount:LoginThrottle.kt:LoginThrottle$@Synchronized fun retryAfterSeconds: Long?</ID>
     <ID>ReturnCount:SessionStore.kt:SessionStore$fun isValid: Boolean</ID>
     <ID>ReturnCount:WebInputService.kt:WebInputService$override fun onStartCommand: Int</ID>
     <ID>SwallowedException:AndroidWebApiDataSource.kt:AndroidWebApiDataSource$cause: Exception</ID>
     <ID>ThrowsCount:AndroidWebApiDataSource.kt:AndroidWebApiDataSource$override fun updateSplit: TransactionDto</ID>
     <ID>ThrowsCount:AndroidWebApiDataSource.kt:AndroidWebApiDataSource$override suspend fun createBudget: BudgetDto</ID>
+    <ID>ThrowsCount:AndroidWebApiDataSource.kt:AndroidWebApiDataSource$override suspend fun createCategory: CategoryDto</ID>
+    <ID>ThrowsCount:AndroidWebApiDataSource.kt:AndroidWebApiDataSource$override suspend fun createCurrency: CurrencyDto</ID>
+    <ID>ThrowsCount:AndroidWebApiDataSource.kt:AndroidWebApiDataSource$override suspend fun deleteCategory: Boolean</ID>
+    <ID>ThrowsCount:AndroidWebApiDataSource.kt:AndroidWebApiDataSource$override suspend fun savePrice: PriceDto</ID>
     <ID>ThrowsCount:AndroidWebApiDataSource.kt:AndroidWebApiDataSource$override suspend fun updateAccount: AccountDto</ID>
     <ID>ThrowsCount:AndroidWebApiDataSource.kt:AndroidWebApiDataSource$override suspend fun updateBudget: BudgetDto</ID>
     <ID>ThrowsCount:AndroidWebApiDataSource.kt:AndroidWebApiDataSource$override suspend fun updateBudgetAllocations: List&lt;BudgetAllocationDto&gt;</ID>
+    <ID>ThrowsCount:AndroidWebApiDataSource.kt:AndroidWebApiDataSource$override suspend fun updateCategory: CategoryDto</ID>
+    <ID>ThrowsCount:AndroidWebApiDataSource.kt:AndroidWebApiDataSource$override suspend fun updateCurrency: CurrencyDto</ID>
+    <ID>ThrowsCount:AndroidWebApiDataSource.kt:AndroidWebApiDataSource$override suspend fun updatePortfolio: AccountDto</ID>
+    <ID>ThrowsCount:AndroidWebApiDataSource.kt:AndroidWebApiDataSource$override suspend fun updateTrade: TradeDto</ID>
+    <ID>ThrowsCount:AndroidWebApiDataSource.kt:AndroidWebApiDataSource$private fun TradeWriteDto.toTradeIntent: TradeIntent</ID>
     <ID>ThrowsCount:AndroidWebApiDataSource.kt:private fun Long?.requireNonZero: Long</ID>
     <ID>ThrowsCount:AndroidWebApiDataSource.kt:private fun budgetDuration: Pair&lt;LocalDate?, LocalDate?&gt;</ID>
     <ID>ThrowsCount:ApiRoutes.kt:ApiRoutes$fun register</ID>

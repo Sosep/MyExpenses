@@ -995,6 +995,86 @@ class ApiRoutesTest {
                 client.delete("/api/v1/currencies/XXX").status
             )
         }
+
+    @Test
+    fun `summary carries the refunds`() = testApplication {
+        installRoutes(FakeDataSource())
+        val body = client.get(
+            "/api/v1/reports/summary?accountId=1&from=2026-11-01&to=2026-11-30"
+        ).bodyAsText()
+        assertTrue(body.contains("\"returnsMinor\":5000"))
+    }
+
+    @Test
+    fun `balance series validates its parameters`() = testApplication {
+        installRoutes(FakeDataSource())
+        val missing = client.get("/api/v1/reports/balance-series?from=2026-11-01")
+        assertEquals(HttpStatusCode.BadRequest, missing.status)
+        assertTrue(missing.bodyAsText().contains("missing_accountIds"))
+
+        val granularity = client.get(
+            "/api/v1/reports/balance-series?accountIds=1&from=2026-11-01&to=2026-11-30" +
+                "&granularity=hour"
+        )
+        assertEquals(HttpStatusCode.BadRequest, granularity.status)
+        assertTrue(granularity.bodyAsText().contains("invalid_granularity"))
+
+        val unknown = client.get(
+            "/api/v1/reports/balance-series?accountIds=99&from=2026-11-01&to=2026-11-30"
+        )
+        assertEquals(HttpStatusCode.NotFound, unknown.status)
+        assertTrue(unknown.bodyAsText().contains("account_not_found"))
+    }
+
+    @Test
+    fun `balance series returns the selected accounts and the used granularity`() =
+        testApplication {
+            val fake = FakeDataSource()
+            installRoutes(fake)
+            val response = client.get(
+                "/api/v1/reports/balance-series?accountIds=1,7&from=2026-11-01" +
+                    "&to=2026-11-30&granularity=week"
+            )
+            assertEquals(HttpStatusCode.OK, response.status)
+            assertEquals(listOf(1L, 7L), fake.lastBalanceIds)
+            assertEquals("week", fake.lastGranularity)
+            val body = response.bodyAsText()
+            assertTrue(body.contains("\"granularity\":\"WEEK\""))
+            assertTrue(body.contains("\"startBalanceMinor\""))
+        }
+
+    @Test
+    fun `breakdown expands a category to its branch`() = testApplication {
+        val fake = FakeDataSource()
+        installRoutes(fake)
+        val response = client.get(
+            "/api/v1/reports/breakdown?accountId=1&by=category&type=expense" +
+                "&from=2026-11-01&to=2026-11-30&categoryId=1"
+        )
+        assertEquals(HttpStatusCode.OK, response.status)
+        assertEquals(listOf(1L, 2L, 3L), fake.lastBreakdownCategories)
+    }
+
+    @Test
+    fun `grouped accepts all accounts`() = testApplication {
+        val fake = FakeDataSource()
+        installRoutes(fake)
+        val response = client.get(
+            "/api/v1/reports/grouped?accountId=all&grouping=MONTH" +
+                "&from=2026-11-01&to=2026-11-30"
+        )
+        assertEquals(HttpStatusCode.OK, response.status)
+        assertEquals(0L, fake.lastGroupAccountId)
+    }
+
+    @Test
+    fun `investments are returned`() = testApplication {
+        installRoutes(FakeDataSource())
+        val body = client.get("/api/v1/reports/investments").bodyAsText()
+        assertTrue(body.contains("\"lastValuationDate\":\"2026-11-01\""))
+        assertTrue(body.contains("\"costKnown\":true"))
+        assertTrue(body.contains("\"symbol\":\"AAPL\""))
+    }
 }
 
 private fun ApplicationTestBuilder.installRoutes(dataSource: WebApiDataSource) {
@@ -1032,6 +1112,10 @@ private class FakeDataSource : WebApiDataSource {
     var lastQueryFilters: TransactionQueryFilters = TransactionQueryFilters()
     var lastGroupType: String? = null
     var lastGroupFilters: TransactionQueryFilters = TransactionQueryFilters()
+    var lastGroupAccountId: Long? = null
+    var lastBreakdownCategories: List<Long> = emptyList()
+    var lastBalanceIds: List<Long> = emptyList()
+    var lastGranularity: String? = null
     var uiPreferences = UiPreferencesDto()
     private val sample = sampleTransaction()
 
@@ -1079,7 +1163,11 @@ private class FakeDataSource : WebApiDataSource {
         samplePortfolio()
     )
 
-    override fun categories() = emptyList<CategoryDto>()
+    override fun categories() = listOf(
+        CategoryDto(1, null, "Food", 0, null, 1),
+        CategoryDto(2, 1, "Groceries", 1, null, null),
+        CategoryDto(3, 1, "Restaurants", 1, null, null)
+    )
 
     override fun payees() = emptyList<PayeeDto>()
 
@@ -1123,6 +1211,7 @@ private class FakeDataSource : WebApiDataSource {
     ) = listOf(GroupDto(2026, 10, 1000, -500, 0, firstDate = "2026-11-03")).also {
         lastGroupType = type
         lastGroupFilters = filters
+        lastGroupAccountId = accountId
     }
 
     override suspend fun budgetAllocations(id: Long, year: Int?, second: Int?) =
@@ -1226,7 +1315,8 @@ private class FakeDataSource : WebApiDataSource {
             incomeMinor = 300000,
             expensesMinor = -180000,
             netMinor = 120000,
-            count = 12
+            count = 12,
+            returnsMinor = 5000
         )
 
     override fun breakdown(
@@ -1234,7 +1324,8 @@ private class FakeDataSource : WebApiDataSource {
         by: String,
         type: String,
         from: LocalDate,
-        to: LocalDate
+        to: LocalDate,
+        categoryIds: List<Long>
     ) = BreakdownDto(
         accountId = accountId,
         from = from.toString(),
@@ -1247,6 +1338,95 @@ private class FakeDataSource : WebApiDataSource {
         items = listOf(
             BreakdownItemDto(1, "Food > Groceries", 120000, 8, 66.67),
             BreakdownItemDto(2, "Transport", 60000, 4, 33.33)
+        )
+    ).also { lastBreakdownCategories = categoryIds }
+
+    override fun balanceSeries(
+        accounts: List<AccountDto>,
+        from: LocalDate,
+        to: LocalDate,
+        granularity: String
+    ): BalanceSeriesDto {
+        lastBalanceIds = accounts.map { it.id }
+        lastGranularity = granularity
+        return BalanceSeriesDto(
+            from = from.toString(),
+            to = to.toString(),
+            granularity = if (granularity == "auto") "DAY" else granularity.uppercase(),
+            mixedCurrencies = false,
+            currencies = listOf(CurrencyRefDto("EUR", 2)),
+            accounts = accounts.map { account ->
+                BalanceAccountSeriesDto(
+                    id = account.id,
+                    label = account.label,
+                    color = account.color,
+                    currency = account.currency,
+                    fractionDigits = account.fractionDigits,
+                    startBalanceMinor = 100000,
+                    firstTransactionDate = "2026-11-03",
+                    periodIncomeMinor = 300000,
+                    periodExpensesMinor = -180000,
+                    series = listOf(
+                        BalancePointDto(from.toString(), 100000),
+                        BalancePointDto(to.toString(), 420000)
+                    )
+                )
+            },
+            totals = listOf(
+                CurrencyBalanceTotalDto(
+                    currency = "EUR",
+                    fractionDigits = 2,
+                    startBalanceMinor = 100000L * accounts.size,
+                    periodIncomeMinor = 300000L * accounts.size,
+                    periodExpensesMinor = -180000L * accounts.size,
+                    series = listOf(
+                        BalancePointDto(from.toString(), 100000L * accounts.size),
+                        BalancePointDto(to.toString(), 420000L * accounts.size)
+                    )
+                )
+            )
+        )
+    }
+
+    override fun investments() = InvestmentsDto(
+        homeCurrency = "EUR",
+        portfolios = listOf(
+            InvestmentPortfolioDto(
+                id = 7,
+                label = "Investments",
+                currency = "EUR",
+                fractionDigits = 2,
+                cashMinor = 50000,
+                valuationMinor = 375000,
+                costKnown = true,
+                costMinor = 300000,
+                resultMinor = 75000,
+                lastValuationDate = "2026-11-01",
+                assets = listOf(
+                    InvestmentAssetDto(
+                        symbol = "AAPL",
+                        label = "Apple",
+                        fractionDigits = 4,
+                        quantityMinor = 10000,
+                        priceMinor = 2.5,
+                        lastPriceDate = "2026-11-01",
+                        valuationMinor = 250000,
+                        costKnown = true,
+                        costMinor = 200000,
+                        resultMinor = 50000
+                    )
+                )
+            )
+        ),
+        totals = listOf(
+            CurrencyInvestmentTotalDto(
+                currency = "EUR",
+                fractionDigits = 2,
+                valuationMinor = 375000,
+                costKnown = true,
+                costMinor = 300000,
+                resultMinor = 75000
+            )
         )
     )
 

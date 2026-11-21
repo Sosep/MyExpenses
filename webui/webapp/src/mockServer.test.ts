@@ -209,3 +209,93 @@ describe('mock category rules', () => {
     expect(await response.json()).toMatchObject({ error: 'invalid_remapTo' })
   })
 })
+
+describe('mock reports', () => {
+  const now = new Date()
+  const from = `${now.getFullYear()}-01-01`
+  const to = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+
+  it('draws a dense balance series with a total per currency', async () => {
+    const response = await api(
+      `/api/v1/reports/balance-series?accountIds=1,2&from=${from}&to=${to}&granularity=month`,
+    )
+    expect(response.status).toBe(200)
+    const body = await response.json()
+    expect(body.granularity).toBe('MONTH')
+    expect(body.accounts).toHaveLength(2)
+    expect(body.accounts[0].series.length).toBeGreaterThan(1)
+    expect(body.accounts[0].series.at(-1).date).toBe(to)
+    expect(body.totals).toHaveLength(1)
+    expect(body.totals[0].currency).toBe('EUR')
+    expect(body.mixedCurrencies).toBe(false)
+  })
+
+  it('separates currencies instead of converting them', async () => {
+    const response = await api(
+      `/api/v1/reports/balance-series?accountIds=1&from=${from}&to=${to}&mixedCurrency=1`,
+    )
+    const body = await response.json()
+    expect(body.mixedCurrencies).toBe(true)
+    expect(body.totals.map((entry: { currency: string }) => entry.currency)).toEqual([
+      'EUR',
+      'USD',
+    ])
+  })
+
+  it('rejects an unknown account or granularity', async () => {
+    const missing = await api(
+      `/api/v1/reports/balance-series?accountIds=99&from=${from}&to=${to}`,
+    )
+    expect(missing.status).toBe(404)
+    expect(await missing.json()).toMatchObject({ error: 'account_not_found' })
+    const granularity = await api(
+      `/api/v1/reports/balance-series?accountIds=1&from=${from}&to=${to}&granularity=hour`,
+    )
+    expect(granularity.status).toBe(400)
+    expect(await granularity.json()).toMatchObject({ error: 'invalid_granularity' })
+  })
+
+  it('returns the investments with the last manual valuation', async () => {
+    const body = await (await api('/api/v1/reports/investments')).json()
+    expect(body.portfolios.length).toBeGreaterThan(0)
+    expect(body.portfolios[0].lastValuationDate).toBeTruthy()
+    expect(body.portfolios[0].assets.length).toBeGreaterThan(0)
+    expect(body.totals[0].currency).toBe('EUR')
+  })
+
+  it('can hide the result when a cost is unknown', async () => {
+    const body = await (await api('/api/v1/reports/investments?costUnknown=1')).json()
+    const asset = body.portfolios[0].assets[0]
+    expect(asset.costKnown).toBe(false)
+    expect(asset.costMinor).toBeNull()
+    expect(asset.resultMinor).toBeNull()
+  })
+
+  it('returns refunds separately from income', async () => {
+    const body = await (
+      await api(`/api/v1/reports/summary?accountId=all&from=${from}&to=${to}`)
+    ).json()
+    expect(body).toHaveProperty('returnsMinor')
+    expect(body.returnsMinor).toBeGreaterThanOrEqual(0)
+  })
+
+  it('filters a category breakdown by its branch', async () => {
+    const body = await (
+      await api(
+        `/api/v1/reports/breakdown?accountId=all&by=category&type=expense&from=${from}&to=${to}&categoryId=1`,
+      )
+    ).json()
+    expect(body.items.length).toBeGreaterThan(0)
+    expect(
+      body.items.every((item: { id: number }) => [1, 2, 5, 9].includes(item.id)),
+    ).toBe(true)
+  })
+
+  it('aggregates grouped flows for all accounts', async () => {
+    const response = await api(
+      `/api/v1/reports/grouped?accountId=all&grouping=MONTH&from=${from}&to=${to}`,
+    )
+    expect(response.status).toBe(200)
+    expect((await response.json()).length).toBeGreaterThan(0)
+  })
+})

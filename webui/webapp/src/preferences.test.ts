@@ -13,13 +13,17 @@ beforeEach(() => {
 })
 
 describe('remembered screen preferences', () => {
-  it('starts from the current month and the report defaults', () => {
-    expect(readReportPreferences('2026-11')).toEqual({
-      month: '2026-11',
-      range: 'month',
-      breakdown: 'category',
-      type: 'expense',
-      allAccounts: false,
+  it('starts from the supplied range and the report defaults', () => {
+    expect(readReportPreferences('2026-11-01', '2026-11-30')).toEqual({
+      tab: 'summary',
+      period: 'month',
+      customFrom: '2026-11-01',
+      customTo: '2026-11-30',
+      compare: 'none',
+      balanceRange: 'y1',
+      balanceFrom: '2026-11-01',
+      balanceTo: '2026-11-30',
+      accountIds: [],
     })
     expect(readBudgetMonth('2026-11')).toBe('2026-11')
     expect(readTransactionType()).toBe('all')
@@ -27,19 +31,27 @@ describe('remembered screen preferences', () => {
 
   it('round-trips the report controls', () => {
     rememberReportPreferences({
-      month: '2025-03',
-      range: 'year',
-      breakdown: 'payee',
-      type: 'both',
-      allAccounts: true,
+      tab: 'expenses',
+      period: 'quarter',
+      customFrom: '2025-01-01',
+      customTo: '2025-03-31',
+      compare: 'previous',
+      balanceRange: 'm3',
+      balanceFrom: '2025-02-01',
+      balanceTo: '2025-04-30',
+      accountIds: [1, 2],
     })
 
-    expect(readReportPreferences('2026-11')).toEqual({
-      month: '2025-03',
-      range: 'year',
-      breakdown: 'payee',
-      type: 'both',
-      allAccounts: true,
+    expect(readReportPreferences('2026-11-01', '2026-11-30')).toEqual({
+      tab: 'expenses',
+      period: 'quarter',
+      customFrom: '2025-01-01',
+      customTo: '2025-03-31',
+      compare: 'previous',
+      balanceRange: 'm3',
+      balanceFrom: '2025-02-01',
+      balanceTo: '2025-04-30',
+      accountIds: [1, 2],
     })
   })
 
@@ -52,33 +64,43 @@ describe('remembered screen preferences', () => {
   })
 
   it('ignores values a previous version or the user left behind', () => {
-    localStorage.setItem('myexpenses.reportMonth', '2026-13')
-    localStorage.setItem('myexpenses.reportRange', 'decade')
-    localStorage.setItem('myexpenses.reportBreakdown', 'account')
-    localStorage.setItem('myexpenses.reportType', 'transfer')
+    localStorage.setItem('myexpenses.reportTab', 'unknown')
+    localStorage.setItem('myexpenses.reportPeriod', 'decade')
+    localStorage.setItem('myexpenses.reportCustomFrom', '2026-13-01')
+    localStorage.setItem('myexpenses.reportCompare', 'yearAgo')
+    localStorage.setItem('myexpenses.reportBalanceRange', 'm2')
+    localStorage.setItem('myexpenses.reportAccountIds', '1,-2,x')
     localStorage.setItem('myexpenses.budgetMonth', 'next-month')
     localStorage.setItem('myexpenses.transactionType', 'transfers')
 
-    expect(readReportPreferences('2026-11')).toEqual({
-      month: '2026-11',
-      range: 'month',
-      breakdown: 'category',
-      type: 'expense',
-      allAccounts: false,
+    expect(readReportPreferences('2026-11-01', '2026-11-30')).toEqual({
+      tab: 'summary',
+      period: 'month',
+      customFrom: '2026-11-01',
+      customTo: '2026-11-30',
+      compare: 'none',
+      balanceRange: 'y1',
+      balanceFrom: '2026-11-01',
+      balanceTo: '2026-11-30',
+      accountIds: [1],
     })
     expect(readBudgetMonth('2026-11')).toBe('2026-11')
     expect(readTransactionType()).toBe('all')
   })
 
-  it('keeps a falsy all-accounts flag as false', () => {
+  it('keeps an empty account selection when every id is invalid', () => {
     rememberReportPreferences({
-      month: '2026-11',
-      range: 'last3',
-      breakdown: 'tag',
-      type: 'income',
-      allAccounts: false,
+      tab: 'summary',
+      period: 'month',
+      customFrom: '2026-11-01',
+      customTo: '2026-11-30',
+      compare: 'none',
+      balanceRange: 'y1',
+      balanceFrom: '2026-11-01',
+      balanceTo: '2026-11-30',
+      accountIds: [],
     })
 
-    expect(readReportPreferences('2020-01').allAccounts).toBe(false)
+    expect(readReportPreferences('2020-01-01', '2020-01-31').accountIds).toEqual([])
   })
 })

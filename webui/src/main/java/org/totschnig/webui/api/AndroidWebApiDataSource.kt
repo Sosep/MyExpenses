@@ -524,30 +524,34 @@ class AndroidWebApiDataSource(
         type: String?,
         filters: TransactionQueryFilters
     ): List<GroupDto> {
-        repository.getCurrencyUnitForAccount(accountId)
-            ?: throw ApiException(
-                HttpStatusCode.NotFound,
-                "account_not_found",
-                "Account not found"
+        // Same branch expansion as the transaction list, so the period sums
+        // cover exactly the rows the filter shows.
+        val expanded = if (filters.categoryIds.isEmpty()) {
+            filters
+        } else {
+            filters.copy(
+                categoryIds = categoryBranchIds(
+                    filters.categoryIds,
+                    repository.queryCategories().associate { it.id to it.parentId }
+                )
             )
+        }
+        if (accountId != 0L) {
+            repository.getCurrencyUnitForAccount(accountId)
+                ?: throw ApiException(
+                    HttpStatusCode.NotFound,
+                    "account_not_found",
+                    "Account not found"
+                )
+        }
         return repository.queryTransactionGroups(
-            accountId = accountId,
+            // Null lets the provider build its home-currency total.
+            accountId = accountId.takeIf { it != 0L },
             grouping = Grouping.valueOf(grouping),
             from = from,
             to = to,
             type = type,
-            // Same branch expansion as the transaction list, so the period sums
-            // cover exactly the rows the filter shows.
-            filters = if (filters.categoryIds.isEmpty()) {
-                filters
-            } else {
-                filters.copy(
-                    categoryIds = categoryBranchIds(
-                        filters.categoryIds,
-                        repository.queryCategories().associate { it.id to it.parentId }
-                    )
-                )
-            }
+            filters = expanded
         )
     }
 
@@ -581,7 +585,8 @@ class AndroidWebApiDataSource(
         by: String,
         type: String,
         from: LocalDate,
-        to: LocalDate
+        to: LocalDate,
+        categoryIds: List<Long>
     ): BreakdownDto {
         val allAccounts = accountId == 0L
         val unit = if (allAccounts) {
@@ -601,9 +606,19 @@ class AndroidWebApiDataSource(
             from = from,
             to = to,
             unit = unit,
-            allAccounts = allAccounts
+            allAccounts = allAccounts,
+            categoryIds = categoryIds
         )
     }
+
+    override fun balanceSeries(
+        accounts: List<AccountDto>,
+        from: LocalDate,
+        to: LocalDate,
+        granularity: String
+    ) = repository.queryBalanceSeries(accounts, from, to, granularity)
+
+    override fun investments() = repository.queryInvestments(currencyContext)
 
     override fun reportTransactions(
         accountId: Long,
@@ -615,21 +630,19 @@ class AndroidWebApiDataSource(
         limit: Int,
         offset: Int
     ): PageDto<TransactionDto> {
-        if (accountId == 0L) {
-            throw ApiException(
-                HttpStatusCode.UnprocessableEntity,
-                "unsupported_all_accounts",
-                "Drill-down needs a single account"
-            )
+        val allAccounts = accountId == 0L
+        val currency = if (allAccounts) {
+            currencyContext.homeCurrencyUnit
+        } else {
+            repository.getCurrencyUnitForAccount(accountId)
+                ?: throw ApiException(
+                    HttpStatusCode.NotFound,
+                    "account_not_found",
+                    "Account not found"
+                )
         }
-        val currency = repository.getCurrencyUnitForAccount(accountId)
-            ?: throw ApiException(
-                HttpStatusCode.NotFound,
-                "account_not_found",
-                "Account not found"
-            )
         val (items, total) = repository.queryReportTransactions(
-            accountId,
+            accountId.takeIf { !allAccounts },
             by,
             groupId,
             type,
@@ -642,8 +655,15 @@ class AndroidWebApiDataSource(
         val methodLabels = repository.queryMethods().associate { it.id to it.label }
         return PageDto(
             items = items.map {
+                // With all accounts every row keeps its own currency; a single
+                // account always uses its unit.
+                val unit = if (allAccounts) {
+                    currencyContext[it.currency ?: currency.code]
+                } else {
+                    currency
+                }
                 it.toApiDto(
-                    currencyUnit = currency,
+                    currencyUnit = unit,
                     payeeMap = payeeMap.value,
                     tagMap = tagMap.value,
                     withTime = withTime,

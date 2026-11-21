@@ -22,6 +22,15 @@ export const STORAGE_KEYS = {
   reportBreakdown: 'myexpenses.reportBreakdown',
   reportType: 'myexpenses.reportType',
   reportAllAccounts: 'myexpenses.reportAllAccounts',
+  reportTab: 'myexpenses.reportTab',
+  reportPeriod: 'myexpenses.reportPeriod',
+  reportCustomFrom: 'myexpenses.reportCustomFrom',
+  reportCustomTo: 'myexpenses.reportCustomTo',
+  reportCompare: 'myexpenses.reportCompare',
+  reportBalanceRange: 'myexpenses.reportBalanceRange',
+  reportBalanceFrom: 'myexpenses.reportBalanceFrom',
+  reportBalanceTo: 'myexpenses.reportBalanceTo',
+  reportAccountIds: 'myexpenses.reportAccountIds',
   budgetMonth: 'myexpenses.budgetMonth',
   transactionType: 'myexpenses.transactionType',
 } as const
@@ -40,13 +49,23 @@ const FIELDS: readonly UiPreferenceField[] = [
   'reportBreakdown',
   'reportType',
   'reportAllAccounts',
+  'reportTab',
+  'reportPeriod',
+  'reportCustomFrom',
+  'reportCustomTo',
+  'reportCompare',
+  'reportBalanceRange',
+  'reportBalanceFrom',
+  'reportBalanceTo',
+  'reportAccountIds',
   'budgetMonth',
   'transactionType',
 ]
 
-type Value = string | number | boolean
+type Value = string | number | boolean | number[]
 
 const MONTH_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/
+const DATE_PATTERN = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/
 
 interface FieldSpec {
   storageKey: string
@@ -82,6 +101,34 @@ function month(storageKey: string): FieldSpec {
   }
 }
 
+function date(storageKey: string): FieldSpec {
+  const valid = (raw: unknown): raw is string =>
+    typeof raw === 'string' && DATE_PATTERN.test(raw)
+  return {
+    storageKey,
+    fromLocal: (raw) => (valid(raw) ? raw : null),
+    fromServer: (raw) => (valid(raw) ? raw : null),
+  }
+}
+
+function idList(storageKey: string): FieldSpec {
+  const valid = (raw: unknown): raw is number[] =>
+    Array.isArray(raw) &&
+    raw.every((value) => typeof value === 'number' && Number.isInteger(value) && value > 0)
+  return {
+    storageKey,
+    fromLocal: (raw) => {
+      if (raw === null || raw.trim() === '') return null
+      const values = raw
+        .split(',')
+        .map((value) => Number(value))
+        .filter((value) => Number.isInteger(value) && value > 0)
+      return values.length > 0 ? values : null
+    },
+    fromServer: (raw) => (valid(raw) ? raw : null),
+  }
+}
+
 function positiveId(storageKey: string): FieldSpec {
   return {
     storageKey,
@@ -107,6 +154,38 @@ const SPECS: Record<UiPreferenceField, FieldSpec> = {
   reportBreakdown: oneOf(STORAGE_KEYS.reportBreakdown, ['category', 'payee', 'tag', 'method']),
   reportType: oneOf(STORAGE_KEYS.reportType, ['expense', 'income', 'both']),
   reportAllAccounts: boolean(STORAGE_KEYS.reportAllAccounts),
+  reportTab: oneOf(STORAGE_KEYS.reportTab, [
+    'summary',
+    'expenses',
+    'income',
+    'accounts',
+    'investments',
+    'budgets',
+  ]),
+  reportPeriod: oneOf(STORAGE_KEYS.reportPeriod, [
+    'week',
+    'month',
+    'quarter',
+    'year',
+    'lastYear',
+    'custom',
+  ]),
+  reportCustomFrom: date(STORAGE_KEYS.reportCustomFrom),
+  reportCustomTo: date(STORAGE_KEYS.reportCustomTo),
+  reportCompare: oneOf(STORAGE_KEYS.reportCompare, ['none', 'previous']),
+  reportBalanceRange: oneOf(STORAGE_KEYS.reportBalanceRange, [
+    'm1',
+    'm3',
+    'm6',
+    'y1',
+    'y2',
+    'y5',
+    'all',
+    'custom',
+  ]),
+  reportBalanceFrom: date(STORAGE_KEYS.reportBalanceFrom),
+  reportBalanceTo: date(STORAGE_KEYS.reportBalanceTo),
+  reportAccountIds: idList(STORAGE_KEYS.reportAccountIds),
   budgetMonth: month(STORAGE_KEYS.budgetMonth),
   transactionType: oneOf(STORAGE_KEYS.transactionType, ['all', 'expense', 'income']),
 }
@@ -128,6 +207,7 @@ function writeLocal(key: string, value: string): void {
 }
 
 function encode(value: Value): string {
+  if (Array.isArray(value)) return value.join(',')
   if (typeof value === 'boolean') return value ? '1' : '0'
   return String(value)
 }

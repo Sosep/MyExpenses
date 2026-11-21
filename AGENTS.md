@@ -11,11 +11,12 @@ Read this before changing code. Detailed sources:
 
 - `/api/v1`: read endpoints plus create/update/delete for simple transactions,
   transfers and splits.
-- API routes covered on the JVM by 99 tests — 83 `ApiRoutesTest`, 7
-  `CategoryBranchTest`, 5 `LoginThrottleTest` and 4 `SessionStoreTest` — with a
-  fake `WebApiDataSource` and Ktor `testApplication`.
-- SPA: dashboard, transactions, detail, reports, files, budgets, and the simple,
-  transfer and split editors. The split editor uses signed amounts, a parts list
+- API routes covered on the JVM by 115 tests — 89 `ApiRoutesTest`, 10
+  `BalanceMathTest`, 7 `CategoryBranchTest`, 5 `LoginThrottleTest` and 4
+  `SessionStoreTest` — with a fake `WebApiDataSource` and Ktor `testApplication`.
+  The pure balance folding and reconciliation live in `BalanceMathTest`.
+- SPA: dashboard, transactions, detail, the **Informes** section (six tabs),
+  files, budgets, and the simple, transfer and split editors. The split editor uses signed amounts, a parts list
   and a part panel. It is installable as a PWA; on narrow screens the side rail
   becomes a fixed bottom navigation with icon and label.
 - Budgets: list plus current-period progress, create/update/delete and
@@ -150,12 +151,34 @@ Read this before changing code. Detailed sources:
   the detail panel sends a single `categoryId` when it opens the matching
   transactions, and on the budget's account (`accountId` in the link), not the
   one the topbar happens to show.
-- Reports: `/reports/summary`, `/reports/breakdown` (category, payee, tag or
-  method) and `/reports/transactions` for drill-down. Period presets, `All
-  accounts` converted to the home currency and server-computed shares. Category breakdown
-  uses split parts; the rest count whole transactions. Month indexes are 0-based
-  (`second`: November = 10) from the provider to the API; the SPA keeps `YYYY-MM`
-  and converts at the call boundary.
+- Reports: the `reports` view is the **Informes** section, with six tabs
+  (Resumen, Gastos, Ingresos, Cuentas, Inversiones, Presupuestos), the tab,
+  period, comparison, balance range/mode and the chart's account ids in the URL
+  and in `ui-preferences`. The rail label is still Reports; no new rail item.
+  `/reports/summary` adds `returnsMinor` (positive amounts on expense
+  categories: spent = `|expenses| − returns`, income = `income − returns`,
+  balance unchanged). `/reports/breakdown` accepts repeated `categoryId` with
+  branch expansion and recomputes `totalMinor`/`share` on the filtered set;
+  `grouped` accepts `accountId=all`; `/reports/transactions` accepts it too and
+  keeps each row's currency.
+  `/reports/balance-series` returns a dense per-account series (opening plus
+  every parent movement before `from`, transfers signed per account, splits by
+  parent, VOID/archived excluded) and totals **per currency** with
+  `mixedCurrencies`; it never converts. Granularity auto = day ≤70 days, week
+  ≤~30 months, month after; an explicit choice over ~400 points falls back.
+  `/reports/investments` values each product at the last manual price, uses the
+  weighted average BUY/SELL cost and hides the result when `costKnown` is
+  false. The pure folding lives in `BalanceMath.kt` (`BalanceMathTest`); the
+  last point reconciles with `currentBalanceMinor`.
+  Category breakdown uses split parts; the rest count whole transactions. Month
+  indexes are 0-based (`second`: November = 10) from the provider to the API;
+  the SPA keeps `YYYY-MM` and converts at the call boundary.
+- Reports UI: `ReportsSection` + `components/reports/*`, `LineChart` (own SVG,
+  no chart dependency, hover/touch tooltip, toggleable legend, textual table,
+  `prefers-reduced-motion`) and the extended `Chart` bars (day/week/month/year
+  labels and a ghost previous-period bar). Filters are per view; the period and
+  comparison are shared by Resumen/Gastos/Ingresos and never forced on
+  Cuentas/Inversiones/Presupuestos.
 
 ## Build and verify
 
@@ -263,8 +286,12 @@ npm run mock           # http://localhost:4173/app/
 
 QA switches: `?login=1` (clears the mock cookie), `?locale=es`,
 `?view=transactions`, `?view=transactions&filter=groceries`,
-`?view=transactions&categoryId=1` (Food and its subcategories), `?view=reports`, `?view=reports&reportBy=Payee&reportType=Both`,
-`?view=reports&reportDrill=1`, `?view=budgets`, `?view=budgets&budgetMonth=-1`, `?view=budgets&new=1`,
+`?view=transactions&categoryId=1` (Food and its subcategories),
+`?view=reports` (Resumen), `?view=reports&tab=expenses|income|accounts|investments|budgets`,
+`&period=week|month|quarter|year|lastYear|custom`, `&compare=previous`,
+`&balanceRange=y1&balanceMode=perAccount`, `&mixedCurrency=1`, `&noHistory=1`,
+`&costUnknown=1`, `&emptyInvestments=1`, `&overBudget=1`,
+`?view=budgets`, `?view=budgets&budgetMonth=-1`, `?view=budgets&new=1`,
 `?view=budgets&edit=1`, `?view=budgets&edit=1&periodOverride=1`, `?view=budgets&detail=<id>`
 (`3` = *Fuel*, *Joint*, con la app en otra cuenta), `?view=files`,
 `?hidden=1|totals|transactions`, `?prefs=seed` (fixed server preferences),
@@ -279,8 +306,8 @@ phone API. It tests the SPA and the HTTP contract, not the Kotlin queries. The
 full guide lives in `webui/webapp/README.md` (section **Probar sin el móvil**).
 To reproduce the original bug, configure one origin of the same mock
 (`http://localhost:4173/app/`), reload another (`http://127.0.0.1:4173/app/`)
-and check that theme, language, grouping, account, report month and both
-privacy switches arrive.
+and check that theme, language, grouping, account, the Informes tab/period/
+comparison/balance controls and both privacy switches arrive.
 
 `MOCK_QA_SEED=1 npm run mock` serves six months of generated transactions
 (categories, payees, methods, tags, states, transfers and splits with their own
@@ -309,6 +336,14 @@ Update the docs while the change is fresh; do not defer them to a later commit.
 - Device QA remains for the new slices (cookie, PWA, allocations/rollover,
   reports drill-down and all-account aggregation). The mock can be checked at
   390×844 to catch responsive regressions.
+- Informes: reconcile `balance-series` with `currentBalanceMinor` on a phone
+  with real transfers (both legs), a split, a VOID and an opening balance; an
+  operation dated in the past must only move the points after its date. Check
+  `grouped?accountId=all` against the Android report, the weighted cost of a
+  portfolio with a transfer-in (`costKnown:false`) and a big history for
+  performance. The tab/period/compare/balance preferences must travel between
+  origins and survive the server ignoring the retired `reportMonth`/`reportRange`
+  keys.
 - Portfolios need device QA the mock cannot fake: create one from the web and
   confirm the phone shows it exactly like one created in Android (type, currency,
   fixed/dynamic rate, colour); confirm the valuation matches `BalanceType.VALUATION`

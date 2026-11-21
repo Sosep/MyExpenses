@@ -11,35 +11,69 @@ import { scheduleUpload, STORAGE_KEYS } from './uiPreferences'
  * switches) live next to the feature that owns them; this module covers the
  * screen-level choices.
  */
-export type ReportRange = 'month' | 'last3' | 'year'
-export type ReportBreakdown = 'category' | 'payee' | 'tag' | 'method'
-export type ReportType = 'expense' | 'income' | 'both'
+export type ReportTab = 'summary' | 'expenses' | 'income' | 'accounts' | 'investments' | 'budgets'
+export type ReportPeriod = 'week' | 'month' | 'quarter' | 'year' | 'lastYear' | 'custom'
+export type ReportCompare = 'none' | 'previous'
+export type ReportBalanceRange = 'm1' | 'm3' | 'm6' | 'y1' | 'y2' | 'y5' | 'all' | 'custom'
 export type TransactionType = 'all' | 'expense' | 'income'
 
 export interface ReportPreferences {
-  month: string
-  range: ReportRange
-  breakdown: ReportBreakdown
-  type: ReportType
-  allAccounts: boolean
+  tab: ReportTab
+  period: ReportPeriod
+  customFrom: string
+  customTo: string
+  compare: ReportCompare
+  balanceRange: ReportBalanceRange
+  balanceFrom: string
+  balanceTo: string
+  accountIds: number[]
 }
 
-const REPORT_RANGES: readonly ReportRange[] = ['month', 'last3', 'year']
-const REPORT_BREAKDOWNS: readonly ReportBreakdown[] = ['category', 'payee', 'tag', 'method']
-const REPORT_TYPES: readonly ReportType[] = ['expense', 'income', 'both']
+const REPORT_TABS: readonly ReportTab[] = [
+  'summary',
+  'expenses',
+  'income',
+  'accounts',
+  'investments',
+  'budgets',
+]
+const REPORT_PERIODS: readonly ReportPeriod[] = [
+  'week',
+  'month',
+  'quarter',
+  'year',
+  'lastYear',
+  'custom',
+]
+const REPORT_COMPARES: readonly ReportCompare[] = ['none', 'previous']
+const REPORT_BALANCE_RANGES: readonly ReportBalanceRange[] = [
+  'm1',
+  'm3',
+  'm6',
+  'y1',
+  'y2',
+  'y5',
+  'all',
+  'custom',
+]
 const TRANSACTION_TYPES: readonly TransactionType[] = ['all', 'expense', 'income']
 
 const KEYS = {
-  reportMonth: STORAGE_KEYS.reportMonth,
-  reportRange: STORAGE_KEYS.reportRange,
-  reportBreakdown: STORAGE_KEYS.reportBreakdown,
-  reportType: STORAGE_KEYS.reportType,
-  reportAllAccounts: STORAGE_KEYS.reportAllAccounts,
+  reportTab: STORAGE_KEYS.reportTab,
+  reportPeriod: STORAGE_KEYS.reportPeriod,
+  reportCustomFrom: STORAGE_KEYS.reportCustomFrom,
+  reportCustomTo: STORAGE_KEYS.reportCustomTo,
+  reportCompare: STORAGE_KEYS.reportCompare,
+  reportBalanceRange: STORAGE_KEYS.reportBalanceRange,
+  reportBalanceFrom: STORAGE_KEYS.reportBalanceFrom,
+  reportBalanceTo: STORAGE_KEYS.reportBalanceTo,
+  reportAccountIds: STORAGE_KEYS.reportAccountIds,
   budgetMonth: STORAGE_KEYS.budgetMonth,
   transactionType: STORAGE_KEYS.transactionType,
 } as const
 
 const MONTH_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/
+const DATE_PATTERN = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/
 
 function read(key: string): string | null {
   try {
@@ -69,27 +103,53 @@ function month(key: string, fallback: string): string {
   return stored !== null && MONTH_PATTERN.test(stored) ? stored : fallback
 }
 
-export function readReportPreferences(defaultMonth: string): ReportPreferences {
+function date(key: string, fallback: string): string {
+  const stored = read(key)
+  return stored !== null && DATE_PATTERN.test(stored) ? stored : fallback
+}
+
+function idList(key: string): number[] {
+  const stored = read(key)
+  if (!stored) return []
+  return stored
+    .split(',')
+    .map((value) => Number(value))
+    .filter((value) => Number.isInteger(value) && value > 0)
+}
+
+export function readReportPreferences(defaultFrom: string, defaultTo: string): ReportPreferences {
   return {
-    month: month(KEYS.reportMonth, defaultMonth),
-    range: oneOf(KEYS.reportRange, REPORT_RANGES, 'month'),
-    breakdown: oneOf(KEYS.reportBreakdown, REPORT_BREAKDOWNS, 'category'),
-    type: oneOf(KEYS.reportType, REPORT_TYPES, 'expense'),
-    allAccounts: read(KEYS.reportAllAccounts) === '1',
+    tab: oneOf(KEYS.reportTab, REPORT_TABS, 'summary'),
+    period: oneOf(KEYS.reportPeriod, REPORT_PERIODS, 'month'),
+    customFrom: date(KEYS.reportCustomFrom, defaultFrom),
+    customTo: date(KEYS.reportCustomTo, defaultTo),
+    compare: oneOf(KEYS.reportCompare, REPORT_COMPARES, 'none'),
+    balanceRange: oneOf(KEYS.reportBalanceRange, REPORT_BALANCE_RANGES, 'y1'),
+    balanceFrom: date(KEYS.reportBalanceFrom, defaultFrom),
+    balanceTo: date(KEYS.reportBalanceTo, defaultTo),
+    accountIds: idList(KEYS.reportAccountIds),
   }
 }
 
 export function rememberReportPreferences(preferences: ReportPreferences): void {
-  remember(KEYS.reportMonth, preferences.month)
-  remember(KEYS.reportRange, preferences.range)
-  remember(KEYS.reportBreakdown, preferences.breakdown)
-  remember(KEYS.reportType, preferences.type)
-  remember(KEYS.reportAllAccounts, preferences.allAccounts ? '1' : '0')
-  scheduleUpload('reportMonth', preferences.month)
-  scheduleUpload('reportRange', preferences.range)
-  scheduleUpload('reportBreakdown', preferences.breakdown)
-  scheduleUpload('reportType', preferences.type)
-  scheduleUpload('reportAllAccounts', preferences.allAccounts)
+  remember(KEYS.reportTab, preferences.tab)
+  remember(KEYS.reportPeriod, preferences.period)
+  remember(KEYS.reportCustomFrom, preferences.customFrom)
+  remember(KEYS.reportCustomTo, preferences.customTo)
+  remember(KEYS.reportCompare, preferences.compare)
+  remember(KEYS.reportBalanceRange, preferences.balanceRange)
+  remember(KEYS.reportBalanceFrom, preferences.balanceFrom)
+  remember(KEYS.reportBalanceTo, preferences.balanceTo)
+  remember(KEYS.reportAccountIds, preferences.accountIds.join(','))
+  scheduleUpload('reportTab', preferences.tab)
+  scheduleUpload('reportPeriod', preferences.period)
+  scheduleUpload('reportCustomFrom', preferences.customFrom)
+  scheduleUpload('reportCustomTo', preferences.customTo)
+  scheduleUpload('reportCompare', preferences.compare)
+  scheduleUpload('reportBalanceRange', preferences.balanceRange)
+  scheduleUpload('reportBalanceFrom', preferences.balanceFrom)
+  scheduleUpload('reportBalanceTo', preferences.balanceTo)
+  scheduleUpload('reportAccountIds', preferences.accountIds)
 }
 
 export function readBudgetMonth(defaultMonth: string): string {

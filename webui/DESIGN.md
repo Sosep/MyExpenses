@@ -570,37 +570,58 @@ Filters: [search] [account] [All|Expenses|Income] [Month]
 ### Informes
 
 ```text
-Reports                                   ‹ November 2026 ›  [Refresh]
-Everyday · November 2026
-[Category | Payee | Tag]   [Expenses | Income | Both]
+Reports                                              Refresh
+This month · 3 accounts
+[Week | Month | Quarter | Year | Last year | Custom]  Compare with: Previous
 
-┌ Income €2,950 ┐ ┌ Expenses €1,138 ┐ ┌ Net +€1,811 ┐ ┌ 59 tx ┐
+[Summary] [Spending] [Income] [Accounts] [Investments] [Budgets]
 
-┌ Spending by category · 7 groups · €1,138.67 total ──────┐
-│ Food > Groceries                         €324.07      │
-│ ▓▓▓▓▓▓▓▓░░░░░░░░░░░░░░░░░░░░░░                        │
-│ 28.5%                                  15 transactions │
-│ Transport                                €242.48      │
-│ ▓▓▓▓▓▓░░░░░░░░░░░░░░░░░░░░░░░░░░                        │
-│ 21.3%                                  14 transactions │
-└────────────────────────────────────────────────────────┘
+┌ Income €2,950 ┐ ┌ Spent €1,133 ┐ ┌ Balance +€1,817 ┐ ┌ Savings 61.6% ┐
+
+┌ How my balances evolve ────────────────── [Total | By account] ┐
+│ Range: 1 year   Grouping: Automatic   Accounts: 3              │
+│                                                        €4,210  │
+│      ╱╲      ╱╲                                                │
+│  ╱╲╱  ╲╱╲╱╲╱  ╲────                                            │
+│ Start €2,000 · End €4,210 · Change +€2,210 · +110.5%           │
+└────────────────────────────────────────────────────────────────┘
 ```
 
-- Mes visible con navegación `‹ ›`; el mismo mes manda en KPIs y desglose.
-- Tres segmentados: periodo (`This month`, `Last 3 months`, `This year`),
-  dimensión (`Category`, `Payee`, `Tag`, `Method`) y tipo (`Expenses`, `Income`,
-  `Both`). Con `All accounts` se agrega en servidor y se convierte a la divisa
-  base, así que admite cuentas de divisas distintas.
-- KPIs: ingresos, gastos (magnitud), neto con signo y número de transacciones.
-- Cada fila: etiqueta, importe, barra proporcional, porcentaje y número de
-  transacciones. La barra usa `--negative` para gastos, `--positive` para
-  ingresos y `--accent` para `Both`.
-- El porcentaje y el total vienen del servidor; el cliente no suma transacciones.
-- Vacío: explica que no hay actividad y sugiere cambiar de mes o de tipo.
-- El badge de etiqueta puede solaparse entre sí; es un reparto por etiqueta, no
-  una partición del gasto.
-- Cada fila abre un panel de detalle con las transacciones del grupo. Con
-  `All accounts` el detalle se desactiva: necesita una sola cuenta.
+- La sección **Informes** ES la vista `reports`; no añade un elemento al rail.
+  El rail sigue con Overview, Transactions, Reports, Budgets, Files y Data.
+- Pestañas secundarias desplazables, subrayado `--accent` en la activa. En móvil
+  ocupan una sola fila con scroll horizontal; nunca una rejilla de seis botones.
+- Filtros globales: periodo y comparación, en una fila que se pliega. Cada vista
+  añade solo sus filtros (cuentas en el gráfico, categoría en Gastos/Ingresos,
+  cartera en Inversiones, frecuencia y cuenta en Presupuestos). Cada chip se
+  quita por separado y hay `Reset filters`.
+- KPIs: Ingresos, Gastado (neto de devoluciones), Balance del periodo y Tasa de
+  ahorro. La variación usa flecha y texto (`Up 8.2% vs the previous period`),
+  nunca solo color. La tasa es `—` cuando no hay ingresos.
+- **Gráfico de saldo**: usa `LineChart` (SVG propio, sin dependencia). Modos Total
+  y Por cuenta, selector múltiple de cuentas, rangos 1m/3m/6m/1a/2a/5a/todo/
+  personalizado, granularidad automática o forzada. Un máximo de 6 series
+  visibles; el resto se añade desde el selector. Tooltip con fecha y saldo,
+  equivalente táctil, leyenda que conmuta series y tabla textual en `details`.
+  Resumen inferior: saldo inicial, final y **Cambio de saldo** (nunca
+  «Ganancia»), con porcentaje solo si el saldo inicial lo permite.
+- Días sin movimientos repiten el saldo; una transferencia interna suma cero en
+  Total y ± en cada cuenta. Las divisas no se convierten: una línea por divisa y
+  aviso «Historical conversion between currencies is not available».
+- Evolución de ingresos y gastos: barras agrupadas por día/semana/mes/año
+  (`Chart`), sin transferencias; la comparación pinta una barra fantasma
+  (`opacity .30`) y una entrada de leyenda «Previous period».
+- Categorías: fila con importe, barra, porcentaje y número de operaciones. El
+  porcentaje viene del servidor sobre el conjunto filtrado. `View subcategories`
+  añade el id al filtro de rama; `View operations` abre `ReportPanel`.
+- Resumen de cuentas («Money available»), inversiones («Money invested», valor
+  con el último precio manual y fecha) y presupuestos (dentro/cerca/superados).
+- Inversiones: valor = cantidad × último precio, coste medio ponderado y
+  resultado solo con `costKnown`. El histórico de precios vive en un `details`
+  por producto y dice siempre que es manual, nunca una cotización.
+- Presupuestos: solo agrega divisas y periodos iguales; una entrada por divisa.
+  Superado = icono `!` + «Over the limit», cerca = `≈` + «Close to the limit».
+- Vacíos: mensaje y acción; nunca un gráfico sin ejes ni contexto.
 
 ### Presupuestos
 

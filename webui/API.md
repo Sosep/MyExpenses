@@ -146,24 +146,35 @@ agrupación o la cuenta se perdían al cambiar de IP o puerto.
   "grouping": "WEEK",
   "hideTotals": true,
   "hideTransactions": false,
-  "reportMonth": "2026-11",
-  "reportRange": "last3",
-  "reportBreakdown": "payee",
-  "reportType": "both",
-  "reportAllAccounts": false,
+  "reportTab": "summary",
+  "reportPeriod": "quarter",
+  "reportCustomFrom": "2026-01-01",
+  "reportCustomTo": "2026-03-31",
+  "reportCompare": "previous",
+  "reportBalanceRange": "y1",
+  "reportBalanceFrom": "2025-01-01",
+  "reportBalanceTo": "2026-01-01",
+  "reportAccountIds": [1, 2],
   "budgetMonth": "2026-11",
   "transactionType": "expense"
 }
 ```
 
 - `theme`: `light` \| `dark`; `locale`: `en` \| `es`; `grouping`: `NONE` \|
-  `DAY` \| `WEEK` \| `MONTH` \| `YEAR`; `reportRange`: `month` \| `last3` \|
-  `year`; `reportBreakdown`: `category` \| `payee` \| `tag` \| `method`;
-  `reportType`: `expense` \| `income` \| `both`; `transactionType`: `all` \|
+  `DAY` \| `WEEK` \| `MONTH` \| `YEAR`; `transactionType`: `all` \|
   `expense` \| `income`.
+- Informes: `reportTab`: `summary` \| `expenses` \| `income` \| `accounts` \|
+  `investments` \| `budgets`; `reportPeriod`: `week` \| `month` \| `quarter` \|
+  `year` \| `lastYear` \| `custom`; `reportCompare`: `none` \| `previous`;
+  `reportBalanceRange`: `m1` \| `m3` \| `m6` \| `y1` \| `y2` \| `y5` \|
+  `all` \| `custom`; `reportAccountIds` es una lista de ids positivos.
 - `accountId` es un entero positivo. No se comprueba que la cuenta exista: la
   SPA ya cae a la primera cuenta si el id desapareció.
-- `reportMonth` y `budgetMonth` son `YYYY-MM`.
+- `reportMonth` y `budgetMonth` son `YYYY-MM`. `reportCustomFrom/To` y
+  `reportBalanceFrom/To` son `YYYY-MM-DD`.
+- Las claves antiguas `reportMonth`, `reportRange`, `reportBreakdown`,
+  `reportType` y `reportAllAccounts` siguen siendo legibles para no romper una
+  SPA anterior; la sección Informes ya no las usa ni las escribe.
 - La respuesta del `PUT` es el documento ya fusionado. Un `PUT` vacío conserva
   todo. Valor de enum o mes inválido: `422 validation_failed` con `fields`; el
   resto de campos del cuerpo no se guarda.
@@ -903,9 +914,11 @@ que la web detecta pero no reescribe.
 | Método | Ruta | Descripción |
 |---|---|---|
 | GET | `/reports/grouped?accountId&grouping=DAY\|WEEK\|MONTH\|YEAR\|NONE&from&to&type=both\|income\|expense&categoryId&payeeId&tagId&methodId&q&amountMin&amountMax&status&transfer&uncategorized` | Serie temporal: ingresos, gastos, transferencias, total por grupo |
-| GET | `/reports/summary?accountId&from&to` | Totales del rango |
-| GET | `/reports/breakdown?accountId&from&to&by=category\|payee\|tag\|method&type=expense\|income\|both` | Reparto con importe, número y porcentaje |
-| GET | `/reports/transactions?accountId&by&id&type&from&to&limit&offset` | Drill-down de un grupo |
+| GET | `/reports/summary?accountId&from&to` | Totales del rango, incluidas devoluciones |
+| GET | `/reports/breakdown?accountId&from&to&by=category\|payee\|tag\|method&type=expense\|income\|both&categoryId` | Reparto con importe, número y porcentaje; `categoryId` acota la rama |
+| GET | `/reports/transactions?accountId&by&id&type&from&to&limit&offset` | Drill-down de un grupo; `accountId=all` también |
+| GET | `/reports/balance-series?accountIds&from&to&granularity=auto\|day\|week\|month` | Saldo histórico por cuenta y totales por divisa |
+| GET | `/reports/investments` | Valor, coste, resultado y fecha de la última valoración manual |
 
 `grouping` usa el mismo enum que la app, así los números coinciden con el móvil.
 La serie sale de `IAccount.groupingQuery`; el resumen y el reparto usan
@@ -940,9 +953,16 @@ los criterios no aparece.
   "incomeMinor": 295000,
   "expensesMinor": -113867,
   "netMinor": 181133,
-  "count": 59
+  "count": 59,
+  "returnsMinor": 5000
 }
 ```
+
+`returnsMinor` son los importes **positivos** asignados a categorías de gasto (una
+devolución). El KPI de gasto del cliente es `|expensesMinor| − returnsMinor` y el
+de ingresos `incomeMinor − returnsMinor`; `netMinor` no cambia. Una dividida
+cuenta por la categoría de cada parte; una devolución nunca se presenta como
+ingreso ordinario.
 
 `BreakdownDto`:
 
@@ -973,12 +993,96 @@ los criterios no aparece.
   reparto por etiqueta puede superar el gasto real del periodo.
 - `by` admite también `method`; inválido: `400 invalid_by`; `type` inválido:
   `400 invalid_type`; cuenta desconocida: `404 account_not_found`.
+- `categoryId` se puede repetir (`?categoryId=1&categoryId=4`); cada id se
+  expande a su rama (como el `CategoryCriterion` de Android). `totalMinor` y
+  `share` se recalculan sobre las filas devueltas, lo que permite abrir las
+  subcategorías de una fila.
 - `accountId=all` agrega todas las cuentas en servidor: los importes se
   convierten a la **divisa base** con el importe equivalente de la app, así que
   pueden convivir cuentas de divisas distintas. `BreakdownDto` incluye `currency`
   y `fractionDigits` de la divisa resultante.
-- `/reports/transactions` lista las transacciones de un grupo (`by` + `id`); no
-  admite `accountId=all` (`422 unsupported_all_accounts`).
+- `/reports/transactions` lista las transacciones de un grupo (`by` + `id`).
+  Acepta `accountId=all`; en ese caso cada fila conserva su propia divisa.
+- `/reports/grouped` acepta `accountId=all`: suma las cuentas incluidas en
+  totales (sin carteras ni subcuentas) y devuelve los importes convertidos a la
+  divisa base.
+
+#### GET /reports/balance-series
+
+`saldo(fecha) = saldo de apertura + Σ movimientos con fecha efectiva ≤ fecha`.
+Los movimientos `VOID` y archivados se excluyen; una dividida cuenta por su
+padre (las partes duplicarían el saldo); una transferencia conserva su signo en
+cada cuenta y suma cero en el total cuando están las dos. Los días sin
+movimientos repiten el último saldo.
+
+```json
+{
+  "from": "2026-01-01", "to": "2026-11-21",
+  "granularity": "WEEK", "granularityFallback": false,
+  "mixedCurrencies": false,
+  "currencies": [{ "code": "EUR", "fractionDigits": 2 }],
+  "accounts": [{
+    "id": 1, "label": "Everyday", "color": -16776961,
+    "currency": "EUR", "fractionDigits": 2,
+    "startBalanceMinor": 1234500, "firstTransactionDate": "2025-02-03",
+    "periodIncomeMinor": 500000, "periodExpensesMinor": -376544,
+    "series": [{ "date": "2026-01-04", "balanceMinor": 1234500 }]
+  }],
+  "totals": [{
+    "currency": "EUR", "fractionDigits": 2,
+    "startBalanceMinor": 2000000,
+    "periodIncomeMinor": 700000, "periodExpensesMinor": -500000,
+    "series": [{ "date": "2026-01-04", "balanceMinor": 2000000 }]
+  }]
+}
+```
+
+- `accountIds` es obligatorio y admite coma o parámetro repetido; una cuenta
+  desconocida es `404 account_not_found`; `granularity` inválida,
+  `400 invalid_granularity`; `from` obligatorio y `from > to`,
+  `400 invalid_range`.
+- `auto` usa diario hasta 70 días, semanal hasta ~30 meses y mensual después.
+  Una granularidad explícita que supere ~400 puntos cae al automático y
+  `granularityFallback` es `true`.
+- **No se convierte**: `totals` lleva una entrada por divisa y
+  `mixedCurrencies` avisa cuando hay más de una. La SPA muestra una línea por
+  divisa en lugar de sumar monedas distintas.
+- `periodIncomeMinor`/`periodExpensesMinor` son flujos del rango, sin
+  transferencias. La serie es de saldo, no de flujo.
+- El último punto, si `to` es hoy, coincide con `currentBalanceMinor` de la
+  cuenta (reconciliación cubierta por `BalanceMathTest`).
+
+#### GET /reports/investments
+
+```json
+{
+  "homeCurrency": "EUR",
+  "portfolios": [{
+    "id": 7, "label": "Investments", "currency": "EUR", "fractionDigits": 2,
+    "cashMinor": 25000, "valuationMinor": 110000,
+    "costKnown": true, "costMinor": 90000, "resultMinor": 20000,
+    "lastValuationDate": "2026-11-19",
+    "assets": [{
+      "symbol": "AAPL", "label": "Apple Inc.", "fractionDigits": 4,
+      "quantityMinor": 30000, "priceMinor": 0.05,
+      "lastPriceDate": "2026-11-19", "valuationMinor": 1500,
+      "costKnown": true, "costMinor": 2000, "resultMinor": -500
+    }]
+  }],
+  "totals": [{
+    "currency": "EUR", "fractionDigits": 2,
+    "valuationMinor": 110000, "costKnown": true,
+    "costMinor": 90000, "resultMinor": 20000
+  }]
+}
+```
+
+- Valor = cantidad × último precio manual. `lastValuationDate` es siempre la
+  fecha del último precio introducido; **nunca** una cotización en tiempo real.
+- Coste = coste medio ponderado de BUY/SELL (principal + comisión). Un traspaso
+  entrante o la falta de precio de compra dejan `costKnown: false` y ocultan
+  coste y resultado.
+- Sin carteras devuelve listas vacías; la SPA muestra un estado vacío.
 
 ### 4.10 Ficheros
 
@@ -1031,8 +1135,11 @@ Modelo de lectura:
 | methods | `METHODS_URI`, `loadPaymentMethod`, `createPaymentMethod`, `updatePaymentMethod`, `deleteMethod` | mapeador |
 | budgets | `loadBudget`, `loadBudgetProgress`, `saveBudget`, `deleteBudget` | mapeador |
 | ui-preferences | `Repository.webUiPreferences()` / `saveWebUiPreferences()` (DataStore, una clave `webuiPreferences` con el JSON) | DTO, validación y fusión por campo |
-| reports/grouped | `IAccount.groupingQuery` / `TransactionsUri/groups/{Grouping}` | mapeador de cursor |
-| reports/breakdown | `TRANSACTIONS_SUM_URI` + `groupBy` | **función tipada nueva** en `db2` |
+| reports/grouped | `IAccount.groupingQuery` / `TransactionsUri/groups/{Grouping}` | mapeador de cursor; `accountId=all` suma las cuentas en `ApiQueries` |
+| reports/breakdown | `TRANSACTIONS_SUM_URI` + `groupBy` | `categoryId` expandido con `categoryBranchIds` |
+| reports/summary | `TRANSACTIONS_EXTENDED` | devoluciones por categoría de gasto (`returnsMinor`) |
+| reports/balance-series | `EXTENDED_URI` (movimientos padre) + `opening_balance` | `queryBalanceSeries` + plegado puro en `BalanceMath.kt` |
+| reports/investments | `queryAccounts`, `loadTrades`, precios manuales | coste medio ponderado en `queryInvestments` |
 | files | `AppDirHelper` | mapeador + validación de nombre |
 
 Todo es aditivo: no hace falta tocar el esquema de base de datos.

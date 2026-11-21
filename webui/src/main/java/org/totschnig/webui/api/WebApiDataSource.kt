@@ -45,8 +45,21 @@ interface WebApiDataSource {
         by: String,
         type: String,
         from: LocalDate,
-        to: LocalDate
+        to: LocalDate,
+        categoryIds: List<Long> = emptyList()
     ): BreakdownDto
+
+    /**
+     * Historical balance per account. [granularity] is AUTO, DAY, WEEK or MONTH;
+     * accounts are the already validated selection.
+     */
+    fun balanceSeries(
+        accounts: List<AccountDto>,
+        from: LocalDate,
+        to: LocalDate,
+        granularity: String
+    ): BalanceSeriesDto
+    fun investments(): InvestmentsDto
     fun reportTransactions(
         accountId: Long,
         by: String,

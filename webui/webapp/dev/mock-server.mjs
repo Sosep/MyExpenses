@@ -15,6 +15,12 @@
  *   ?view=budgets       open the budgets screen
  *   ?view=budgets&detail=3  open that budget's detail (1 is the first one)
  *   ?view=reports       open the reports screen
+ *   ?view=reports&tab=expenses&period=quarter  reports QA state
+ *   ?view=reports&mixedCurrency=1              two balance currencies
+ *   ?view=reports&noHistory=1                  almost no balance history
+ *   ?view=reports&costUnknown=1                investments without cost
+ *   ?view=reports&emptyInvestments=1           no portfolios
+ *   ?view=reports&overBudget=1                 a budget over its limit
  *   ?panel=split        open the split transaction detail panel
  *   ?theme=dark         toggle dark mode
  *   ?hidden=1           hide totals and transaction amounts (`totals`, `transactions`)
@@ -34,6 +40,17 @@ const root = resolve(here, '../..')
 const webapp = join(root, 'src/main/assets/webapp')
 const favicon = join(root, 'src/main/assets/favicon.ico')
 const port = Number(process.env.MOCK_PORT || 4173)
+
+// Page QA switches that change the fixture served by the API. The SPA does not
+// forward the page query to every request, so the mock remembers the ones it
+// was opened with. A switch only ever turns a flag on.
+const qaFlags = {
+  mixedCurrency: false,
+  noHistory: false,
+  costUnknown: false,
+  emptyInvestments: false,
+  overBudget: false,
+}
 
 const now = new Date()
 const year = now.getFullYear()
@@ -524,6 +541,15 @@ const UI_PREFERENCE_FIELDS = [
   'reportBreakdown',
   'reportType',
   'reportAllAccounts',
+  'reportTab',
+  'reportPeriod',
+  'reportCustomFrom',
+  'reportCustomTo',
+  'reportCompare',
+  'reportBalanceRange',
+  'reportBalanceFrom',
+  'reportBalanceTo',
+  'reportAccountIds',
   'budgetMonth',
   'transactionType',
 ]
@@ -541,10 +567,15 @@ const UI_PREFERENCE_ENUMS = {
   reportRange: ['month', 'last3', 'year'],
   reportBreakdown: ['category', 'payee', 'tag', 'method'],
   reportType: ['expense', 'income', 'both'],
+  reportTab: ['summary', 'expenses', 'income', 'accounts', 'investments', 'budgets'],
+  reportPeriod: ['week', 'month', 'quarter', 'year', 'lastYear', 'custom'],
+  reportCompare: ['none', 'previous'],
+  reportBalanceRange: ['m1', 'm3', 'm6', 'y1', 'y2', 'y5', 'all', 'custom'],
   transactionType: ['all', 'expense', 'income'],
 }
 
 const UI_MONTH_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/
+const UI_DATE_PATTERN = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/
 
 function validateUiPreferences(body) {
   const fields = {}
@@ -565,6 +596,25 @@ function validateUiPreferences(body) {
       fields[name] = 'Must be YYYY-MM'
     }
   }
+  for (const name of [
+    'reportCustomFrom',
+    'reportCustomTo',
+    'reportBalanceFrom',
+    'reportBalanceTo',
+  ]) {
+    const value = body[name]
+    if (value !== undefined && value !== null && !UI_DATE_PATTERN.test(value)) {
+      fields[name] = 'Must be YYYY-MM-DD'
+    }
+  }
+  if (body.reportAccountIds !== undefined && body.reportAccountIds !== null) {
+    if (
+      !Array.isArray(body.reportAccountIds) ||
+      body.reportAccountIds.some((id) => !Number.isInteger(id) || id <= 0)
+    ) {
+      fields.reportAccountIds = 'Must be a list of positive numbers'
+    }
+  }
   return fields
 }
 
@@ -581,6 +631,10 @@ function seedUiPreferencesFromQuery(url) {
     reportRange: 'last3',
     reportBreakdown: 'payee',
     reportType: 'both',
+    reportTab: 'expenses',
+    reportPeriod: 'quarter',
+    reportCompare: 'previous',
+    reportBalanceRange: 'y1',
   }
 }
 
@@ -1543,10 +1597,231 @@ function matchingTransactions(url) {
   })
 }
 
+/* ---- Informes: historical balances and the investment overview ---------- */
+
+const isoToDate = (value) => {
+  const [y, m, d] = value.split('-').map(Number)
+  return new Date(y, m - 1, d)
+}
+const dateToIso = (date) =>
+  `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+const addDays = (date, days) => {
+  const next = new Date(date)
+  next.setDate(next.getDate() + days)
+  return next
+}
+const addMonthsDate = (date, months) => {
+  const next = new Date(date.getFullYear(), date.getMonth() + months, 1)
+  return next
+}
+
+function autoGranularity(from, to) {
+  const days = Math.round((isoToDate(to) - isoToDate(from)) / 86400000) + 1
+  if (days <= 70) return 'day'
+  if (days <= 930) return 'week'
+  return 'month'
+}
+
+function balanceBucketDates(from, to, granularity) {
+  const start = isoToDate(from)
+  const end = isoToDate(to)
+  const points = []
+  if (start > end) return points
+  if (from === to) return [to]
+  if (granularity === 'day') {
+    for (let date = start; date <= end; date = addDays(date, 1)) points.push(dateToIso(date))
+    return points
+  }
+  if (granularity === 'week') {
+    const dayOfWeek = (start.getDay() + 6) % 7 // Monday = 0
+    let date = addDays(start, (7 - dayOfWeek) % 7)
+    while (date < end) {
+      points.push(dateToIso(date))
+      date = addDays(date, 7)
+    }
+    points.push(to)
+    return points
+  }
+  let month = new Date(start.getFullYear(), start.getMonth(), 1)
+  for (;;) {
+    const monthEnd = new Date(month.getFullYear(), month.getMonth() + 1, 0)
+    if (monthEnd > end) break
+    points.push(dateToIso(monthEnd))
+    month = addMonthsDate(month, 1)
+  }
+  if (points[points.length - 1] !== to) points.push(to)
+  return points
+}
+
+function movementsForAccount(accountId) {
+  return transactions
+    .filter((item) => item.accountId === accountId && item.crStatus !== 'VOID')
+    .map((item) => ({
+      date: item.date,
+      amount: item.amountMinor,
+      transfer: Boolean(item.transferPeerId),
+      income: !item.transferPeerId && item.amountMinor > 0 ? item.amountMinor : 0,
+      expense: !item.transferPeerId && item.amountMinor < 0 ? item.amountMinor : 0,
+    }))
+}
+
+function balanceSeriesFor(account, from, to, granularity) {
+  const movements = movementsForAccount(account.id)
+  const days = new Map()
+  const prior = movements
+    .filter((item) => item.date < from)
+    .reduce((sum, item) => sum + item.amount, 0)
+  let income = 0
+  let expense = 0
+  for (const item of movements) {
+    if (item.date < from || item.date > to) continue
+    const current = days.get(item.date) ?? { amount: 0, income: 0, expense: 0 }
+    current.amount += item.amount
+    current.income += item.income
+    current.expense += item.expense
+    days.set(item.date, current)
+    income += item.income
+    expense += item.expense
+  }
+  let balance = account.openingBalanceMinor + prior
+  const points = []
+  const dates = balanceBucketDates(from, to, granularity)
+  let cursor = isoToDate(from)
+  for (const point of dates) {
+    const pointDate = isoToDate(point)
+    while (cursor <= pointDate) {
+      const day = days.get(dateToIso(cursor))
+      if (day) balance += day.amount
+      cursor = addDays(cursor, 1)
+    }
+    points.push({ date: point, balanceMinor: balance })
+  }
+  const first = movements.map((item) => item.date).sort()[0] ?? null
+  return {
+    id: account.id,
+    label: account.label,
+    color: account.color,
+    currency: account.currency,
+    fractionDigits: account.fractionDigits,
+    startBalanceMinor: account.openingBalanceMinor + prior,
+    firstTransactionDate: first,
+    periodIncomeMinor: income,
+    periodExpensesMinor: expense,
+    series: points,
+  }
+}
+
+function lastPrice(symbol) {
+  return prices
+    .filter((entry) => entry.commodity === symbol)
+    .sort((left, right) => right.date.localeCompare(left.date))[0]
+}
+
+function mockInvestments(url) {
+  if (url.searchParams.get('emptyInvestments') === '1' || qaFlags.emptyInvestments) {
+    return { homeCurrency: 'EUR', portfolios: [], totals: [] }
+  }
+  const unknownCost =
+    url.searchParams.get('costUnknown') === '1' || qaFlags.costUnknown
+  const portfolios = Object.values(portfolioAssets).map((portfolio) => {
+    const trades = portfolioTradesByPortfolio[portfolio.portfolioId] ?? []
+    const assets = portfolio.assets.map((asset) => {
+      const price = lastPrice(asset.symbol)
+      const portfolioDigits = currencyFractionDigits(portfolio.currency)
+      const assetDigits = currencyFractionDigits(asset.symbol)
+      const priceMinor = price
+        ? price.value * Math.pow(10, portfolioDigits - assetDigits)
+        : null
+      const valuationMinor =
+        priceMinor === null ? 0 : Math.round(asset.quantityMinor * priceMinor)
+      const buys = trades.filter(
+        (trade) => trade.assetSymbol === asset.symbol && trade.type === 'BUY',
+      )
+      const sells = trades.filter(
+        (trade) => trade.assetSymbol === asset.symbol && trade.type === 'SELL',
+      )
+      const transfers = trades.filter(
+        (trade) =>
+          trade.assetSymbol === asset.symbol &&
+          (trade.type === 'TRANSFER_IN' || trade.type === 'TRANSFER_OUT'),
+      )
+      const bought = buys.reduce(
+        (sum, trade) => sum + trade.principalMinor + (trade.feeMinor ?? 0),
+        0,
+      )
+      const boughtQuantity = buys.reduce((sum, trade) => sum + trade.quantityMinor, 0)
+      const soldQuantity = sells.reduce((sum, trade) => sum + trade.quantityMinor, 0)
+      const soldCost =
+        boughtQuantity > 0 ? Math.round((bought / boughtQuantity) * soldQuantity) : 0
+      const costKnown = !unknownCost && transfers.every((trade) => trade.type !== 'TRANSFER_IN') && boughtQuantity > 0
+      const costMinor = costKnown ? Math.max(0, bought - soldCost) : null
+      return {
+        symbol: asset.symbol,
+        label: asset.label,
+        fractionDigits: asset.fractionDigits,
+        quantityMinor: asset.quantityMinor,
+        priceMinor,
+        lastPriceDate: price?.date ?? null,
+        valuationMinor,
+        costKnown,
+        costMinor,
+        resultMinor: costMinor === null ? null : valuationMinor - costMinor,
+      }
+    })
+    const costKnown = assets.every((asset) => asset.costKnown)
+    const costMinor = costKnown
+      ? assets.reduce((sum, asset) => sum + (asset.costMinor ?? 0), 0)
+      : null
+    const valuationMinor = assets.reduce((sum, asset) => sum + asset.valuationMinor, 0) + portfolio.cashMinor
+    const lastValuationDate =
+      assets.map((asset) => asset.lastPriceDate).filter(Boolean).sort().at(-1) ?? null
+    return {
+      id: portfolio.portfolioId,
+      label: portfolio.label,
+      currency: portfolio.currency,
+      fractionDigits: portfolio.fractionDigits,
+      cashMinor: portfolio.cashMinor,
+      valuationMinor,
+      costKnown,
+      costMinor,
+      resultMinor: costMinor === null ? null : valuationMinor - costMinor,
+      lastValuationDate,
+      assets,
+    }
+  })
+  const totals = [...new Set(portfolios.map((portfolio) => portfolio.currency))].map(
+    (currency) => {
+      const matching = portfolios.filter((portfolio) => portfolio.currency === currency)
+      const costKnown = matching.every((portfolio) => portfolio.costKnown)
+      const costMinor = costKnown
+        ? matching.reduce((sum, portfolio) => sum + (portfolio.costMinor ?? 0), 0)
+        : null
+      const valuationMinor = matching.reduce(
+        (sum, portfolio) => sum + portfolio.valuationMinor,
+        0,
+      )
+      return {
+        currency,
+        fractionDigits: currencyFractionDigits(currency),
+        valuationMinor,
+        costKnown,
+        costMinor,
+        resultMinor: costMinor === null ? null : valuationMinor - costMinor,
+      }
+    },
+  )
+  return { homeCurrency: 'EUR', portfolios, totals }
+}
+
 createServer(async (request, response) => {
   try {
     const url = new URL(request.url ?? '/', `http://localhost:${port}`)
     const path = decodeURIComponent(url.pathname)
+    if (request.method === 'GET' && path.startsWith('/app')) {
+      for (const flag of Object.keys(qaFlags)) {
+        if (url.searchParams.get(flag) === '1') qaFlags[flag] = true
+      }
+    }
     const isSession = path === '/api/v1/session'
 
     if (isSession && request.method === 'POST') {
@@ -2521,6 +2796,12 @@ createServer(async (request, response) => {
       const qCurrentDay = qIsCurrent ? now.getDate() : qIsPast ? qTotalDays + 1 : 0
       const override = (values.periodAllocated ?? {})[`${qYear}-${qSecond}`] ?? null
       const allocated = override ?? values.allocated
+      // QA: force the first budget over its limit without touching the fixture.
+      const spent =
+        (url.searchParams.get('overBudget') === '1' || qaFlags.overBudget) &&
+        budget.id === 1
+          ? allocated + 5000
+          : values.spent
       return sendJson(response, 200, {
         budgetId: budget.id,
         accountId: budget.accountId,
@@ -2534,8 +2815,8 @@ createServer(async (request, response) => {
         periodEnd: qEnd,
         periodDescription: qMonthName,
         allocatedMinor: allocated,
-        spentMinor: values.spent,
-        remainingMinor: allocated - values.spent,
+        spentMinor: spent,
+        remainingMinor: allocated - spent,
         totalDays: qTotalDays,
         currentDay: qCurrentDay,
         periodAllocationMinor: override,
@@ -2595,11 +2876,138 @@ createServer(async (request, response) => {
       })
     }
 
+    if (path === '/api/v1/reports/balance-series') {
+      const ids = url.searchParams
+        .getAll('accountIds')
+        .flatMap((value) => value.split(','))
+        .map(Number)
+        .filter((value) => Number.isInteger(value) && value > 0)
+      if (!ids.length) {
+        return sendJson(response, 400, {
+          error: 'missing_accountIds',
+          message: "Query parameter 'accountIds' is required",
+        })
+      }
+      const from = url.searchParams.get('from')
+      const to = url.searchParams.get('to')
+      if (!from || !to) {
+        return sendJson(response, 400, {
+          error: 'missing_from',
+          message: 'from and to are required',
+        })
+      }
+      const requested = (url.searchParams.get('granularity') ?? 'auto').toLowerCase()
+      if (!['auto', 'day', 'week', 'month'].includes(requested)) {
+        return sendJson(response, 400, {
+          error: 'invalid_granularity',
+          message: 'granularity must be auto, day, week or month',
+        })
+      }
+      const selected = []
+      for (const id of ids) {
+        const account = accounts.find((item) => item.id === id)
+        if (!account) {
+          return sendJson(response, 404, {
+            error: 'account_not_found',
+            message: 'Account not found',
+          })
+        }
+        selected.push(account)
+      }
+      const auto = autoGranularity(from, to)
+      let granularity = requested === 'auto' ? auto : requested
+      let granularityFallback = false
+      if (
+        requested !== 'auto' &&
+        balanceBucketDates(from, to, granularity).length > 400
+      ) {
+        granularity = auto
+        granularityFallback = true
+      }
+      const series = selected.map((account) =>
+        balanceSeriesFor(account, from, to, granularity),
+      )
+      const totals = [...new Set(series.map((entry) => entry.currency))].map((currency) => {
+        const matching = series.filter((entry) => entry.currency === currency)
+        const points = new Map()
+        for (const entry of matching) {
+          for (const point of entry.series) {
+            points.set(point.date, (points.get(point.date) ?? 0) + point.balanceMinor)
+          }
+        }
+        return {
+          currency,
+          fractionDigits: matching[0].fractionDigits,
+          startBalanceMinor: matching.reduce((sum, entry) => sum + entry.startBalanceMinor, 0),
+          periodIncomeMinor: matching.reduce((sum, entry) => sum + entry.periodIncomeMinor, 0),
+          periodExpensesMinor: matching.reduce((sum, entry) => sum + entry.periodExpensesMinor, 0),
+          series: [...points.entries()].map(([date, balanceMinor]) => ({ date, balanceMinor })),
+        }
+      })
+      if (url.searchParams.get('mixedCurrency') === '1' || qaFlags.mixedCurrency) {
+        const usd = selected[0]
+        totals.push({
+          currency: 'USD',
+          fractionDigits: 2,
+          startBalanceMinor: 50000,
+          periodIncomeMinor: 10000,
+          periodExpensesMinor: -5000,
+          series: series[0].series.map((point) => ({
+            date: point.date,
+            balanceMinor: Math.round(point.balanceMinor * 104) / 100 + 50000,
+          })),
+        })
+        if (!series.some((entry) => entry.currency === 'USD')) {
+          series.push({
+            ...series[0],
+            id: -1,
+            label: usd.label + ' (USD)',
+            currency: 'USD',
+            startBalanceMinor: 50000,
+            periodIncomeMinor: 10000,
+            periodExpensesMinor: -5000,
+            series: totals.at(-1).series,
+          })
+        }
+      }
+      if (url.searchParams.get('noHistory') === '1' || qaFlags.noHistory) {
+        for (const entry of series) {
+          entry.series = [entry.series[0]]
+          entry.periodIncomeMinor = 0
+          entry.periodExpensesMinor = 0
+        }
+      }
+      return sendJson(response, 200, {
+        from,
+        to,
+        granularity: granularity.toUpperCase(),
+        granularityFallback,
+        mixedCurrencies: totals.length > 1,
+        currencies: totals.map((entry) => ({
+          code: entry.currency,
+          fractionDigits: entry.fractionDigits,
+        })),
+        accounts: series,
+        totals,
+      })
+    }
+
+    if (path === '/api/v1/reports/investments') {
+      return sendJson(response, 200, mockInvestments(url))
+    }
+
     if (path === '/api/v1/reports/summary') {
       const from = url.searchParams.get('from') ?? ''
       const to = url.searchParams.get('to') ?? ''
+      const accountId = url.searchParams.get('accountId')
+      const all = accountId === 'all' || accountId === null || Number(accountId) === 0
       const items = transactions.filter(
-        (item) => item.date >= from && item.date <= to && !item.transferPeerId,
+        (item) =>
+          item.date >= from &&
+          item.date <= to &&
+          !item.transferPeerId &&
+          item.crStatus !== 'VOID' &&
+          (all || item.accountId === Number(accountId)),
       )
       const income = items
         .filter((item) => item.amountMinor > 0)
@@ -2607,8 +3015,22 @@ createServer(async (request, response) => {
       const expenses = items
         .filter((item) => item.amountMinor < 0)
         .reduce((total, item) => total + item.amountMinor, 0)
+      // Refunds: positive amounts on expense categories. Split parts carry
+      // their own category, so they are counted one by one.
+      const returnsMinor = items.reduce((total, item) => {
+        const parts = item.kind === 'SPLIT' ? (item.splitParts ?? splitParts) : [item]
+        return (
+          total +
+          parts.reduce((sum, part) => {
+            const category = categories.find((entry) => entry.id === part.category?.id)
+            return part.amountMinor > 0 && category?.type === 1
+              ? sum + part.amountMinor
+              : sum
+          }, 0)
+        )
+      }, 0)
       return sendJson(response, 200, {
-        accountId: url.searchParams.get('accountId') === 'all' ? 0 : Number(url.searchParams.get('accountId')),
+        accountId: all ? 0 : Number(accountId),
         from,
         to,
         currency: 'EUR',
@@ -2617,6 +3039,7 @@ createServer(async (request, response) => {
         expensesMinor: expenses,
         netMinor: income + expenses,
         count: items.length,
+        returnsMinor,
       })
     }
 
@@ -2627,11 +3050,33 @@ createServer(async (request, response) => {
       const type = url.searchParams.get('type') ?? 'expense'
       const matchesType = (item) =>
         type === 'both' || (type === 'income' ? item.amountMinor > 0 : item.amountMinor < 0)
+      const accountId = url.searchParams.get('accountId')
+      const all = accountId === 'all' || accountId === null || Number(accountId) === 0
+      const categoryIds = url.searchParams
+        .getAll('categoryId')
+        .flatMap((value) => value.split(','))
+        .map(Number)
+        .filter((value) => Number.isInteger(value) && value > 0)
+      const branch = new Set()
+      for (const id of categoryIds) {
+        const pending = [id]
+        while (pending.length) {
+          const current = pending.pop()
+          if (branch.has(current)) continue
+          branch.add(current)
+          for (const entry of categories) {
+            if (entry.parentId === current) pending.push(entry.id)
+          }
+        }
+      }
+      const inBranch = (id) => branch.size === 0 || branch.has(id)
       const parents = transactions.filter(
         (item) =>
           item.date >= from &&
           item.date <= to &&
           !item.transferPeerId &&
+          item.crStatus !== 'VOID' &&
+          (all || item.accountId === Number(accountId)) &&
           matchesType(item),
       )
       const entries = []
@@ -2695,7 +3140,9 @@ createServer(async (request, response) => {
         current.amountMinor += entry.amountMinor
         grouped.set(key, current)
       }
-      const items = [...grouped.values()]
+      const items = [...grouped.values()].filter(
+        (item) => by !== 'category' || inBranch(item.id),
+      )
       const total = items.reduce((sum, item) => sum + item.amountMinor, 0)
       const result = items
         .map((item) => ({
@@ -2747,8 +3194,11 @@ createServer(async (request, response) => {
         if (grouping === 'YEAR') return iso.slice(0, 4)
         return iso.slice(0, 7)
       }
+      const accountId = url.searchParams.get('accountId')
+      const all = accountId === 'all' || accountId === null || Number(accountId) === 0
       const buckets = new Map()
       for (const item of matchingTransactions(url)) {
+        if (!all && item.accountId !== Number(accountId)) continue
         const key = keyFor(item.date)
         const entry = buckets.get(key) ?? {
           year: Number(item.date.slice(0, 4)),

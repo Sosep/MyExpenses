@@ -38,7 +38,7 @@ import { Files } from './components/Files'
 import { Login } from './components/Login'
 import { Pwa } from './components/Pwa'
 import { AmountsProvider } from './privacy'
-import { Reports } from './components/Reports'
+import { ReportsSection } from './components/reports/ReportsSection'
 import { Shell } from './components/Shell'
 import type { View } from './components/Shell'
 import { TradeEditor } from './components/TradeEditor'
@@ -102,7 +102,30 @@ export default function App({ initialLocale: initial }: { initialLocale: Locale 
 
   function setView(next: View) {
     if (next === view) return
-    window.history.pushState(null, '', viewUrl(window.location.search, next))
+    let url = viewUrl(window.location.search, next)
+    // Report filters are not transaction filters. Leaving the section must not
+    // leave `categoryId`/`tab` behind for the list or Datos to interpret.
+    if (view === 'reports' && next !== 'reports') {
+      const params = new URLSearchParams(searchOf(url))
+      for (const key of [
+        'tab',
+        'period',
+        'compare',
+        'balanceRange',
+        'balanceMode',
+        'reportAccount',
+        'reportCategory',
+        'from',
+        'to',
+        'balanceFrom',
+        'balanceTo',
+      ]) {
+        params.delete(key)
+      }
+      const query = params.toString()
+      url = query ? `${window.location.pathname}?${query}` : window.location.pathname
+    }
+    window.history.pushState(null, '', url)
     setViewState(next)
   }
 
@@ -327,7 +350,11 @@ export default function App({ initialLocale: initial }: { initialLocale: Locale 
               onNewTransaction={() => setEditor({ mode: 'create' })}
             />
           ) : activeView === 'reports' ? (
-            <Reports account={account} accounts={accounts} />
+            <ReportsSection
+              accounts={accounts}
+              homeCurrency={meta.homeCurrency}
+              onNavigate={navigate}
+            />
           ) : activeView === 'files' ? (
             <Files />
           ) : activeView === 'budgets' ? (

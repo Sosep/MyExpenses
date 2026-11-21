@@ -10,6 +10,7 @@ import kotlin.math.roundToLong
 import org.totschnig.myexpenses.db2.Repository
 import org.totschnig.myexpenses.db2.entities.Transaction
 import org.totschnig.myexpenses.db2.getCurrencyUnitForAccount
+import org.totschnig.myexpenses.db2.loadTrades
 import org.totschnig.myexpenses.model.AccountType
 import org.totschnig.myexpenses.model.CrStatus
 import org.totschnig.myexpenses.model.CurrencyContext
@@ -18,6 +19,7 @@ import org.totschnig.myexpenses.model.Grouping
 import org.totschnig.myexpenses.provider.BaseTransactionProvider
 import org.totschnig.myexpenses.provider.CTE_SEARCH
 import org.totschnig.myexpenses.provider.DataBaseAccount
+import org.totschnig.myexpenses.provider.DatabaseConstants.WHERE_NOT_SPLIT_PART
 import org.totschnig.myexpenses.provider.KEY_ACCOUNTID
 import org.totschnig.myexpenses.provider.KEY_ACCOUNT_TYPE_LABEL
 import org.totschnig.myexpenses.provider.KEY_ACCOUNT_TYPE_LIST
@@ -53,6 +55,7 @@ import org.totschnig.myexpenses.provider.KEY_REFERENCE_NUMBER
 import org.totschnig.myexpenses.provider.KEY_ROWID
 import org.totschnig.myexpenses.provider.KEY_SEALED
 import org.totschnig.myexpenses.provider.KEY_SECOND_GROUP
+import org.totschnig.myexpenses.provider.KEY_STATUS
 import org.totschnig.myexpenses.provider.KEY_SUM
 import org.totschnig.myexpenses.provider.KEY_SUM_EXPENSES
 import org.totschnig.myexpenses.provider.KEY_SUM_INCOME
@@ -70,6 +73,7 @@ import org.totschnig.myexpenses.provider.PORTFOLIO_CASH
 import org.totschnig.myexpenses.provider.PORTFOLIO_CONTAINER
 import org.totschnig.myexpenses.provider.PORTFOLIO_NONE
 import org.totschnig.myexpenses.provider.SPLIT_CATID
+import org.totschnig.myexpenses.provider.STATUS_ARCHIVED
 import org.totschnig.myexpenses.provider.SplitStrategy
 import org.totschnig.myexpenses.provider.TABLE_TRANSACTIONS
 import org.totschnig.myexpenses.provider.TABLE_TRANSACTIONS_TAGS
@@ -89,6 +93,8 @@ import org.totschnig.myexpenses.provider.getString
 import org.totschnig.myexpenses.provider.getStringOrNull
 import org.totschnig.myexpenses.provider.useAndMapToList
 import org.totschnig.myexpenses.provider.withLimit
+import org.totschnig.myexpenses.viewmodel.data.Trade
+import org.totschnig.myexpenses.viewmodel.data.TradeType
 
 /**
  * One account row of the full-projection query, plus the raw fields the
@@ -392,7 +398,7 @@ internal fun Repository.queryBudgetAllocations(
 }
 
 internal fun Repository.queryReportTransactions(
-    accountId: Long,
+    accountId: Long?,
     by: String,
     groupId: Long,
     type: String,
@@ -488,6 +494,33 @@ internal fun Repository.queryReportSummary(
             Triple(cursor.getLong(0), cursor.getLong(1), cursor.getLong(2))
         }
     } ?: Triple(0L, 0L, 0L)
+    // A positive amount booked on an expense category is a refund: it nets the
+    // expense KPI, never the income one. Split parts count through their own
+    // category, so the parent with the technical split category is skipped.
+    val expenseCategories = expenseCategoryIds(queryCategories())
+    val returns = if (expenseCategories.isEmpty()) {
+        0L
+    } else {
+        val (returnsSelection, returnsArgs) = reportSelection(
+            accountId,
+            from,
+            to,
+            "both",
+            wholeTransactions = false,
+            alias = alias
+        )
+        val placeholders = expenseCategories.joinToString(",")
+        val selection = "$returnsSelection AND $KEY_AMOUNT > 0 " +
+            "AND $KEY_CATID IN ($placeholders) " +
+            "AND ($KEY_PARENTID IS NOT NULL OR $KEY_CATID IS NOT $SPLIT_CATID)"
+        contentResolver.query(
+            uri,
+            arrayOf("sum($amountColumn)"),
+            selection,
+            returnsArgs,
+            null
+        )?.use { cursor -> if (cursor.moveToFirst()) cursor.getLong(0) else 0L } ?: 0L
+    }
     return ReportSummaryDto(
         accountId = accountId ?: 0,
         from = from.toString(),
@@ -497,8 +530,309 @@ internal fun Repository.queryReportSummary(
         incomeMinor = income,
         expensesMinor = expenses,
         netMinor = income + expenses,
-        count = count
+        count = count,
+        returnsMinor = returns
     )
+}
+
+/** The app's category mask: 1 expense, 2 income, 3 neutral; a child inherits. */
+internal fun expenseCategoryIds(categories: List<CategoryDto>): Set<Long> {
+    val byId = categories.associateBy { it.id }
+    val resolved = mutableMapOf<Long, Int?>()
+    fun typeOf(id: Long, seen: MutableSet<Long> = mutableSetOf()): Int? {
+        if (resolved.containsKey(id)) return resolved[id]
+        val category = byId[id] ?: return null
+        if (!seen.add(id)) return category.type
+        val type = category.type ?: category.parentId?.let { typeOf(it, seen) }
+        resolved[id] = type
+        return type
+    }
+    return categories.filter { typeOf(it.id) == 1 }.map { it.id }.toSet()
+}
+
+/**
+ * Historical balance of the selected accounts.
+ *
+ * One aggregated query returns the signed movement per account and day plus one
+ * query returns the movements before `from`; the dense folding is pure Kotlin.
+ * Splits count as their parent for the balance (the parts would double-count),
+ * transfers keep their signed amount per account and cancelled or archived rows
+ * are excluded, exactly like the provider's current balance.
+ */
+internal fun Repository.queryBalanceSeries(
+    accounts: List<AccountDto>,
+    from: LocalDate,
+    to: LocalDate,
+    requestedGranularity: String
+): BalanceSeriesDto {
+    val ids = accounts.map { it.id }
+    val (granularity, fallback) = resolveBalanceGranularity(requestedGranularity, from, to)
+    val zone = ZoneId.systemDefault()
+    val fromEpoch = from.atStartOfDay(zone).toEpochSecond()
+    val toEpoch = to.plusDays(1).atStartOfDay(zone).toEpochSecond()
+    val base = "$KEY_ACCOUNTID IN (${ids.joinToString(",")}) AND $KEY_PARENTID IS NULL " +
+        "AND $KEY_CR_STATUS != '${CrStatus.VOID.name}' AND $KEY_STATUS != $STATUS_ARCHIVED"
+
+    val prior = mutableMapOf<Long, Long>()
+    contentResolver.query(
+        TransactionProvider.EXTENDED_URI,
+        arrayOf(KEY_ACCOUNTID, "sum($KEY_AMOUNT)"),
+        "$base AND $KEY_DATE < ?",
+        arrayOf(fromEpoch.toString()),
+        "$KEY_ACCOUNTID"
+    )?.use { cursor ->
+        while (cursor.moveToNext()) {
+            prior[cursor.getLong(0)] = cursor.getLong(1)
+        }
+    }
+
+    val firstDates = mutableMapOf<Long, String>()
+    contentResolver.query(
+        TransactionProvider.EXTENDED_URI,
+        arrayOf(KEY_ACCOUNTID, "min($KEY_DATE)"),
+        base,
+        null,
+        "$KEY_ACCOUNTID"
+    )?.use { cursor ->
+        while (cursor.moveToNext()) {
+            firstDates[cursor.getLong(0)] =
+                Instant.ofEpochSecond(cursor.getLong(1)).atZone(zone).toLocalDate().toString()
+        }
+    }
+
+    val daysByAccount = mutableMapOf<Long, MutableList<BalanceDay>>()
+    val incomeByAccount = mutableMapOf<Long, Long>()
+    val expenseByAccount = mutableMapOf<Long, Long>()
+    contentResolver.query(
+        TransactionProvider.EXTENDED_URI,
+        arrayOf(
+            KEY_ACCOUNTID,
+            "strftime('%Y-%m-%d', $KEY_DATE, 'unixepoch', 'localtime') AS day",
+            "sum($KEY_AMOUNT)",
+            "sum(CASE WHEN $KEY_TRANSFER_ACCOUNT IS NULL AND $KEY_AMOUNT > 0 " +
+                "THEN $KEY_AMOUNT ELSE 0 END)",
+            "sum(CASE WHEN $KEY_TRANSFER_ACCOUNT IS NULL AND $KEY_AMOUNT < 0 " +
+                "THEN $KEY_AMOUNT ELSE 0 END)"
+        ),
+        "$base AND $KEY_DATE >= ? AND $KEY_DATE < ?",
+        arrayOf(fromEpoch.toString(), toEpoch.toString()),
+        "$KEY_ACCOUNTID, day"
+    )?.use { cursor ->
+        while (cursor.moveToNext()) {
+            val accountId = cursor.getLong(0)
+            val date = LocalDate.parse(cursor.getString(1))
+            val amount = cursor.getLong(2)
+            val income = cursor.getLong(3)
+            val expense = cursor.getLong(4)
+            daysByAccount.getOrPut(accountId) { mutableListOf() }
+                .add(BalanceDay(date, amount, income, expense))
+            incomeByAccount[accountId] = (incomeByAccount[accountId] ?: 0L) + income
+            expenseByAccount[accountId] = (expenseByAccount[accountId] ?: 0L) + expense
+        }
+    }
+
+    val series = accounts.map { account ->
+        val start = account.openingBalanceMinor + (prior[account.id] ?: 0L)
+        BalanceAccountSeriesDto(
+            id = account.id,
+            label = account.label,
+            color = account.color,
+            currency = account.currency,
+            fractionDigits = account.fractionDigits,
+            startBalanceMinor = start,
+            firstTransactionDate = firstDates[account.id],
+            periodIncomeMinor = incomeByAccount[account.id] ?: 0L,
+            periodExpensesMinor = expenseByAccount[account.id] ?: 0L,
+            series = foldBalanceSeries(
+                start,
+                daysByAccount[account.id] ?: emptyList(),
+                from,
+                to,
+                granularity
+            )
+        )
+    }
+
+    val totals = accounts
+        .map { it.currency }
+        .distinct()
+        .map { currency ->
+            val ofCurrency = series.filter { it.currency == currency }
+            val first = accounts.first { it.currency == currency }
+            CurrencyBalanceTotalDto(
+                currency = currency,
+                fractionDigits = first.fractionDigits,
+                startBalanceMinor = ofCurrency.sumOf { it.startBalanceMinor },
+                periodIncomeMinor = ofCurrency.sumOf { it.periodIncomeMinor },
+                periodExpensesMinor = ofCurrency.sumOf { it.periodExpensesMinor },
+                series = totalBalanceSeries(ofCurrency.map { it.series })
+            )
+        }
+
+    return BalanceSeriesDto(
+        from = from.toString(),
+        to = to.toString(),
+        granularity = granularity.name,
+        granularityFallback = fallback,
+        mixedCurrencies = totals.size > 1,
+        currencies = accounts.map { it.currency }.distinct().map { currency ->
+            CurrencyRefDto(currency, accounts.first { it.currency == currency }.fractionDigits)
+        },
+        accounts = series,
+        totals = totals
+    )
+}
+
+private data class PricePoint(val value: Double, val date: String)
+
+private fun Repository.latestPricesWithDate(): Map<Pair<String, String>, PricePoint> =
+    contentResolver.query(
+        TransactionProvider.LATEST_PRICES_URI,
+        arrayOf(KEY_COMMODITY, KEY_CURRENCY, KEY_DATE, KEY_VALUE),
+        null,
+        null,
+        null
+    )?.useAndMapToList { cursor ->
+        Triple(
+            cursor.getString(KEY_COMMODITY) to cursor.getString(KEY_CURRENCY),
+            cursor.getDouble(KEY_VALUE),
+            cursor.getString(KEY_DATE)
+        )
+    }?.associate { (pair, value, date) -> pair to PricePoint(value, date) } ?: emptyMap()
+
+private data class CostBasis(val quantityMinor: Long, val costMinor: Long?, val known: Boolean)
+
+/**
+ * Weighted average cost over BUY/SELL, the criterion the app's trade editor
+ * presents. Units arriving through a transfer have no purchase price, so the
+ * basis is marked unknown instead of inventing one.
+ */
+private fun costBasis(trades: List<Trade>): CostBasis {
+    var quantity = 0L
+    var cost = 0L
+    var known = true
+    trades.sortedBy { it.date }.forEach { trade ->
+        val moved = trade.quantity.amountMinor
+        when (val type = trade.type) {
+            is TradeType.AssetTrade -> {
+                if (type.isIncoming) {
+                    if (moved > 0) {
+                        cost += trade.principal.amountMinor +
+                            (trade.fee?.amountMinor ?: 0L)
+                        quantity += moved
+                    }
+                } else if (quantity > 0) {
+                    val sold = moved.coerceAtMost(quantity)
+                    val average = cost.toDouble() / quantity
+                    cost -= (average * sold).roundToLong().coerceAtMost(cost)
+                    quantity -= sold
+                }
+            }
+
+            is TradeType.Transfer -> {
+                if (type.isIncoming) {
+                    if (moved > 0) {
+                        quantity += moved
+                        known = false
+                    }
+                } else if (quantity > 0) {
+                    val out = moved.coerceAtMost(quantity)
+                    if (out == quantity) {
+                        cost = 0
+                    } else {
+                        val average = cost.toDouble() / quantity
+                        cost -= (average * out).roundToLong().coerceAtMost(cost)
+                    }
+                    quantity -= out
+                }
+            }
+
+            else -> Unit
+        }
+    }
+    if (quantity <= 0) return CostBasis(0L, 0L, known)
+    return CostBasis(quantity, if (known) cost else null, known)
+}
+
+/**
+ * Aggregate dashboard of every portfolio, valued at the last manual price.
+ * Nothing here is a live quote: `lastValuationDate` is always the date the user
+ * entered the price.
+ */
+internal fun Repository.queryInvestments(currencyContext: CurrencyContext): InvestmentsDto {
+    val rows = queryAccounts(currencyContext)
+    val prices = latestPricesWithDate()
+    val home = currencyContext.homeCurrencyString
+    val portfolios = rows.filter { it.portfolioRole == "CONTAINER" }.map { container ->
+        val children = rows.filter { it.parentId == container.id }
+        val cash = children.firstOrNull { it.portfolioRole == "CASH" }
+        val assetRows = children.filter { it.portfolioRole == "ASSET" }
+        val tradeIds = contentResolver.query(
+            TransactionProvider.TRANSACTIONS_URI.buildUpon()
+                .appendQueryParameter(KEY_ACCOUNTID, container.id.toString())
+                .appendQueryParameter(TransactionProvider.QUERY_PARAMETER_SEARCH, "1")
+                .build(),
+            arrayOf(KEY_ROWID),
+            WHERE_NOT_SPLIT_PART,
+            null,
+            null
+        )?.useAndMapToList { it.getLong(KEY_ROWID) } ?: emptyList()
+        val tradesBySymbol = loadTrades(tradeIds).groupBy { it.assetSymbol }
+        val assets = assetRows.map { child ->
+            val price = prices[child.currency to container.currency]
+            val rate = conversionRate(
+                child.currency,
+                child.dynamicExchangeRates,
+                container.currency,
+                prices.mapValues { it.value.value }
+            )
+            val valuation = (child.currentBalanceMinor * rate).roundToLong()
+            val basis = costBasis(tradesBySymbol[child.currency].orEmpty())
+            InvestmentAssetDto(
+                symbol = child.currency,
+                label = child.label,
+                fractionDigits = child.fractionDigits,
+                quantityMinor = child.currentBalanceMinor,
+                priceMinor = price?.value,
+                lastPriceDate = price?.date,
+                valuationMinor = valuation,
+                costKnown = basis.known,
+                costMinor = basis.costMinor,
+                resultMinor = basis.costMinor?.let { valuation - it }
+            )
+        }
+        val knownCost = assets.all { it.costKnown }
+        val cost = if (knownCost) assets.sumOf { it.costMinor ?: 0L } else null
+        val valuation = container.valuationMinor ?: container.currentBalanceMinor
+        InvestmentPortfolioDto(
+            id = container.id,
+            label = container.label,
+            currency = container.currency,
+            fractionDigits = container.fractionDigits,
+            cashMinor = cash?.currentBalanceMinor ?: 0,
+            valuationMinor = valuation,
+            costKnown = knownCost,
+            costMinor = cost,
+            resultMinor = cost?.let { valuation - it },
+            lastValuationDate = assets.mapNotNull { it.lastPriceDate }.maxOrNull(),
+            assets = assets
+        )
+    }
+    val totals = portfolios.map { it.currency }.distinct().map { currency ->
+        val matching = portfolios.filter { it.currency == currency }
+        val known = matching.all { it.costKnown }
+        val cost = if (known) matching.sumOf { it.costMinor ?: 0L } else null
+        val valuation = matching.sumOf { it.valuationMinor }
+        CurrencyInvestmentTotalDto(
+            currency = currency,
+            fractionDigits = matching.first().fractionDigits,
+            valuationMinor = valuation,
+            costKnown = known,
+            costMinor = cost,
+            resultMinor = cost?.let { valuation - it }
+        )
+    }
+    return InvestmentsDto(homeCurrency = home, portfolios = portfolios, totals = totals)
 }
 
 internal fun Repository.queryBreakdown(
@@ -508,7 +842,8 @@ internal fun Repository.queryBreakdown(
     from: LocalDate,
     to: LocalDate,
     unit: CurrencyUnit,
-    allAccounts: Boolean
+    allAccounts: Boolean,
+    categoryIds: List<Long> = emptyList()
 ): BreakdownDto {
     val amountColumn = if (allAccounts) KEY_DISPLAY_AMOUNT else KEY_AMOUNT
     val (baseUri, alias) = if (allAccounts) {
@@ -526,7 +861,8 @@ internal fun Repository.queryBreakdown(
             to,
             amountColumn,
             baseUri,
-            alias
+            alias,
+            if (by == "category") categoryIds else emptyList()
         )
 
         "tag" -> queryTagBreakdown(
@@ -574,7 +910,8 @@ private fun Repository.queryGroupedBreakdown(
     to: LocalDate,
     amountColumn: String,
     baseUri: Uri,
-    alias: String
+    alias: String,
+    categoryIds: List<Long>
 ): List<BreakdownItemDto> {
     val wholeTransactions = by != "category"
     val (baseSelection, args) =
@@ -583,7 +920,12 @@ private fun Repository.queryGroupedBreakdown(
     // parent must stay out. Uncategorized rows (catid null or 0) must stay in:
     // dropping them made the category report total disagree with the summary.
     val selection = if (by == "category") {
-        "$baseSelection AND $KEY_CATID IS NOT $SPLIT_CATID"
+        val branch = if (categoryIds.isEmpty()) {
+            ""
+        } else {
+            " AND $KEY_CATID IN (${categoryIds.joinToString(",")})"
+        }
+        "$baseSelection AND $KEY_CATID IS NOT $SPLIT_CATID$branch"
     } else {
         baseSelection
     }
@@ -704,8 +1046,13 @@ private fun reportSelection(
     return clauses.joinToString(" AND ") to args.takeIf { it.isNotEmpty() }?.toTypedArray()
 }
 
+/**
+ * Period groups. A null [accountId] asks the provider for the home-currency
+ * total of every account included in totals, which is the only correct way to
+ * aggregate accounts in different currencies.
+ */
 internal fun Repository.queryTransactionGroups(
-    accountId: Long,
+    accountId: Long?,
     grouping: Grouping,
     from: LocalDate,
     to: LocalDate,
@@ -714,7 +1061,11 @@ internal fun Repository.queryTransactionGroups(
 ): List<GroupDto> {
     val unfiltered = filters.isEmpty && (type == null || type == "both")
     val uri = BaseTransactionProvider.groupingUriBuilder(grouping)
-        .appendQueryParameter(KEY_ACCOUNTID, accountId.toString())
+        .apply {
+            accountId?.takeIf { it > 0 }?.let {
+                appendQueryParameter(KEY_ACCOUNTID, it.toString())
+            }
+        }
         .appendQueryParameter(KEY_FIRST_DATE, "1")
         .apply {
             // The list shows a split as its parent whole. Under a filter the sums

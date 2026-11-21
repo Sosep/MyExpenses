@@ -511,6 +511,44 @@ class ApiRoutes(
                 validateRange(from, to)
                 call.respond(dataSource.summary(accountId, from, to))
             }
+            get("/reports/balance-series") {
+                val ids = call.idsParam("accountIds")
+                if (ids.isEmpty()) {
+                    throw ApiException(
+                        HttpStatusCode.BadRequest,
+                        "missing_accountIds",
+                        "Query parameter 'accountIds' is required"
+                    )
+                }
+                val now = LocalDate.now()
+                val from = call.dateParam("from")
+                    ?: throw ApiException(
+                        HttpStatusCode.BadRequest,
+                        "missing_from",
+                        "Query parameter 'from' is required"
+                    )
+                val to = call.dateParam("to") ?: now
+                validateRange(from, to)
+                val granularity = (call.parameters["granularity"] ?: "auto").lowercase(Locale.ROOT)
+                if (granularity !in setOf("auto", "day", "week", "month")) {
+                    throw ApiException(
+                        HttpStatusCode.BadRequest,
+                        "invalid_granularity",
+                        "granularity must be auto, day, week or month"
+                    )
+                }
+                val accounts = ids.map { id ->
+                    dataSource.account(id) ?: throw ApiException(
+                        HttpStatusCode.NotFound,
+                        "account_not_found",
+                        "Account not found"
+                    )
+                }
+                call.respond(dataSource.balanceSeries(accounts, from, to, granularity))
+            }
+            get("/reports/investments") {
+                call.respond(dataSource.investments())
+            }
             get("/reports/transactions") {
                 val accountId = call.reportAccountId()
                 val by = (call.parameters["by"] ?: "category").lowercase(Locale.ROOT)
@@ -571,10 +609,21 @@ class ApiRoutes(
                 val from = call.dateParam("from") ?: now.withDayOfMonth(1).minusMonths(11)
                 val to = call.dateParam("to") ?: now
                 validateRange(from, to)
-                call.respond(dataSource.breakdown(accountId, by, type, from, to))
+                val selected = call.idsParam("categoryId")
+                val categories = if (selected.isEmpty()) {
+                    emptyList()
+                } else {
+                    categoryBranchIds(
+                        selected,
+                        dataSource.categories().associate { it.id to it.parentId }
+                    )
+                }
+                call.respond(
+                    dataSource.breakdown(accountId, by, type, from, to, categories)
+                )
             }
             get("/reports/grouped") {
-                val accountId = call.requireLong("accountId")
+                val accountId = call.reportAccountId()
                 val grouping = (call.parameters["grouping"] ?: "MONTH")
                     .uppercase(Locale.ROOT)
                 if (grouping !in setOf("DAY", "WEEK", "MONTH", "YEAR", "NONE")) {

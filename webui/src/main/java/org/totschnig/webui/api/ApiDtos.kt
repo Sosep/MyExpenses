@@ -46,6 +46,17 @@ data class UiPreferencesDto(
     val reportBreakdown: String? = null,
     val reportType: String? = null,
     val reportAllAccounts: Boolean? = null,
+    /** Informes section: tab, shared period and comparison. */
+    val reportTab: String? = null,
+    val reportPeriod: String? = null,
+    val reportCustomFrom: String? = null,
+    val reportCustomTo: String? = null,
+    val reportCompare: String? = null,
+    /** Historical balance chart controls. */
+    val reportBalanceRange: String? = null,
+    val reportBalanceFrom: String? = null,
+    val reportBalanceTo: String? = null,
+    val reportAccountIds: List<Long>? = null,
     val budgetMonth: String? = null,
     val transactionType: String? = null
 )
@@ -483,7 +494,115 @@ data class ReportSummaryDto(
     val incomeMinor: Long,
     val expensesMinor: Long,
     val netMinor: Long,
-    val count: Long
+    val count: Long,
+    /**
+     * Positive amounts booked on expense categories (a refund). They net the
+     * expense KPI but are not ordinary income.
+     */
+    val returnsMinor: Long = 0
+)
+
+@Keep
+data class BalancePointDto(
+    val date: String,
+    val balanceMinor: Long
+)
+
+@Keep
+data class BalanceAccountSeriesDto(
+    val id: Long,
+    val label: String,
+    val color: Int,
+    val currency: String,
+    val fractionDigits: Int,
+    /** Opening balance plus every movement before `from`. */
+    val startBalanceMinor: Long,
+    /** First movement of the account, so partial history is visible. */
+    val firstTransactionDate: String?,
+    /** Non-transfer inflow and outflow inside the range. */
+    val periodIncomeMinor: Long,
+    val periodExpensesMinor: Long,
+    val series: List<BalancePointDto>
+)
+
+@Keep
+data class CurrencyBalanceTotalDto(
+    val currency: String,
+    val fractionDigits: Int,
+    val startBalanceMinor: Long,
+    val periodIncomeMinor: Long,
+    val periodExpensesMinor: Long,
+    val series: List<BalancePointDto>
+)
+
+@Keep
+data class CurrencyRefDto(
+    val code: String,
+    val fractionDigits: Int
+)
+
+@Keep
+data class BalanceSeriesDto(
+    val from: String,
+    val to: String,
+    /** The granularity actually used: DAY, WEEK or MONTH. */
+    val granularity: String,
+    /** True when an explicit granularity was too dense and the auto one won. */
+    val granularityFallback: Boolean = false,
+    /** Saldos are never converted between currencies. */
+    val mixedCurrencies: Boolean = false,
+    val currencies: List<CurrencyRefDto>,
+    val accounts: List<BalanceAccountSeriesDto>,
+    /** One total per currency; summing them would be meaningless. */
+    val totals: List<CurrencyBalanceTotalDto>
+)
+
+@Keep
+data class InvestmentAssetDto(
+    val symbol: String,
+    val label: String,
+    val fractionDigits: Int,
+    val quantityMinor: Long,
+    /** Raw latest price: portfolio minor units per asset minor unit. */
+    val priceMinor: Double?,
+    /** Date of the last price the user entered, never a live quote. */
+    val lastPriceDate: String?,
+    val valuationMinor: Long,
+    val costKnown: Boolean,
+    val costMinor: Long?,
+    val resultMinor: Long?
+)
+
+@Keep
+data class InvestmentPortfolioDto(
+    val id: Long,
+    val label: String,
+    val currency: String,
+    val fractionDigits: Int,
+    val cashMinor: Long,
+    val valuationMinor: Long,
+    val costKnown: Boolean,
+    val costMinor: Long?,
+    val resultMinor: Long?,
+    val lastValuationDate: String?,
+    val assets: List<InvestmentAssetDto>
+)
+
+@Keep
+data class CurrencyInvestmentTotalDto(
+    val currency: String,
+    val fractionDigits: Int,
+    val valuationMinor: Long,
+    val costKnown: Boolean,
+    val costMinor: Long?,
+    val resultMinor: Long?
+)
+
+@Keep
+data class InvestmentsDto(
+    val homeCurrency: String,
+    val portfolios: List<InvestmentPortfolioDto>,
+    val totals: List<CurrencyInvestmentTotalDto>
 )
 
 @Keep

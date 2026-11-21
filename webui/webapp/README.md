@@ -165,9 +165,16 @@ El detalle de una transacción abre una entrada de historial: atrás lo cierra.
 | `?view=transactions&preset=month` | Rango del mes actual (`last3`, `year`, `custom` con `from`/`to`) |
 | `?view=transactions&q=cafe` | Busca en descripción, beneficiario y referencia |
 | `?view=transactions&status=CLEARED&transfer=false` | Estado y transferencias |
-| `?view=reports` | Informes |
-| `?view=reports&reportBy=Payee&reportType=Both` | Preselecciona dimensión y tipo |
-| `?view=reports&reportDrill=1` | Abre el detalle del primer grupo |
+| `?view=reports` | Informes: abre Resumen |
+| `?view=reports&tab=expenses` / `income` / `accounts` / `investments` / `budgets` | Abre esa pestaña |
+| `?view=reports&period=week\|month\|quarter\|year\|lastYear\|custom` | Periodo global; con `custom` usa `from`/`to` |
+| `?view=reports&compare=previous` | Compara con el periodo anterior |
+| `?view=reports&balanceRange=y1&balanceMode=perAccount` | Histórico de saldos por cuenta |
+| `?view=reports&mixedCurrency=1` | El histórico devuelve dos divisas sin convertirlas |
+| `?view=reports&noHistory=1` | Histórico con un solo punto (estado de pocos datos) |
+| `?view=reports&costUnknown=1` | Inversiones con coste desconocido y resultado oculto |
+| `?view=reports&emptyInvestments=1` | Inversiones sin carteras |
+| `?view=reports&overBudget=1` | Presupuestos con alguno superado (fixture) |
 | `?view=budgets` | Presupuestos |
 | `?view=budgets&budgetMonth=-1` | Presupuestos en el mes anterior |
 | `?view=budgets&detail=1` | Abre el detalle del primer presupuesto (reparto, importe e histórico) |
@@ -243,6 +250,11 @@ Sirve para comprobar:
   rollover, total por periodo, duplicación, informes, preferencias de la interfaz
   web (`GET/PUT /ui-preferences`) y descarga de ficheros; el borrado de
   categorías respeta también las partes de dividida (`409`).
+- **Sí (solo lectura)**: `/reports/balance-series` (serie densa, totales por
+  divisa, `mixedCurrency`, `noHistory` y fallback de granularidad) y
+  `/reports/investments` (valor, coste medio, `costUnknown` y
+  `emptyInvestments`). El resumen incluye `returnsMinor` y el desglose acota la
+  rama con `categoryId`.
 - **Sí**: alta/edición de carteras (`POST/PUT /portfolios`) y sus operaciones
   (`POST/PUT/DELETE /portfolios/{id}/trades`), incluida la subcuenta de efectivo
   que la app crea con la primera operación; el límite de licencia se simula con

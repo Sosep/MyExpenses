@@ -6,12 +6,34 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#. placeholder {0}: formatMonth(group.year, group.second)
+#. placeholder {0}: range.from
+#. placeholder {1}: range.to
+#: src/components/reports/FlowsTab.tsx
+msgid "{0} – {1}"
+msgstr "{0} – {1}"
+
+#. placeholder {0}: range.from
+#. placeholder {1}: range.to
+#: src/components/reports/shared.tsx
+msgid "{0} – {1} · {homeCurrency}"
+msgstr "{0} – {1} · {homeCurrency}"
+
+#. placeholder {0}: fullLabelFor(group, grouping)
 #. placeholder {1}: money( group.incomeMinor, currency, fractionDigits, )
 #. placeholder {2}: money(group.expensesMinor, currency, fractionDigits)
 #: src/components/Chart.tsx
 msgid "{0} — income {1}, expenses {2}"
 msgstr "{0} — income {1}, expenses {2}"
+
+#. placeholder {0}: periodLabel(period)
+#: src/components/reports/ReportsSection.tsx
+msgid "{0} · {accountLabel}"
+msgstr "{0} · {accountLabel}"
+
+#. placeholder {0}: selectedIds.length
+#: src/components/reports/ReportsSection.tsx
+msgid "{0} accounts"
+msgstr "{0} accounts"
 
 #. placeholder {0}: items.length
 #: src/components/Budgets.tsx
@@ -24,11 +46,35 @@ msgstr "{0} — income {1}, expenses {2}"
 msgid "{0} budgets · {1}"
 msgstr "{0} budgets · {1}"
 
+#. placeholder {0}: over.length
+#: src/components/reports/BudgetsTab.tsx
+msgid "{0} budgets over the limit"
+msgstr "{0} budgets over the limit"
+
+#. placeholder {0}: warn.length
+#: src/components/reports/BudgetsTab.tsx
+msgid "{0} close to the limit"
+msgstr "{0} close to the limit"
+
+#. placeholder {0}: breakdown.data.items.length
+#. placeholder {1}: range.from
+#. placeholder {2}: range.to
+#: src/components/reports/FlowsTab.tsx
+#~ msgid "{0} groups · {1} – {2}"
+#~ msgstr "{0} groups · {1} – {2}"
+
+#. placeholder {0}: breakdown.data.items.length
+#. placeholder {1}: range.from
+#. placeholder {2}: range.to
+#: src/components/reports/FlowsTab.tsx
+msgid "{0} groups · {1} – {2} · percentages on the filtered total"
+msgstr "{0} groups · {1} – {2} · percentages on the filtered total"
+
 #. placeholder {0}: data.items.length
 #. placeholder {1}: reportMoney( data.totalMinor, data.currency, data.fractionDigits, )
 #: src/components/Reports.tsx
-msgid "{0} groups · {1} total"
-msgstr "{0} groups · {1} total"
+#~ msgid "{0} groups · {1} total"
+#~ msgstr "{0} groups · {1} total"
 
 #. placeholder {0}: cardMoney( progress.remainingMinor, progress.currency, progress.fractionDigits, )
 #. placeholder {0}: formatMoney(remaining, account?.currency ?? 'EUR', fractionDigits, true)
@@ -39,10 +85,20 @@ msgstr "{0} groups · {1} total"
 msgid "{0} left"
 msgstr "{0} left"
 
+#. placeholder {0}: formatPercent(budgetPercent(entry.progress))
+#: src/components/reports/BudgetsTab.tsx
+msgid "{0} of the limit used"
+msgstr "{0} of the limit used"
+
 #. placeholder {0}: summaryMoney( Math.abs(summary.remaining), summary.currency, summary.fractionDigits, )
 #: src/components/Budgets.tsx
 msgid "{0} over"
 msgstr "{0} over"
+
+#. placeholder {0}: formatPercent(savingsRate - previousSavings)
+#: src/components/reports/SummaryTab.tsx
+msgid "{0} points vs the previous period"
+msgstr "{0} points vs the previous period"
 
 #. placeholder {0}: budget.title
 #: src/components/BudgetDetailPanel.tsx
@@ -53,7 +109,7 @@ msgstr "{0} spent"
 #. placeholder {0}: item.count
 #. placeholder {0}: page.data?.total ?? item.count
 #: src/components/ReportPanel.tsx
-#: src/components/Reports.tsx
+#: src/components/reports/shared.tsx
 msgid "{0} transactions"
 msgstr "{0} transactions"
 
@@ -72,6 +128,10 @@ msgstr "{0} used"
 msgid "{count} filters"
 msgstr "{count} filters"
 
+#: src/components/reports/FlowsTab.tsx
+msgid "{days} days in the period"
+msgstr "{days} days in the period"
+
 #: src/components/BudgetDetailPanel.tsx
 #: src/components/Budgets.tsx
 msgid "{days} days left"
@@ -84,6 +144,34 @@ msgstr "{total} transactions"
 #: src/components/TransactionEditor.tsx
 msgid "+ Add part"
 msgstr "+ Add part"
+
+#: src/components/reports/ReportsSection.tsx
+msgid "1 account"
+msgstr "1 account"
+
+#: src/components/reports/BalanceCard.tsx
+msgid "1 month"
+msgstr "1 month"
+
+#: src/components/reports/BalanceCard.tsx
+msgid "1 year"
+msgstr "1 year"
+
+#: src/components/reports/BalanceCard.tsx
+msgid "2 years"
+msgstr "2 years"
+
+#: src/components/reports/BalanceCard.tsx
+msgid "3 months"
+msgstr "3 months"
+
+#: src/components/reports/BalanceCard.tsx
+msgid "5 years"
+msgstr "5 years"
+
+#: src/components/reports/BalanceCard.tsx
+msgid "6 months"
+msgstr "6 months"
 
 #: src/components/Trades.tsx
 msgid "A deposit or a buy will show up here."
@@ -101,10 +189,20 @@ msgstr "A portfolio starts at zero: bring cash in with a deposit."
 msgid "A single income or expense."
 msgstr "A single income or expense."
 
+#: src/components/reports/InvestmentsTab.tsx
+msgid "A transfer arrived without a purchase price"
+msgstr "A transfer arrived without a purchase price"
+
+#: src/components/reports/InvestmentsTab.tsx
+msgid "Above the purchase cost"
+msgstr "Above the purchase cost"
+
 #: src/components/AccountEditor.tsx
 #: src/components/BudgetDetailPanel.tsx
 #: src/components/BudgetEditor.tsx
 #: src/components/Budgets.tsx
+#: src/components/reports/AccountsTab.tsx
+#: src/components/reports/BudgetsTab.tsx
 #: src/components/Shell.tsx
 #: src/components/TradeEditor.tsx
 #: src/components/TransactionEditor.tsx
@@ -140,18 +238,32 @@ msgstr "Account type"
 msgid "Account types"
 msgstr "Account types"
 
+#: src/components/reports/AccountsTab.tsx
+msgid "accounts"
+msgstr "accounts"
+
+#: src/components/reports/AccountsTab.tsx
+#: src/components/reports/BalanceCard.tsx
+#: src/components/reports/ReportsSection.tsx
+msgid "Accounts"
+msgstr "Accounts"
+
 #: src/components/AppData.tsx
 #: src/components/Files.tsx
 msgid "Actions"
 msgstr "Actions"
 
 #: src/components/Reports.tsx
-msgid "Activity by {noun}"
-msgstr "Activity by {noun}"
+#~ msgid "Activity by {noun}"
+#~ msgstr "Activity by {noun}"
 
 #: src/components/AppData.tsx
 msgid "Add a currency of type Security, Crypto or Commodity first."
 msgstr "Add a currency of type Security, Crypto or Commodity first."
+
+#: src/components/reports/BalanceCard.tsx
+msgid "Add an account to the chart"
+msgstr "Add an account to the chart"
 
 #: src/components/AppData.tsx
 msgid "Add the first price for this asset."
@@ -162,17 +274,26 @@ msgid "Add…"
 msgstr "Add…"
 
 #: src/components/AppData.tsx
+#: src/components/reports/BudgetsTab.tsx
 #: src/components/Transactions.tsx
 msgid "All"
 msgstr "All"
 
-#: src/components/Reports.tsx
+#: src/components/reports/BudgetsTab.tsx
 msgid "All accounts"
 msgstr "All accounts"
 
 #: src/components/Budgets.tsx
 msgid "All budgets"
 msgstr "All budgets"
+
+#: src/components/reports/BalanceCard.tsx
+msgid "All history"
+msgstr "All history"
+
+#: src/components/reports/InvestmentsTab.tsx
+msgid "All portfolios"
+msgstr "All portfolios"
 
 #: src/components/Budgets.tsx
 msgid "allocated"
@@ -186,6 +307,14 @@ msgstr "Allocation for {0}"
 #: src/components/BudgetEditor.tsx
 msgid "Allocations and rollover apply to the current period."
 msgstr "Allocations and rollover apply to the current period."
+
+#: src/components/reports/BudgetsTab.tsx
+msgid "Already spent"
+msgstr "Already spent"
+
+#: src/components/reports/FlowsTab.tsx
+msgid "Already subtracted from what you spent"
+msgstr "Already subtracted from what you spent"
 
 #: src/components/BudgetEditor.tsx
 #: src/components/Dashboard.tsx
@@ -210,9 +339,18 @@ msgstr "Amount from"
 msgid "Amount hidden"
 msgstr "Amount hidden"
 
+#: src/components/reports/InvestmentsTab.tsx
+#: src/components/reports/SummaryTab.tsx
+msgid "Amount invested"
+msgstr "Amount invested"
+
 #: src/components/Transactions.tsx
 msgid "Amount to"
 msgstr "Amount to"
+
+#: src/components/reports/InvestmentsTab.tsx
+msgid "Amounts in different currencies are never added together."
+msgstr "Amounts in different currencies are never added together."
 
 #: src/components/TradeEditor.tsx
 msgid "An account"
@@ -242,21 +380,38 @@ msgstr "Assets"
 msgid "At the latest stored prices"
 msgstr "At the latest stored prices"
 
+#: src/components/reports/BalanceCard.tsx
+msgid "Automatic"
+msgstr "Automatic"
+
 #: src/components/Files.tsx
 msgid "Backups and exports stored on the phone"
 msgstr "Backups and exports stored on the phone"
+
+#: src/components/reports/AccountsTab.tsx
+#: src/components/reports/BalanceCard.tsx
+msgid "Balance change"
+msgstr "Balance change"
+
+#: src/components/reports/SummaryTab.tsx
+msgid "Balance divided by income"
+msgstr "Balance divided by income"
 
 #: src/components/TransactionEditor.tsx
 msgid "Balanced"
 msgstr "Balanced"
 
-#: src/components/Reports.tsx
-msgid "Both"
-msgstr "Both"
+#: src/components/reports/InvestmentsTab.tsx
+msgid "Below the purchase cost"
+msgstr "Below the purchase cost"
 
 #: src/components/Reports.tsx
-msgid "Breakdown by"
-msgstr "Breakdown by"
+#~ msgid "Both"
+#~ msgstr "Both"
+
+#: src/components/Reports.tsx
+#~ msgid "Breakdown by"
+#~ msgstr "Breakdown by"
 
 #: src/components/BudgetDetailPanel.tsx
 #: src/components/BudgetEditor.tsx
@@ -316,9 +471,20 @@ msgid "Budget title"
 msgstr "Budget title"
 
 #: src/components/Budgets.tsx
+#: src/components/reports/BudgetsTab.tsx
+#: src/components/reports/ReportsSection.tsx
+#: src/components/reports/SummaryTab.tsx
 #: src/components/Shell.tsx
 msgid "Budgets"
 msgstr "Budgets"
+
+#: src/components/reports/BudgetsTab.tsx
+msgid "Budgets close to or over their limit, marked with text and an icon."
+msgstr "Budgets close to or over their limit, marked with text and an icon."
+
+#: src/components/reports/BudgetsTab.tsx
+msgid "Budgets in different currencies are shown separately; the totals above use {primaryCurrency}."
+msgstr "Budgets in different currencies are shown separately; the totals above use {primaryCurrency}."
 
 #: src/components/Budgets.tsx
 msgid "Budgets with different currencies or periods are shown separately."
@@ -332,6 +498,10 @@ msgstr "Buy"
 #: src/components/Trades.tsx
 msgid "Buy, sell, deposits, withdrawals and transfers"
 msgstr "Buy, sell, deposits, withdrawals and transfers"
+
+#: src/components/reports/BalanceCard.tsx
+msgid "By account"
+msgstr "By account"
 
 #: src/api.ts
 msgid "Can't reach the phone. Check that My Expenses is open and on the same network."
@@ -368,11 +538,10 @@ msgid "Categories, methods, tags, currencies and prices."
 msgstr "Categories, methods, tags, currencies and prices."
 
 #: src/components/Reports.tsx
-msgid "category"
-msgstr "category"
+#~ msgid "category"
+#~ msgstr "category"
 
 #: src/components/Dashboard.tsx
-#: src/components/Reports.tsx
 #: src/components/TransactionEditor.tsx
 #: src/components/TransactionPanel.tsx
 #: src/components/Transactions.tsx
@@ -390,6 +559,14 @@ msgstr "Category name"
 #: src/components/AppData.tsx
 msgid "Category type"
 msgstr "Category type"
+
+#: src/components/reports/BalanceCard.tsx
+msgid "Choose at least one account to draw its balance."
+msgstr "Choose at least one account to draw its balance."
+
+#: src/components/reports/AccountsTab.tsx
+msgid "Choose one or more accounts to compare them."
+msgstr "Choose one or more accounts to compare them."
 
 #: src/components/TransactionEditor.tsx
 msgid "Choose two different accounts."
@@ -423,6 +600,11 @@ msgstr "Close details"
 msgid "Close editor"
 msgstr "Close editor"
 
+#: src/components/reports/BudgetsTab.tsx
+#: src/components/reports/SummaryTab.tsx
+msgid "Close to the limit"
+msgstr "Close to the limit"
+
 #: src/components/AppData.tsx
 msgid "Code"
 msgstr "Code"
@@ -435,9 +617,17 @@ msgstr "Collapse period"
 msgid "Commodity"
 msgstr "Commodity"
 
+#: src/components/reports/ReportsSection.tsx
+msgid "Compare with"
+msgstr "Compare with"
+
 #: src/App.tsx
 msgid "Connecting to My Expenses…"
 msgstr "Connecting to My Expenses…"
+
+#: src/components/reports/BudgetsTab.tsx
+msgid "Consumed"
+msgstr "Consumed"
 
 #: src/components/AccountEditor.tsx
 msgid "Could not create the account."
@@ -488,11 +678,16 @@ msgstr "Could not duplicate the budget."
 msgid "Could not load more transactions."
 msgstr "Could not load more transactions."
 
+#: src/components/reports/BalanceCard.tsx
+msgid "Could not load the balances."
+msgstr "Could not load the balances."
+
 #: src/components/BudgetDetailPanel.tsx
 msgid "Could not load the breakdown."
 msgstr "Could not load the breakdown."
 
 #: src/components/Budgets.tsx
+#: src/components/reports/BudgetsTab.tsx
 msgid "Could not load the budgets."
 msgstr "Could not load the budgets."
 
@@ -504,6 +699,10 @@ msgstr "Could not load the data."
 msgid "Could not load the detail."
 msgstr "Could not load the detail."
 
+#: src/components/reports/shared.tsx
+msgid "Could not load the evolution."
+msgstr "Could not load the evolution."
+
 #: src/components/Files.tsx
 msgid "Could not load the files."
 msgstr "Could not load the files."
@@ -511,6 +710,10 @@ msgstr "Could not load the files."
 #: src/components/BudgetDetailPanel.tsx
 msgid "Could not load the history."
 msgstr "Could not load the history."
+
+#: src/components/reports/InvestmentsTab.tsx
+msgid "Could not load the investments."
+msgstr "Could not load the investments."
 
 #: src/components/TradeEditor.tsx
 msgid "Could not load the operation."
@@ -521,6 +724,7 @@ msgid "Could not load the operations."
 msgstr "Could not load the operations."
 
 #: src/components/Dashboard.tsx
+#: src/components/reports/SummaryTab.tsx
 msgid "Could not load the overview."
 msgstr "Could not load the overview."
 
@@ -528,9 +732,13 @@ msgstr "Could not load the overview."
 msgid "Could not load the portfolio."
 msgstr "Could not load the portfolio."
 
+#: src/components/reports/InvestmentsTab.tsx
+msgid "Could not load the prices."
+msgstr "Could not load the prices."
+
 #: src/components/Reports.tsx
-msgid "Could not load the report."
-msgstr "Could not load the report."
+#~ msgid "Could not load the report."
+#~ msgstr "Could not load the report."
 
 #: src/components/TransactionEditor.tsx
 #: src/components/TransactionPanel.tsx
@@ -540,6 +748,10 @@ msgstr "Could not load the transaction."
 #: src/components/Transactions.tsx
 msgid "Could not load the transactions."
 msgstr "Could not load the transactions."
+
+#: src/components/reports/FlowsTab.tsx
+msgid "Could not load this report."
+msgstr "Could not load this report."
 
 #: src/components/BudgetEditor.tsx
 msgid "Could not save the budget."
@@ -601,6 +813,14 @@ msgstr "Create a backup or export in the Android app. The file will show up here
 msgid "Create a budget in the Android app. Its progress for the current period will show up here."
 msgstr "Create a budget in the Android app. Its progress for the current period will show up here."
 
+#: src/components/reports/BudgetsTab.tsx
+msgid "Create a budget in the app to follow its spending here."
+msgstr "Create a budget in the app to follow its spending here."
+
+#: src/components/reports/InvestmentsTab.tsx
+msgid "Create a portfolio in the app and its products will appear here."
+msgstr "Create a portfolio in the app and its products will appear here."
+
 #: src/App.tsx
 msgid "Create an account in the Android app and reload this page."
 msgstr "Create an account in the Android app and reload this page."
@@ -618,6 +838,7 @@ msgid "Currencies and assets"
 msgstr "Currencies and assets"
 
 #: src/components/AccountEditor.tsx
+#: src/components/reports/BalanceCard.tsx
 msgid "Currency"
 msgstr "Currency"
 
@@ -637,10 +858,30 @@ msgstr "Currency symbol"
 msgid "Currency type"
 msgstr "Currency type"
 
+#: src/components/reports/AccountsTab.tsx
+msgid "Current balance"
+msgstr "Current balance"
+
+#: src/components/reports/InvestmentsTab.tsx
+#: src/components/reports/SummaryTab.tsx
+msgid "Current value"
+msgstr "Current value"
+
+#: src/components/reports/BalanceCard.tsx
+#: src/components/reports/ReportsSection.tsx
+msgid "Custom"
+msgstr "Custom"
+
 #: src/budgetUi.ts
 #: src/components/BudgetEditor.tsx
+#: src/components/reports/BalanceCard.tsx
+#: src/components/reports/BudgetsTab.tsx
 msgid "Daily"
 msgstr "Daily"
+
+#: src/components/reports/FlowsTab.tsx
+msgid "Daily average"
+msgstr "Daily average"
 
 #: src/components/Shell.tsx
 msgid "Data"
@@ -652,7 +893,9 @@ msgstr "Data sections"
 
 #: src/components/AppData.tsx
 #: src/components/Dashboard.tsx
+#: src/components/LineChart.tsx
 #: src/components/ReportPanel.tsx
+#: src/components/reports/InvestmentsTab.tsx
 #: src/components/TradeEditor.tsx
 #: src/components/Trades.tsx
 #: src/components/TransactionEditor.tsx
@@ -775,6 +1018,11 @@ msgstr "Discard changes?"
 msgid "Divide one amount into categorized parts."
 msgstr "Divide one amount into categorized parts."
 
+#. placeholder {0}: formatPercent(Math.abs(change))
+#: src/components/reports/shared.tsx
+msgid "Down {0} vs the previous period"
+msgstr "Down {0} vs the previous period"
+
 #: src/components/Files.tsx
 msgid "Download"
 msgstr "Download"
@@ -855,6 +1103,10 @@ msgstr "Edit transfer"
 msgid "End"
 msgstr "End"
 
+#: src/components/reports/BalanceCard.tsx
+msgid "Ending balance"
+msgstr "Ending balance"
+
 #: src/components/AppData.tsx
 #: src/components/TradeEditor.tsx
 msgid "Enter a price above zero."
@@ -902,6 +1154,10 @@ msgstr "Enter the total"
 msgid "Enter the total amount."
 msgstr "Enter the total amount."
 
+#: src/components/reports/InvestmentsTab.tsx
+msgid "Estimated result"
+msgstr "Estimated result"
+
 #: src/components/AccountEditor.tsx
 msgid "Exchange rate"
 msgstr "Exchange rate"
@@ -921,7 +1177,6 @@ msgstr "Expense"
 
 #: src/components/Chart.tsx
 #: src/components/Dashboard.tsx
-#: src/components/Reports.tsx
 #: src/components/Transactions.tsx
 msgid "Expenses"
 msgstr "Expenses"
@@ -948,6 +1203,7 @@ msgstr "Files"
 msgid "Filter"
 msgstr "Filter"
 
+#: src/components/reports/FlowsTab.tsx
 #: src/components/Transactions.tsx
 msgid "Filter by category"
 msgstr "Filter by category"
@@ -993,6 +1249,7 @@ msgstr "Filter tags"
 msgid "Filter: {0}"
 msgstr "Filter: {0}"
 
+#: src/components/reports/FlowsTab.tsx
 #: src/components/Transactions.tsx
 msgid "Filters"
 msgstr "Filters"
@@ -1009,6 +1266,12 @@ msgstr "Fraction digits"
 msgid "Free labels attached to transactions"
 msgstr "Free labels attached to transactions"
 
+#: src/components/reports/BudgetsTab.tsx
+msgid "Frequency"
+msgstr "Frequency"
+
+#: src/components/reports/BalanceCard.tsx
+#: src/components/reports/ReportsSection.tsx
 #: src/components/TransactionEditor.tsx
 #: src/components/Transactions.tsx
 msgid "From"
@@ -1030,6 +1293,14 @@ msgstr "Funding"
 msgid "Group by"
 msgstr "Group by"
 
+#: src/components/reports/FlowsTab.tsx
+msgid "Grouped by category, including split parts"
+msgstr "Grouped by category, including split parts"
+
+#: src/components/reports/BalanceCard.tsx
+msgid "Grouping"
+msgstr "Grouping"
+
 #: src/components/Shell.tsx
 msgid "Hide totals"
 msgstr "Hide totals"
@@ -1038,13 +1309,37 @@ msgstr "Hide totals"
 msgid "Hide transaction amounts"
 msgstr "Hide transaction amounts"
 
+#: src/components/reports/BalanceCard.tsx
+msgid "Historical balance of the selected accounts"
+msgstr "Historical balance of the selected accounts"
+
+#: src/components/reports/BalanceCard.tsx
+msgid "Historical conversion between currencies is not available. Each currency is shown on its own line."
+msgstr "Historical conversion between currencies is not available. Each currency is shown on its own line."
+
 #: src/components/Transactions.tsx
 msgid "History"
 msgstr "History"
 
+#: src/components/reports/BalanceCard.tsx
+msgid "How my balances evolve"
+msgstr "How my balances evolve"
+
+#: src/components/reports/shared.tsx
+msgid "How my income evolves"
+msgstr "How my income evolves"
+
+#: src/components/reports/shared.tsx
+msgid "How my spending evolves"
+msgstr "How my spending evolves"
+
+#: src/components/reports/SummaryTab.tsx
+msgid "How your spending limits are doing."
+msgstr "How your spending limits are doing."
+
 #: src/components/Reports.tsx
-msgid "In this month"
-msgstr "In this month"
+#~ msgid "In this month"
+#~ msgstr "In this month"
 
 #: src/components/AppData.tsx
 msgid "In use"
@@ -1057,7 +1352,9 @@ msgstr "Includes subcategories"
 #: src/components/AppData.tsx
 #: src/components/Chart.tsx
 #: src/components/Dashboard.tsx
-#: src/components/Reports.tsx
+#: src/components/reports/FlowsTab.tsx
+#: src/components/reports/ReportsSection.tsx
+#: src/components/reports/SummaryTab.tsx
 #: src/components/TransactionEditor.tsx
 #: src/components/Transactions.tsx
 msgid "Income"
@@ -1068,21 +1365,45 @@ msgid "Income and expenses"
 msgstr "Income and expenses"
 
 #: src/components/Chart.tsx
-msgid "Income and expenses over the last twelve months"
-msgstr "Income and expenses over the last twelve months"
+msgid "Income and expenses for the selected period"
+msgstr "Income and expenses for the selected period"
+
+#: src/components/Chart.tsx
+#~ msgid "Income and expenses over the last twelve months"
+#~ msgstr "Income and expenses over the last twelve months"
+
+#: src/components/reports/shared.tsx
+msgid "Income and expenses over time"
+msgstr "Income and expenses over time"
 
 #: src/components/Reports.tsx
-msgid "Income by {noun}"
-msgstr "Income by {noun}"
+#~ msgid "Income by {noun}"
+#~ msgstr "Income by {noun}"
+
+#: src/components/reports/FlowsTab.tsx
+msgid "Income by category"
+msgstr "Income by category"
+
+#: src/components/reports/FlowsTab.tsx
+msgid "Income compared with spending"
+msgstr "Income compared with spending"
 
 #: src/components/Dashboard.tsx
-#: src/components/Reports.tsx
 msgid "Income minus expenses"
 msgstr "Income minus expenses"
+
+#: src/components/reports/InvestmentsTab.tsx
+#: src/components/reports/ReportsSection.tsx
+msgid "Investments"
+msgstr "Investments"
 
 #: src/components/TransactionPanel.tsx
 msgid "Its parts are deleted too."
 msgstr "Its parts are deleted too."
+
+#: src/components/reports/InvestmentsTab.tsx
+msgid "Known purchase cost"
+msgstr "Known purchase cost"
 
 #: src/components/Shell.tsx
 msgid "Language"
@@ -1093,14 +1414,40 @@ msgstr "Language"
 msgid "Last 12 months"
 msgstr "Last 12 months"
 
-#: src/components/Reports.tsx
 #: src/components/Transactions.tsx
 msgid "Last 3 months"
 msgstr "Last 3 months"
 
+#: src/components/reports/SummaryTab.tsx
+msgid "Last manual valuation"
+msgstr "Last manual valuation"
+
+#. placeholder {0}: formatDate(lastValuation, { day: '2-digit', month: 'short', year: 'numeric', })
+#: src/components/reports/InvestmentsTab.tsx
+msgid "Last manual valuation {0}"
+msgstr "Last manual valuation {0}"
+
+#. placeholder {0}: formatDate(portfolio.lastValuationDate, { day: '2-digit', month: 'short', year: 'numeric', })
+#. placeholder {1}: portfolio.currency
+#: src/components/reports/InvestmentsTab.tsx
+msgid "Last manual valuation {0} · {1}"
+msgstr "Last manual valuation {0} · {1}"
+
+#: src/components/reports/ReportsSection.tsx
+msgid "Last year"
+msgstr "Last year"
+
 #: src/components/Login.tsx
 msgid "Leave the password empty if you have not set one."
 msgstr "Leave the password empty if you have not set one."
+
+#: src/components/reports/BudgetsTab.tsx
+msgid "Limit"
+msgstr "Limit"
+
+#: src/components/reports/BudgetsTab.tsx
+msgid "Limit for the period"
+msgstr "Limit for the period"
 
 #. placeholder {0}: page.data.total - page.data.items.length
 #. placeholder {0}: total - items.length
@@ -1122,25 +1469,43 @@ msgid "Loading files…"
 msgstr "Loading files…"
 
 #: src/components/Reports.tsx
-msgid "Loading report…"
-msgstr "Loading report…"
+#~ msgid "Loading report…"
+#~ msgstr "Loading report…"
 
 #: src/App.tsx
 #: src/components/BudgetDetailPanel.tsx
 #: src/components/ReportPanel.tsx
+#: src/components/reports/InvestmentsTab.tsx
+#: src/components/reports/shared.tsx
+#: src/components/reports/SummaryTab.tsx
 #: src/components/Transactions.tsx
 msgid "Loading…"
 msgstr "Loading…"
+
+#: src/components/reports/shared.tsx
+msgid "Lower is better"
+msgstr "Lower is better"
+
+#: src/components/reports/SummaryTab.tsx
+msgid "Main spending categories"
+msgstr "Main spending categories"
+
+#: src/components/reports/BudgetsTab.tsx
+msgid "Manage budgets"
+msgstr "Manage budgets"
 
 #: src/components/AppData.tsx
 msgid "Manual prices used for the portfolio valuation"
 msgstr "Manual prices used for the portfolio valuation"
 
-#: src/components/Reports.tsx
-msgid "method"
-msgstr "method"
+#: src/components/reports/InvestmentsTab.tsx
+msgid "Manual valuations from oldest to newest. They are not live quotes."
+msgstr "Manual valuations from oldest to newest. They are not live quotes."
 
 #: src/components/Reports.tsx
+#~ msgid "method"
+#~ msgstr "method"
+
 #: src/components/TransactionEditor.tsx
 #: src/components/TransactionPanel.tsx
 #: src/components/Transactions.tsx
@@ -1164,14 +1529,40 @@ msgstr "Methods"
 msgid "Modified"
 msgstr "Modified"
 
+#: src/components/reports/SummaryTab.tsx
+msgid "Money available"
+msgstr "Money available"
+
+#: src/components/reports/AccountsTab.tsx
+msgid "Money available ({currency})"
+msgstr "Money available ({currency})"
+
+#: src/components/reports/AccountsTab.tsx
+msgid "Money in"
+msgstr "Money in"
+
+#: src/components/reports/SummaryTab.tsx
+msgid "Money invested"
+msgstr "Money invested"
+
+#: src/components/reports/AccountsTab.tsx
+msgid "Money out"
+msgstr "Money out"
+
 #: src/components/Transactions.tsx
 msgid "Month"
 msgstr "Month"
 
 #: src/budgetUi.ts
 #: src/components/BudgetEditor.tsx
+#: src/components/reports/BalanceCard.tsx
+#: src/components/reports/BudgetsTab.tsx
 msgid "Monthly"
 msgstr "Monthly"
+
+#: src/components/reports/FlowsTab.tsx
+msgid "Monthly average"
+msgstr "Monthly average"
 
 #: src/components/Shell.tsx
 msgid "More options"
@@ -1203,9 +1594,13 @@ msgstr "Must be on or after the start."
 msgid "Name"
 msgstr "Name"
 
+#: src/components/reports/BudgetsTab.tsx
+msgid "Needs attention"
+msgstr "Needs attention"
+
 #: src/components/Reports.tsx
-msgid "Net"
-msgstr "Net"
+#~ msgid "Net"
+#~ msgstr "Net"
 
 #: src/components/Dashboard.tsx
 msgid "Net worth"
@@ -1271,17 +1666,25 @@ msgid "New transaction"
 msgstr "New transaction"
 
 #: src/components/Budgets.tsx
-#: src/components/Reports.tsx
 msgid "Next month"
 msgstr "Next month"
+
+#: src/components/reports/BalanceCard.tsx
+#: src/components/reports/ReportsSection.tsx
+msgid "No accounts selected"
+msgstr "No accounts selected"
 
 #: src/App.tsx
 msgid "No accounts yet"
 msgstr "No accounts yet"
 
+#: src/components/reports/SummaryTab.tsx
+msgid "No accounts."
+msgstr "No accounts."
+
 #: src/components/Reports.tsx
-msgid "No activity for this selection"
-msgstr "No activity for this selection"
+#~ msgid "No activity for this selection"
+#~ msgstr "No activity for this selection"
 
 #: src/components/Chart.tsx
 msgid "No activity yet"
@@ -1292,7 +1695,12 @@ msgstr "No activity yet"
 msgid "No assets yet"
 msgstr "No assets yet"
 
+#: src/components/reports/BudgetsTab.tsx
+msgid "No budgets"
+msgstr "No budgets"
+
 #: src/components/Budgets.tsx
+#: src/components/reports/BudgetsTab.tsx
 msgid "No budgets yet"
 msgstr "No budgets yet"
 
@@ -1300,6 +1708,10 @@ msgstr "No budgets yet"
 #: src/components/Transactions.tsx
 msgid "No category"
 msgstr "No category"
+
+#: src/components/reports/shared.tsx
+msgid "No change vs the previous period"
+msgstr "No change vs the previous period"
 
 #: src/components/Files.tsx
 msgid "No files yet"
@@ -1310,9 +1722,22 @@ msgstr "No files yet"
 msgid "No filter: the whole account"
 msgstr "No filter: the whole account"
 
+#: src/components/LineChart.tsx
+msgid "No history to draw yet"
+msgstr "No history to draw yet"
+
 #: src/components/BudgetDetailPanel.tsx
 msgid "No history yet."
 msgstr "No history yet."
+
+#: src/components/reports/InvestmentsTab.tsx
+msgid "No manual valuation yet"
+msgstr "No manual valuation yet"
+
+#. placeholder {0}: portfolio.currency
+#: src/components/reports/InvestmentsTab.tsx
+msgid "No manual valuation yet · {0}"
+msgstr "No manual valuation yet · {0}"
 
 #: src/components/SearchSelect.tsx
 msgid "No matches"
@@ -1321,6 +1746,26 @@ msgstr "No matches"
 #: src/components/Trades.tsx
 msgid "No operations yet"
 msgstr "No operations yet"
+
+#: src/components/reports/InvestmentsTab.tsx
+msgid "No portfolios"
+msgstr "No portfolios"
+
+#: src/components/reports/InvestmentsTab.tsx
+msgid "No portfolios yet"
+msgstr "No portfolios yet"
+
+#: src/components/reports/shared.tsx
+msgid "No previous period to compare"
+msgstr "No previous period to compare"
+
+#: src/components/reports/InvestmentsTab.tsx
+msgid "No price"
+msgstr "No price"
+
+#: src/components/reports/InvestmentsTab.tsx
+msgid "No prices entered for this product yet."
+msgstr "No prices entered for this product yet."
 
 #: src/components/AppData.tsx
 msgid "No prices yet"
@@ -1352,6 +1797,10 @@ msgstr "No transfers"
 msgid "None"
 msgstr "None"
 
+#: src/components/reports/SummaryTab.tsx
+msgid "Not available without income"
+msgstr "Not available without income"
+
 #: src/components/TradeEditor.tsx
 msgid "Not tracked"
 msgstr "Not tracked"
@@ -1364,9 +1813,17 @@ msgstr "Not tracked"
 msgid "Note"
 msgstr "Note"
 
+#: src/components/reports/ReportsSection.tsx
+msgid "Nothing"
+msgstr "Nothing"
+
 #: src/components/Reports.tsx
-msgid "Nothing was recorded for this month. Try another month or change the type."
-msgstr "Nothing was recorded for this month. Try another month or change the type."
+#~ msgid "Nothing was recorded for this month. Try another month or change the type."
+#~ msgstr "Nothing was recorded for this month. Try another month or change the type."
+
+#: src/components/reports/shared.tsx
+msgid "Nothing was recorded for this selection. Try another period or clear a filter."
+msgstr "Nothing was recorded for this selection. Try another period or clear a filter."
 
 #: src/components/AppData.tsx
 msgid "Numbered"
@@ -1389,6 +1846,18 @@ msgstr "One-time period"
 msgid "Only transfers"
 msgstr "Only transfers"
 
+#: src/components/reports/InvestmentsTab.tsx
+msgid "Only when the cost is known"
+msgstr "Only when the cost is known"
+
+#: src/components/reports/SummaryTab.tsx
+msgid "Open in spending"
+msgstr "Open in spending"
+
+#: src/components/reports/BudgetsTab.tsx
+msgid "Open the budget"
+msgstr "Open the budget"
+
 #. placeholder {0}: description(transaction)
 #: src/components/Transactions.tsx
 msgid "Open transaction: {0}"
@@ -1410,6 +1879,7 @@ msgstr "Operation saved."
 msgid "Operation type"
 msgstr "Operation type"
 
+#: src/components/reports/FlowsTab.tsx
 #: src/components/Trades.tsx
 msgid "Operations"
 msgstr "Operations"
@@ -1429,6 +1899,16 @@ msgstr "Over"
 #: src/components/Budgets.tsx
 msgid "Over by {0}"
 msgstr "Over by {0}"
+
+#: src/components/reports/BudgetsTab.tsx
+#: src/components/reports/SummaryTab.tsx
+msgid "Over the limit"
+msgstr "Over the limit"
+
+#. placeholder {0}: formatPercent( budgetPercent(entry.progress) - 100, )
+#: src/components/reports/BudgetsTab.tsx
+msgid "Over the limit by {0}"
+msgstr "Over the limit by {0}"
 
 #: src/components/Dashboard.tsx
 #: src/components/Shell.tsx
@@ -1482,10 +1962,9 @@ msgid "Password"
 msgstr "Password"
 
 #: src/components/Reports.tsx
-msgid "payee"
-msgstr "payee"
+#~ msgid "payee"
+#~ msgstr "payee"
 
-#: src/components/Reports.tsx
 #: src/components/TransactionEditor.tsx
 #: src/components/TransactionPanel.tsx
 #: src/components/Transactions.tsx
@@ -1500,8 +1979,12 @@ msgstr "Payees"
 msgid "Payment methods"
 msgstr "Payment methods"
 
+#: src/components/reports/FlowsTab.tsx
+#~ msgid "Percentages are calculated on the filtered spending."
+#~ msgstr "Percentages are calculated on the filtered spending."
+
 #: src/components/BudgetEditor.tsx
-#: src/components/Reports.tsx
+#: src/components/reports/ReportsSection.tsx
 msgid "Period"
 msgstr "Period"
 
@@ -1510,7 +1993,12 @@ msgstr "Period"
 msgid "Period amount"
 msgstr "Period amount"
 
+#: src/components/reports/SummaryTab.tsx
+msgid "Period balance"
+msgstr "Period balance"
+
 #: src/components/AccountEditor.tsx
+#: src/components/reports/InvestmentsTab.tsx
 msgid "Portfolio"
 msgstr "Portfolio"
 
@@ -1528,16 +2016,25 @@ msgid "Portfolio name"
 msgstr "Portfolio name"
 
 #: src/components/Budgets.tsx
-#: src/components/Reports.tsx
 msgid "Previous month"
 msgstr "Previous month"
 
+#: src/components/Chart.tsx
+#: src/components/reports/ReportsSection.tsx
+msgid "Previous period"
+msgstr "Previous period"
+
 #: src/components/AppData.tsx
 #: src/components/Dashboard.tsx
+#: src/components/reports/InvestmentsTab.tsx
 #: src/components/TradeEditor.tsx
 #: src/components/Trades.tsx
 msgid "Price"
 msgstr "Price"
+
+#: src/components/reports/InvestmentsTab.tsx
+msgid "Price date"
+msgstr "Price date"
 
 #: src/components/AppData.tsx
 msgid "Price history"
@@ -1551,7 +2048,21 @@ msgstr "Price of one {currency} in {homeCurrency}."
 msgid "Prices"
 msgstr "Prices"
 
+#. placeholder {0}: asset.label
+#: src/components/reports/InvestmentsTab.tsx
+msgid "Prices you entered for {0}"
+msgstr "Prices you entered for {0}"
+
+#: src/components/reports/InvestmentsTab.tsx
+msgid "Product"
+msgstr "Product"
+
+#: src/components/reports/InvestmentsTab.tsx
+msgid "Products"
+msgstr "Products"
+
 #: src/components/Dashboard.tsx
+#: src/components/reports/InvestmentsTab.tsx
 #: src/components/TradeEditor.tsx
 #: src/components/Trades.tsx
 msgid "Quantity"
@@ -1561,6 +2072,10 @@ msgstr "Quantity"
 msgid "Quantity at the latest price"
 msgstr "Quantity at the latest price"
 
+#: src/components/reports/BalanceCard.tsx
+msgid "Range"
+msgstr "Range"
+
 #: src/components/Dashboard.tsx
 msgid "Recent transactions"
 msgstr "Recent transactions"
@@ -1568,6 +2083,10 @@ msgstr "Recent transactions"
 #: src/format.ts
 msgid "Reconciled"
 msgstr "Reconciled"
+
+#: src/components/LineChart.tsx
+msgid "Record a movement and its balance will appear here."
+msgstr "Record a movement and its balance will appear here."
 
 #: src/components/Dashboard.tsx
 #: src/components/Transactions.tsx
@@ -1582,7 +2101,6 @@ msgstr "Reference"
 #: src/components/Budgets.tsx
 #: src/components/Dashboard.tsx
 #: src/components/Files.tsx
-#: src/components/Reports.tsx
 #: src/components/Trades.tsx
 msgid "Refresh"
 msgstr "Refresh"
@@ -1591,6 +2109,15 @@ msgstr "Refresh"
 #: src/components/Files.tsx
 msgid "Refreshing…"
 msgstr "Refreshing…"
+
+#: src/components/reports/FlowsTab.tsx
+msgid "Refunds"
+msgstr "Refunds"
+
+#. placeholder {0}: formatDate(firstDate, { day: '2-digit', month: 'short', year: 'numeric' })
+#: src/components/reports/BalanceCard.tsx
+msgid "Reliable history starts on {0}."
+msgstr "Reliable history starts on {0}."
 
 #: src/components/Pwa.tsx
 msgid "Reload"
@@ -1611,10 +2138,14 @@ msgstr "Remove filter: {0}"
 msgid "Remove part"
 msgstr "Remove part"
 
-#: src/components/Reports.tsx
+#: src/components/reports/ReportsSection.tsx
 #: src/components/Shell.tsx
 msgid "Reports"
 msgstr "Reports"
+
+#: src/components/reports/ReportsSection.tsx
+msgid "Reports sections"
+msgstr "Reports sections"
 
 #: src/components/AccountEditor.tsx
 #: src/components/AppData.tsx
@@ -1623,6 +2154,14 @@ msgstr "Reports"
 #: src/components/TransactionEditor.tsx
 msgid "Required."
 msgstr "Required."
+
+#: src/components/reports/FlowsTab.tsx
+msgid "Reset filters"
+msgstr "Reset filters"
+
+#: src/components/reports/InvestmentsTab.tsx
+msgid "Result"
+msgstr "Result"
 
 #: src/components/AppData.tsx
 #: src/components/Dashboard.tsx
@@ -1669,6 +2208,14 @@ msgstr "saved this month"
 msgid "Saving…"
 msgstr "Saving…"
 
+#: src/components/reports/SummaryTab.tsx
+msgid "Savings rate"
+msgstr "Savings rate"
+
+#: src/components/reports/BalanceCard.tsx
+msgid "Scope"
+msgstr "Scope"
+
 #: src/components/Transactions.tsx
 msgid "Search"
 msgstr "Search"
@@ -1685,9 +2232,29 @@ msgstr "Sections"
 msgid "Security"
 msgstr "Security"
 
+#: src/components/reports/SummaryTab.tsx
+msgid "See accounts"
+msgstr "See accounts"
+
+#: src/components/reports/SummaryTab.tsx
+msgid "See budgets"
+msgstr "See budgets"
+
+#: src/components/reports/BalanceCard.tsx
+msgid "See how the money in your accounts has changed over time."
+msgstr "See how the money in your accounts has changed over time."
+
+#: src/components/reports/SummaryTab.tsx
+msgid "See investments"
+msgstr "See investments"
+
+#: src/components/reports/BudgetsTab.tsx
+msgid "See operations"
+msgstr "See operations"
+
 #: src/components/Reports.tsx
-msgid "Select a single account to drill down"
-msgstr "Select a single account to drill down"
+#~ msgid "Select a single account to drill down"
+#~ msgstr "Select a single account to drill down"
 
 #: src/components/TradeEditor.tsx
 #: src/components/Trades.tsx
@@ -1702,6 +2269,14 @@ msgstr "Set for this period"
 #~ msgid "Settings (next milestone)"
 #~ msgstr "Settings (next milestone)"
 
+#: src/components/reports/FlowsTab.tsx
+msgid "Share of total"
+msgstr "Share of total"
+
+#: src/components/reports/AccountsTab.tsx
+msgid "Show in chart"
+msgstr "Show in chart"
+
 #: src/components/Shell.tsx
 msgid "Show totals"
 msgstr "Show totals"
@@ -1709,6 +2284,11 @@ msgstr "Show totals"
 #: src/components/Shell.tsx
 msgid "Show transaction amounts"
 msgstr "Show transaction amounts"
+
+#. placeholder {0}: visibleAccounts.length
+#: src/components/reports/BalanceCard.tsx
+msgid "Showing 6 of {0} accounts. Remove one to add another."
+msgstr "Showing 6 of {0} accounts. Remove one to add another."
 
 #: src/components/Login.tsx
 msgid "Sign in"
@@ -1735,6 +2315,7 @@ msgid "Something did not work. Try again."
 msgstr "Something did not work. Try again."
 
 #: src/components/AppData.tsx
+#: src/components/reports/InvestmentsTab.tsx
 #: src/components/TradeEditor.tsx
 msgid "Source"
 msgstr "Source"
@@ -1743,11 +2324,16 @@ msgstr "Source"
 msgid "Source portfolio"
 msgstr "Source portfolio"
 
+#: src/components/reports/ReportsSection.tsx
+msgid "Spending"
+msgstr "Spending"
+
 #: src/components/Reports.tsx
-msgid "Spending by {noun}"
-msgstr "Spending by {noun}"
+#~ msgid "Spending by {noun}"
+#~ msgstr "Spending by {noun}"
 
 #: src/components/BudgetDetailPanel.tsx
+#: src/components/reports/FlowsTab.tsx
 msgid "Spending by category"
 msgstr "Spending by category"
 
@@ -1759,6 +2345,12 @@ msgstr "Spending limits per account and period"
 msgid "spent"
 msgstr "spent"
 
+#: src/components/reports/BudgetsTab.tsx
+#: src/components/reports/FlowsTab.tsx
+#: src/components/reports/SummaryTab.tsx
+msgid "Spent"
+msgstr "Spent"
+
 #: src/components/TransactionEditor.tsx
 #: src/format.ts
 msgid "Split transaction"
@@ -1768,11 +2360,23 @@ msgstr "Split transaction"
 msgid "Start"
 msgstr "Start"
 
+#: src/components/reports/BalanceCard.tsx
+msgid "Starting balance"
+msgstr "Starting balance"
+
 #: src/components/BudgetFilterFields.tsx
 #: src/components/TransactionPanel.tsx
 #: src/components/Transactions.tsx
 msgid "Status"
 msgstr "Status"
+
+#: src/components/reports/BudgetsTab.tsx
+msgid "Still available"
+msgstr "Still available"
+
+#: src/components/reports/ReportsSection.tsx
+msgid "Summary"
+msgstr "Summary"
 
 #: src/components/Shell.tsx
 msgid "Switch to bright"
@@ -1787,10 +2391,9 @@ msgid "Symbol"
 msgstr "Symbol"
 
 #: src/components/Reports.tsx
-msgid "tag"
-msgstr "tag"
+#~ msgid "tag"
+#~ msgstr "tag"
 
-#: src/components/Reports.tsx
 #: src/components/Transactions.tsx
 msgid "Tag"
 msgstr "Tag"
@@ -1815,9 +2418,21 @@ msgstr "Target portfolio"
 msgid "That currency code is already defined."
 msgstr "That currency code is already defined."
 
+#: src/components/reports/BalanceCard.tsx
+msgid "That grouping would return too many points, so the automatic one was used."
+msgstr "That grouping would return too many points, so the automatic one was used."
+
 #: src/api.ts
 msgid "The asset is not registered on the phone. Add it in App data first."
 msgstr "The asset is not registered on the phone. Add it in App data first."
+
+#: src/components/reports/SummaryTab.tsx
+msgid "The balance of your accounts right now."
+msgstr "The balance of your accounts right now."
+
+#: src/components/reports/SummaryTab.tsx
+msgid "The categories that took the largest share of your spending."
+msgstr "The categories that took the largest share of your spending."
 
 #: src/api.ts
 #~ msgid "The category has movements; choose where to move them."
@@ -1839,6 +2454,10 @@ msgstr "The category is in use. Choose where to move its data before deleting it
 msgid "The currency is used by an account or a transaction and cannot be deleted."
 msgstr "The currency is used by an account or a transaction and cannot be deleted."
 
+#: src/components/reports/AccountsTab.tsx
+msgid "The current balance and the movement of the selected period."
+msgstr "The current balance and the movement of the selected period."
+
 #: src/components/Dashboard.tsx
 msgid "The first buy creates the asset here."
 msgstr "The first buy creates the asset here."
@@ -1859,6 +2478,10 @@ msgstr "The parts must add up to the total."
 msgid "The phone could not complete the request."
 msgstr "The phone could not complete the request."
 
+#: src/components/reports/InvestmentsTab.tsx
+msgid "The result is hidden because at least one product arrived without a known purchase cost."
+msgstr "The result is hidden because at least one product arrived without a known purchase cost."
+
 #: src/components/TransactionEditor.tsx
 msgid "The transaction could not be loaded."
 msgstr "The transaction could not be loaded."
@@ -1870,6 +2493,10 @@ msgstr "The tree used by transactions and budgets"
 #: src/components/Budgets.tsx
 msgid "There is no later period"
 msgstr "There is no later period"
+
+#: src/components/reports/BalanceCard.tsx
+msgid "There were no movements in this range; the line keeps the balance known at the start."
+msgstr "There were no movements in this range; the line keeps the balance known at the start."
 
 #: src/components/BudgetFilterFields.tsx
 msgid "This budget uses a filter the web cannot edit. Keep using the Android app for it."
@@ -1888,12 +2515,24 @@ msgid "This item no longer exists on the phone."
 msgstr "This item no longer exists on the phone."
 
 #: src/components/Dashboard.tsx
-#: src/components/Reports.tsx
+#: src/components/reports/ReportsSection.tsx
 #: src/components/Transactions.tsx
 msgid "This month"
 msgstr "This month"
 
-#: src/components/Reports.tsx
+#: src/components/reports/InvestmentsTab.tsx
+msgid "This portfolio has no products."
+msgstr "This portfolio has no products."
+
+#: src/components/reports/ReportsSection.tsx
+msgid "This quarter"
+msgstr "This quarter"
+
+#: src/components/reports/ReportsSection.tsx
+msgid "This week"
+msgstr "This week"
+
+#: src/components/reports/ReportsSection.tsx
 #: src/components/Transactions.tsx
 msgid "This year"
 msgstr "This year"
@@ -1907,6 +2546,8 @@ msgstr "Time"
 msgid "Title"
 msgstr "Title"
 
+#: src/components/reports/BalanceCard.tsx
+#: src/components/reports/ReportsSection.tsx
 #: src/components/TransactionEditor.tsx
 #: src/components/Transactions.tsx
 msgid "To"
@@ -1916,6 +2557,7 @@ msgstr "To"
 msgid "To account"
 msgstr "To account"
 
+#: src/components/reports/BalanceCard.tsx
 #: src/components/TransactionPanel.tsx
 msgid "Total"
 msgstr "Total"
@@ -1927,6 +2569,15 @@ msgstr "Total (signed)"
 #: src/components/TransactionEditor.tsx
 msgid "Total amount"
 msgstr "Total amount"
+
+#. placeholder {0}: selectedIds.length
+#: src/components/reports/BalanceCard.tsx
+msgid "Total of {0} accounts"
+msgstr "Total of {0} accounts"
+
+#: src/components/reports/InvestmentsTab.tsx
+msgid "Totals by currency"
+msgstr "Totals by currency"
 
 #: src/components/ReportPanel.tsx
 #: src/components/TransactionEditor.tsx
@@ -1948,11 +2599,10 @@ msgid "Transaction saved."
 msgstr "Transaction saved."
 
 #: src/components/Reports.tsx
-msgid "Transaction type"
-msgstr "Transaction type"
+#~ msgid "Transaction type"
+#~ msgstr "Transaction type"
 
 #: src/components/Dashboard.tsx
-#: src/components/Reports.tsx
 #: src/components/Shell.tsx
 #: src/components/Trades.tsx
 #: src/components/Transactions.tsx
@@ -2001,9 +2651,23 @@ msgstr "Type"
 msgid "Uncategorized"
 msgstr "Uncategorized"
 
+#: src/components/reports/InvestmentsTab.tsx
+#: src/components/reports/SummaryTab.tsx
+msgid "Unknown"
+msgstr "Unknown"
+
+#: src/components/reports/InvestmentsTab.tsx
+msgid "Unknown cost"
+msgstr "Unknown cost"
+
 #: src/format.ts
 msgid "Unreconciled"
 msgstr "Unreconciled"
+
+#. placeholder {0}: formatPercent(Math.abs(change))
+#: src/components/reports/shared.tsx
+msgid "Up {0} vs the previous period"
+msgstr "Up {0} vs the previous period"
 
 #: src/components/BudgetEditor.tsx
 msgid "Use as default budget for this account and period"
@@ -2022,9 +2686,25 @@ msgstr "Valuation"
 msgid "Value date"
 msgstr "Value date"
 
+#: src/components/reports/SummaryTab.tsx
+msgid "Valued with the last price you entered, not a live quote."
+msgstr "Valued with the last price you entered, not a live quote."
+
 #: src/components/Dashboard.tsx
 msgid "View all"
 msgstr "View all"
+
+#: src/components/reports/shared.tsx
+msgid "View operations"
+msgstr "View operations"
+
+#: src/components/reports/shared.tsx
+msgid "View subcategories"
+msgstr "View subcategories"
+
+#: src/components/LineChart.tsx
+msgid "View the data as a table"
+msgstr "View the data as a table"
 
 #: src/format.ts
 msgid "Void"
@@ -2042,6 +2722,8 @@ msgstr "Week {0} · {1}"
 
 #: src/budgetUi.ts
 #: src/components/BudgetEditor.tsx
+#: src/components/reports/BalanceCard.tsx
+#: src/components/reports/BudgetsTab.tsx
 msgid "Weekly"
 msgstr "Weekly"
 
@@ -2058,6 +2740,11 @@ msgstr "What to create"
 msgid "Withdraw"
 msgstr "Withdraw"
 
+#: src/components/reports/BudgetsTab.tsx
+#: src/components/reports/SummaryTab.tsx
+msgid "Within the limit"
+msgstr "Within the limit"
+
 #: src/api.ts
 msgid "Wrong password."
 msgstr "Wrong password."
@@ -2068,9 +2755,14 @@ msgstr "Year"
 
 #: src/budgetUi.ts
 #: src/components/BudgetEditor.tsx
+#: src/components/reports/BudgetsTab.tsx
 msgid "Yearly"
 msgstr "Yearly"
 
 #: src/components/Pwa.tsx
 msgid "You are offline. The phone is not reachable; showing cached screens only."
 msgstr "You are offline. The phone is not reachable; showing cached screens only."
+
+#: src/components/reports/SummaryTab.tsx
+msgid "You have no portfolios yet."
+msgstr "You have no portfolios yet."

@@ -25,7 +25,9 @@ import type {
   PortfolioWrite,
   Price,
   PriceWrite,
+  BalanceSeries,
   ReportSummary,
+  Investments,
   SplitWrite,
   Tag,
   TagWrite,
@@ -256,7 +258,7 @@ export const getTags = (signal?: AbortSignal) => request<Tag[]>('/tags', { signa
 export const getMethods = (signal?: AbortSignal) => request<Method[]>('/methods', { signal })
 
 export const getGrouped = (
-  accountId: number,
+  accountId: number | 'all',
   grouping: Grouping,
   from: string,
   to: string,
@@ -408,18 +410,40 @@ export const getReportSummary = (
   )
 
 export const getBreakdown = (
-  accountId: number,
+  accountId: number | 'all',
   by: 'category' | 'payee' | 'tag' | 'method',
   type: 'expense' | 'income' | 'both',
   from: string,
   to: string,
+  categoryIds: number[] = [],
+  signal?: AbortSignal,
+) => {
+  const params = new URLSearchParams({
+    accountId: String(accountId),
+    by,
+    type,
+    from,
+    to,
+  })
+  for (const id of categoryIds) params.append('categoryId', String(id))
+  return request<Breakdown>(`/reports/breakdown?${params.toString()}`, { signal })
+}
+
+export const getBalanceSeries = (
+  accountIds: number[],
+  from: string,
+  to: string,
+  granularity: 'auto' | 'day' | 'week' | 'month' = 'auto',
   signal?: AbortSignal,
 ) =>
-  request<Breakdown>(
-    `/reports/breakdown?accountId=${accountId}&by=${by}&type=${type}` +
-      `&from=${from}&to=${to}`,
+  request<BalanceSeries>(
+    `/reports/balance-series?accountIds=${accountIds.join(',')}` +
+      `&from=${from}&to=${to}&granularity=${granularity}`,
     { signal },
   )
+
+export const getInvestments = (signal?: AbortSignal) =>
+  request<Investments>('/reports/investments', { signal })
 
 export const getBudgetAllocations = (
   id: number,

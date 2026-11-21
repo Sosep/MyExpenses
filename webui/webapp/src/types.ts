@@ -32,6 +32,15 @@ export interface UiPreferences {
   reportBreakdown: string | null
   reportType: string | null
   reportAllAccounts: boolean | null
+  reportTab: string | null
+  reportPeriod: string | null
+  reportCustomFrom: string | null
+  reportCustomTo: string | null
+  reportCompare: string | null
+  reportBalanceRange: string | null
+  reportBalanceFrom: string | null
+  reportBalanceTo: string | null
+  reportAccountIds: number[] | null
   budgetMonth: string | null
   transactionType: string | null
 }
@@ -315,6 +324,95 @@ export interface ReportSummary {
   expensesMinor: number
   netMinor: number
   count: number
+  /** Positive amounts on expense categories; nets the expense KPI. */
+  returnsMinor: number
+}
+
+export interface BalancePoint {
+  date: string
+  balanceMinor: number
+}
+
+export interface BalanceAccountSeries {
+  id: number
+  label: string
+  color: number
+  currency: string
+  fractionDigits: number
+  startBalanceMinor: number
+  firstTransactionDate: string | null
+  periodIncomeMinor: number
+  periodExpensesMinor: number
+  series: BalancePoint[]
+}
+
+export interface CurrencyBalanceTotal {
+  currency: string
+  fractionDigits: number
+  startBalanceMinor: number
+  periodIncomeMinor: number
+  periodExpensesMinor: number
+  series: BalancePoint[]
+}
+
+export interface CurrencyRef {
+  code: string
+  fractionDigits: number
+}
+
+export type BalanceGranularity = 'DAY' | 'WEEK' | 'MONTH'
+
+export interface BalanceSeries {
+  from: string
+  to: string
+  granularity: BalanceGranularity
+  granularityFallback: boolean
+  mixedCurrencies: boolean
+  currencies: CurrencyRef[]
+  accounts: BalanceAccountSeries[]
+  totals: CurrencyBalanceTotal[]
+}
+
+export interface InvestmentAsset {
+  symbol: string
+  label: string
+  fractionDigits: number
+  quantityMinor: number
+  priceMinor: number | null
+  lastPriceDate: string | null
+  valuationMinor: number
+  costKnown: boolean
+  costMinor: number | null
+  resultMinor: number | null
+}
+
+export interface InvestmentPortfolio {
+  id: number
+  label: string
+  currency: string
+  fractionDigits: number
+  cashMinor: number
+  valuationMinor: number
+  costKnown: boolean
+  costMinor: number | null
+  resultMinor: number | null
+  lastValuationDate: string | null
+  assets: InvestmentAsset[]
+}
+
+export interface CurrencyInvestmentTotal {
+  currency: string
+  fractionDigits: number
+  valuationMinor: number
+  costKnown: boolean
+  costMinor: number | null
+  resultMinor: number | null
+}
+
+export interface Investments {
+  homeCurrency: string
+  portfolios: InvestmentPortfolio[]
+  totals: CurrencyInvestmentTotal[]
 }
 
 export interface BreakdownItem {
