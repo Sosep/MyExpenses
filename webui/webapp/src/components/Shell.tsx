@@ -64,6 +64,10 @@ export function Shell({
   const transactionsAction = amounts.transactions
     ? t`Show transaction amounts`
     : t`Hide transaction amounts`
+  // A portfolio shows the asset screens (no budgets); a normal account keeps
+  // the full rail. Budgets need categories a portfolio does not track.
+  const isPortfolio = accounts.find((account) => account.id === accountId)?.portfolioRole ===
+    'CONTAINER'
 
   useEffect(() => {
     if (!menuOpen) return
@@ -103,6 +107,7 @@ export function Shell({
               type="button"
               className="icon-btn"
               onClick={onNewAccount}
+              data-action="new-account"
               aria-label={t`New account`}
               title={t`New account`}
             >
@@ -284,18 +289,20 @@ export function Shell({
             <IconChart />
             <span className="rail-label">{t`Reports`}</span>
           </button>
-          <button
-            type="button"
-            className={`rail-item ${view === 'budgets' ? 'active' : ''}`}
-            data-view="budgets"
-            onClick={() => onView('budgets')}
-            title={t`Budgets`}
-            aria-label={t`Budgets`}
-            aria-current={view === 'budgets' ? 'page' : undefined}
-          >
-            <IconPie />
-            <span className="rail-label">{t`Budgets`}</span>
-          </button>
+          {isPortfolio ? null : (
+            <button
+              type="button"
+              className={`rail-item ${view === 'budgets' ? 'active' : ''}`}
+              data-view="budgets"
+              onClick={() => onView('budgets')}
+              title={t`Budgets`}
+              aria-label={t`Budgets`}
+              aria-current={view === 'budgets' ? 'page' : undefined}
+            >
+              <IconPie />
+              <span className="rail-label">{t`Budgets`}</span>
+            </button>
+          )}
           <button
             type="button"
             className={`rail-item ${view === 'files' ? 'active' : ''}`}

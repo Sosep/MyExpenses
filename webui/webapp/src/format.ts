@@ -17,12 +17,21 @@ export function formatMoney(
   showSign = false,
 ): string {
   const value = amountMinor / Math.pow(10, fractionDigits)
-  const formatted = new Intl.NumberFormat(uiLocale(), {
-    style: 'currency',
-    currency,
-    minimumFractionDigits: fractionDigits,
-    maximumFractionDigits: fractionDigits,
-  }).format(Math.abs(value))
+  let formatted: string
+  try {
+    formatted = new Intl.NumberFormat(uiLocale(), {
+      style: 'currency',
+      currency,
+      minimumFractionDigits: fractionDigits,
+      maximumFractionDigits: fractionDigits,
+    }).format(Math.abs(value))
+  } catch {
+    // Commodities (AAPL, BTC) are not ISO-4217 codes: a plain number plus the
+    // code keeps the quantity readable where a currency style would throw.
+    formatted = `${new Intl.NumberFormat(uiLocale(), {
+      maximumFractionDigits: fractionDigits,
+    }).format(Math.abs(value))} ${currency}`
+  }
   if (value < 0) return '−' + formatted
   if (showSign && value > 0) return '+' + formatted
   return formatted
@@ -164,11 +173,17 @@ export function amountInputValue(amountMinor: number, fractionDigits: number): s
 }
 
 export function currencySymbol(currency: string): string {
-  const parts = new Intl.NumberFormat(uiLocale(), {
-    style: 'currency',
-    currency,
-  }).formatToParts(0)
-  return parts.find((part) => part.type === 'currency')?.value ?? currency
+  let symbol = currency
+  try {
+    const parts = new Intl.NumberFormat(uiLocale(), {
+      style: 'currency',
+      currency,
+    }).formatToParts(0)
+    symbol = parts.find((part) => part.type === 'currency')?.value ?? currency
+  } catch {
+    // Non-ISO-4217 codes (commodities) have no symbol: the code itself is it.
+  }
+  return symbol
 }
 
 /**

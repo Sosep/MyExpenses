@@ -63,6 +63,9 @@ const accounts = [
     sealed: false,
     color: -16776961,
     parentId: null,
+    portfolioRole: 'NONE',
+    dynamicExchangeRates: false,
+    valuationMinor: null,
   },
   {
     id: 2,
@@ -80,6 +83,9 @@ const accounts = [
     sealed: false,
     color: -16776961,
     parentId: null,
+    portfolioRole: 'NONE',
+    dynamicExchangeRates: false,
+    valuationMinor: null,
   },
   {
     id: 3,
@@ -97,10 +103,255 @@ const accounts = [
     sealed: false,
     color: -16776961,
     parentId: null,
+    portfolioRole: 'NONE',
+    dynamicExchangeRates: false,
+    valuationMinor: null,
+  },
+  // A portfolio: the container holds the hub splits, the cash sub-account the
+  // liquid money and each asset sub-account the quantity of one commodity.
+  {
+    id: 7,
+    label: 'Investments',
+    type: '6',
+    typeName: 'INVESTMENT',
+    currency: 'EUR',
+    fractionDigits: 2,
+    openingBalanceMinor: 0,
+    currentBalanceMinor: -2500,
+    totalMinor: -2500,
+    incomeMinor: 0,
+    expensesMinor: 0,
+    excludeFromTotals: false,
+    sealed: false,
+    color: -16776961,
+    parentId: null,
+    portfolioRole: 'CONTAINER',
+    dynamicExchangeRates: false,
+    valuationMinor: 110000,
+  },
+  {
+    id: 8,
+    label: 'Trading',
+    type: '6',
+    typeName: 'INVESTMENT',
+    currency: 'USD',
+    fractionDigits: 2,
+    openingBalanceMinor: 0,
+    currentBalanceMinor: 0,
+    totalMinor: 0,
+    incomeMinor: 0,
+    expensesMinor: 0,
+    excludeFromTotals: false,
+    sealed: false,
+    color: -16776961,
+    parentId: null,
+    portfolioRole: 'CONTAINER',
+    dynamicExchangeRates: true,
+    valuationMinor: 0,
+  },
+  {
+    id: 9,
+    label: 'Cash',
+    type: '1',
+    typeName: 'CASH',
+    currency: 'EUR',
+    fractionDigits: 2,
+    openingBalanceMinor: 0,
+    currentBalanceMinor: 25000,
+    totalMinor: 25000,
+    incomeMinor: 0,
+    expensesMinor: 0,
+    excludeFromTotals: false,
+    sealed: false,
+    color: -16776961,
+    parentId: 7,
+    portfolioRole: 'CASH',
+    dynamicExchangeRates: false,
+    valuationMinor: null,
+  },
+  {
+    id: 10,
+    label: 'Apple Inc.',
+    type: '6',
+    typeName: 'INVESTMENT',
+    currency: 'AAPL',
+    fractionDigits: 4,
+    openingBalanceMinor: 0,
+    currentBalanceMinor: 30000,
+    totalMinor: 30000,
+    incomeMinor: 0,
+    expensesMinor: 0,
+    excludeFromTotals: false,
+    sealed: false,
+    color: -16776961,
+    parentId: 7,
+    portfolioRole: 'ASSET',
+    dynamicExchangeRates: true,
+    valuationMinor: null,
+  },
+  {
+    id: 11,
+    label: 'Bitcoin',
+    type: '6',
+    typeName: 'INVESTMENT',
+    currency: 'BTC',
+    fractionDigits: 8,
+    openingBalanceMinor: 0,
+    currentBalanceMinor: 20000000,
+    totalMinor: 20000000,
+    incomeMinor: 0,
+    expensesMinor: 0,
+    excludeFromTotals: false,
+    sealed: false,
+    color: -16776961,
+    parentId: 7,
+    portfolioRole: 'ASSET',
+    dynamicExchangeRates: true,
+    valuationMinor: null,
   },
 ]
 
-let nextAccountId = 10
+// Valuation of each portfolio at the latest stored prices: cash plus every
+// asset quantity converted, plus the container's own hub balance.
+const portfolioAssets = {
+  7: {
+    portfolioId: 7,
+    label: 'Investments',
+    currency: 'EUR',
+    fractionDigits: 2,
+    cashAccountId: 9,
+    cashMinor: 25000,
+    valuationMinor: 110000,
+    assets: [
+      {
+        id: 10,
+        label: 'Apple Inc.',
+        symbol: 'AAPL',
+        fractionDigits: 4,
+        quantityMinor: 30000,
+        priceMinor: 0.05,
+        valuationMinor: 1500,
+      },
+      {
+        id: 11,
+        label: 'Bitcoin',
+        symbol: 'BTC',
+        fractionDigits: 8,
+        quantityMinor: 20000000,
+        priceMinor: 0.0043,
+        valuationMinor: 86000,
+      },
+    ],
+  },
+  8: {
+    portfolioId: 8,
+    label: 'Trading',
+    currency: 'USD',
+    fractionDigits: 2,
+    cashAccountId: null,
+    cashMinor: 0,
+    valuationMinor: 0,
+    assets: [],
+  },
+}
+
+// Operations of the portfolio, the same five kinds the Android app offers.
+// `price` is the real (major to major) rate as a string; deposits and
+// withdrawals carry the portfolio currency as the asset symbol.
+const portfolioTrades = [
+  {
+    id: 705,
+    type: 'TRANSFER_OUT',
+    accountId: 7,
+    currency: 'EUR',
+    date: iso(15),
+    time: null,
+    comment: 'Al fondo del otro bróker',
+    assetSymbol: 'BTC',
+    fractionDigits: 8,
+    quantityMinor: 1000000,
+    price: '430.0',
+    principalMinor: 43000,
+    feeMinor: null,
+    peerAccountId: 8,
+    peerAccountLabel: 'Trading',
+  },
+  {
+    id: 704,
+    type: 'WITHDRAW',
+    accountId: 7,
+    currency: 'EUR',
+    date: iso(20),
+    time: null,
+    comment: 'Vacaciones',
+    assetSymbol: 'EUR',
+    fractionDigits: 2,
+    quantityMinor: 15000,
+    price: '1',
+    principalMinor: 15000,
+    feeMinor: null,
+    peerAccountId: null,
+    peerAccountLabel: null,
+  },
+  {
+    id: 703,
+    type: 'DEPOSIT',
+    accountId: 7,
+    currency: 'EUR',
+    date: iso(13),
+    time: null,
+    comment: 'Aportación mensual',
+    assetSymbol: 'EUR',
+    fractionDigits: 2,
+    quantityMinor: 40000,
+    price: '1',
+    principalMinor: 40000,
+    feeMinor: null,
+    peerAccountId: 1,
+    peerAccountLabel: 'Everyday',
+  },
+  {
+    id: 701,
+    type: 'BUY',
+    accountId: 7,
+    currency: 'EUR',
+    date: iso(12),
+    time: null,
+    comment: '',
+    assetSymbol: 'AAPL',
+    fractionDigits: 4,
+    quantityMinor: 30000,
+    price: '5.0',
+    principalMinor: 15000,
+    feeMinor: 500,
+    peerAccountId: 9,
+    peerAccountLabel: 'Cash',
+  },
+  {
+    id: 702,
+    type: 'SELL',
+    accountId: 7,
+    currency: 'EUR',
+    date: iso(9),
+    time: null,
+    comment: 'Tomar beneficios',
+    assetSymbol: 'AAPL',
+    fractionDigits: 4,
+    quantityMinor: 10000,
+    price: '5.2',
+    principalMinor: 52000,
+    feeMinor: 300,
+    peerAccountId: 1,
+    peerAccountLabel: 'Everyday',
+  },
+].sort((left, right) => right.date.localeCompare(left.date))
+
+const portfolioTradesByPortfolio = {
+  7: portfolioTrades,
+  8: [],
+}
+
+let nextAccountId = 20
 
 const monthName = new Intl.DateTimeFormat('en-GB', { month: 'long', year: 'numeric' }).format(
   new Date(year, month - 1, 1),
@@ -805,7 +1056,13 @@ function serveAppIndex(response) {
             }, 1500)
           }
           var kind = q.get('kind')
-          if (q.get('new') === '1') {
+          if (kind === 'portfolio' && q.get('new') === '1') {
+            // The `+` opens the dual editor; it presets the portfolio kind
+            // itself from the same query parameter.
+            setTimeout(function(){
+              document.querySelector('[data-action="new-account"]')?.click()
+            }, 350)
+          } else if (q.get('new') === '1') {
             setTimeout(function(){
               document.querySelector('button.btn.primary')?.click()
             }, 350)
@@ -1118,7 +1375,129 @@ createServer(async (request, response) => {
         { id: 1, name: 'CASH', isAsset: true, supportsReconciliation: false },
         { id: 2, name: 'BANK', isAsset: true, supportsReconciliation: true },
         { id: 4, name: 'ASSET', isAsset: true, supportsReconciliation: false },
+        { id: 6, name: 'INVESTMENT', isAsset: true, supportsReconciliation: false },
       ])
+    }
+    if (path === '/api/v1/portfolios' && request.method === 'POST') {
+      const body = await readJson(request)
+      if (!body.label || !body.type || !body.currency) {
+        return sendJson(response, 422, {
+          error: 'validation_failed',
+          message: 'label, type and currency are required',
+        })
+      }
+      if (
+        body.currency !== meta.homeCurrency &&
+        !body.dynamicExchangeRates &&
+        !(Number(body.exchangeRate) > 0)
+      ) {
+        return sendJson(response, 422, {
+          error: 'missing_exchangeRate',
+          message: 'A fixed exchange rate above zero is required for a foreign currency',
+        })
+      }
+      if ((request.headers.cookie ?? '').includes('mock_portfolio_limit=1')) {
+        return sendJson(response, 409, {
+          error: 'portfolio_limit_reached',
+          message: 'A licence is needed for more than one portfolio',
+        })
+      }
+      const typeName = { 1: 'CASH', 2: 'BANK', 4: 'ASSET', 6: 'INVESTMENT' }[Number(body.type)] ?? 'BANK'
+      const portfolio = {
+        id: nextAccountId++,
+        label: body.label,
+        type: String(body.type),
+        typeName,
+        currency: body.currency,
+        fractionDigits: 2,
+        openingBalanceMinor: 0,
+        currentBalanceMinor: 0,
+        totalMinor: 0,
+        incomeMinor: 0,
+        expensesMinor: 0,
+        excludeFromTotals: false,
+        sealed: false,
+        color: body.color ?? 0,
+        parentId: null,
+        portfolioRole: 'CONTAINER',
+        dynamicExchangeRates: body.dynamicExchangeRates ?? false,
+        valuationMinor: 0,
+      }
+      accounts.push(portfolio)
+      portfolioAssets[portfolio.id] = {
+        portfolioId: portfolio.id,
+        label: portfolio.label,
+        currency: portfolio.currency,
+        fractionDigits: portfolio.fractionDigits,
+        cashAccountId: null,
+        cashMinor: 0,
+        valuationMinor: 0,
+        assets: [],
+      }
+      portfolioTradesByPortfolio[portfolio.id] = []
+      return sendJson(response, 201, portfolio, {
+        Location: `/api/v1/accounts/${portfolio.id}`,
+      })
+    }
+    const portfolioMatch = path.match(/^\/api\/v1\/portfolios\/(\d+)$/)
+    if (portfolioMatch && request.method === 'PUT') {
+      const portfolio = accounts.find(
+        (item) => item.id === Number(portfolioMatch[1]) && item.portfolioRole === 'CONTAINER',
+      )
+      if (!portfolio) {
+        return sendJson(response, 404, {
+          error: 'portfolio_not_found',
+          message: 'Portfolio not found',
+        })
+      }
+      const body = await readJson(request)
+      if (body.label) portfolio.label = body.label
+      if (body.color !== undefined) portfolio.color = body.color
+      if (body.dynamicExchangeRates !== undefined) {
+        portfolio.dynamicExchangeRates = body.dynamicExchangeRates
+      }
+      return sendJson(response, 200, portfolio)
+    }
+    const assetsMatch = path.match(/^\/api\/v1\/portfolios\/(\d+)\/assets$/)
+    if (assetsMatch) {
+      const assets = portfolioAssets[Number(assetsMatch[1])]
+      if (!assets) {
+        return sendJson(response, 404, {
+          error: 'portfolio_not_found',
+          message: 'Portfolio not found',
+        })
+      }
+      return sendJson(response, 200, assets)
+    }
+    const tradesMatch = path.match(/^\/api\/v1\/portfolios\/(\d+)\/trades$/)
+    if (tradesMatch && request.method === 'GET') {
+      const portfolioId = Number(tradesMatch[1])
+      if (!portfolioTradesByPortfolio[portfolioId]) {
+        return sendJson(response, 404, {
+          error: 'portfolio_not_found',
+          message: 'Portfolio not found',
+        })
+      }
+      const limit = Number(url.searchParams.get('limit') ?? 50)
+      const offset = Number(url.searchParams.get('offset') ?? 0)
+      const rows = portfolioTradesByPortfolio[portfolioId]
+      return sendJson(response, 200, {
+        items: rows.slice(offset, offset + limit),
+        total: rows.length,
+        limit,
+        offset,
+      })
+    }
+    const tradeMatch = path.match(/^\/api\/v1\/portfolios\/(\d+)\/trades\/(\d+)$/)
+    if (tradeMatch) {
+      const portfolioId = Number(tradeMatch[1])
+      const trade = (portfolioTradesByPortfolio[portfolioId] ?? []).find(
+        (item) => item.id === Number(tradeMatch[2]),
+      )
+      if (!trade) {
+        return sendJson(response, 404, { error: 'trade_not_found', message: 'Trade not found' })
+      }
+      return sendJson(response, 200, trade)
     }
     if (path === '/api/v1/accounts' && request.method === 'POST') {
       const body = await readJson(request)
@@ -1145,6 +1524,9 @@ createServer(async (request, response) => {
         sealed: false,
         color: body.color ?? 0,
         parentId: null,
+        portfolioRole: 'NONE',
+        dynamicExchangeRates: false,
+        valuationMinor: null,
       }
       accounts.push(account)
       return sendJson(response, 201, account, { Location: `/api/v1/accounts/${account.id}` })

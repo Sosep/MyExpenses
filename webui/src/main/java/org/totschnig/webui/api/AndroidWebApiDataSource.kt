@@ -4,6 +4,7 @@ import android.content.ContentUris
 import android.content.ContentValues
 import android.net.Uri
 import io.ktor.http.HttpStatusCode
+import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
@@ -11,6 +12,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeParseException
 import java.util.Locale
 import kotlin.math.abs
+import kotlin.math.roundToLong
 import kotlinx.coroutines.flow.StateFlow
 import org.totschnig.myexpenses.db2.Repository
 import org.totschnig.myexpenses.db2.RepositoryTransaction
@@ -22,22 +24,30 @@ import org.totschnig.myexpenses.db2.deleteAccount
 import org.totschnig.myexpenses.db2.deleteBudget
 import org.totschnig.myexpenses.db2.entities.Transaction
 import org.totschnig.myexpenses.db2.getCurrencyUnitForAccount
+import org.totschnig.myexpenses.db2.loadAccount
 import org.totschnig.myexpenses.db2.loadAccountType
 import org.totschnig.myexpenses.db2.loadBudget
 import org.totschnig.myexpenses.db2.loadBudgetProgress
+import org.totschnig.myexpenses.db2.loadTrade
+import org.totschnig.myexpenses.db2.loadTrades
 import org.totschnig.myexpenses.db2.loadTransaction
 import org.totschnig.myexpenses.db2.saveBudget
 import org.totschnig.myexpenses.db2.saveBudgetCriteria
+import org.totschnig.myexpenses.db2.storeExchangeRate
 import org.totschnig.myexpenses.db2.updateAccount
 import org.totschnig.myexpenses.db2.updateTransaction
+import org.totschnig.myexpenses.model.ContribFeature
 import org.totschnig.myexpenses.model.CrStatus
 import org.totschnig.myexpenses.model.CurrencyContext
 import org.totschnig.myexpenses.model.Grouping
 import org.totschnig.myexpenses.model.generateUuid
+import org.totschnig.myexpenses.model.sort.SortDirection
 import org.totschnig.myexpenses.model2.Account as AccountModel
 import org.totschnig.myexpenses.preference.PrefHandler
 import org.totschnig.myexpenses.preference.PrefKey
 import org.totschnig.myexpenses.provider.BaseTransactionProvider.Companion.budgetAllocationUri
+import org.totschnig.myexpenses.provider.DataBaseAccount
+import org.totschnig.myexpenses.provider.DatabaseConstants.WHERE_NOT_SPLIT_PART
 import org.totschnig.myexpenses.provider.KEY_ACCOUNTID
 import org.totschnig.myexpenses.provider.KEY_BUDGET
 import org.totschnig.myexpenses.provider.KEY_BUDGETID
@@ -46,6 +56,8 @@ import org.totschnig.myexpenses.provider.KEY_BUDGET_ROLLOVER_PREVIOUS
 import org.totschnig.myexpenses.provider.KEY_CATID
 import org.totschnig.myexpenses.provider.KEY_COLOR
 import org.totschnig.myexpenses.provider.KEY_CURRENCY
+import org.totschnig.myexpenses.provider.KEY_DATE
+import org.totschnig.myexpenses.provider.KEY_DYNAMIC
 import org.totschnig.myexpenses.provider.KEY_EXCLUDE_FROM_TOTALS
 import org.totschnig.myexpenses.provider.KEY_LABEL
 import org.totschnig.myexpenses.provider.KEY_ONE_TIME
@@ -56,7 +68,9 @@ import org.totschnig.myexpenses.provider.KEY_SECOND_GROUP
 import org.totschnig.myexpenses.provider.KEY_TITLE
 import org.totschnig.myexpenses.provider.KEY_TYPE
 import org.totschnig.myexpenses.provider.KEY_YEAR
+import org.totschnig.myexpenses.provider.PORTFOLIO_CONTAINER
 import org.totschnig.myexpenses.provider.SPLIT_CATID
+import org.totschnig.myexpenses.provider.TransactionProvider
 import org.totschnig.myexpenses.provider.TransactionProvider.BUDGETS_URI
 import org.totschnig.myexpenses.provider.TransactionProvider.BUDGET_ALLOCATIONS_URI
 import org.totschnig.myexpenses.provider.TransactionProvider.CATEGORIES_URI
@@ -71,9 +85,14 @@ import org.totschnig.myexpenses.provider.filter.Criterion
 import org.totschnig.myexpenses.provider.filter.MethodCriterion
 import org.totschnig.myexpenses.provider.filter.PayeeCriterion
 import org.totschnig.myexpenses.provider.filter.TagCriterion
+import org.totschnig.myexpenses.provider.withLimit
+import org.totschnig.myexpenses.util.calculateRawExchangeRate
 import org.totschnig.myexpenses.util.epoch2ZonedDateTime
+import org.totschnig.myexpenses.util.licence.LicenceHandler
 import org.totschnig.myexpenses.util.toEpoch
 import org.totschnig.myexpenses.viewmodel.data.Budget
+import org.totschnig.myexpenses.viewmodel.data.Trade
+import org.totschnig.myexpenses.viewmodel.data.TradeType
 
 class AndroidWebApiDataSource(
     private val repository: Repository,
@@ -81,6 +100,7 @@ class AndroidWebApiDataSource(
     private val currencyContext: CurrencyContext,
     private val payeeMap: StateFlow<Map<Long, String>>,
     private val tagMap: StateFlow<Map<Long, String>>,
+    private val licenceHandler: LicenceHandler,
     private val appVersion: String
 ) : WebApiDataSource {
     override fun meta() = MetaDto(
@@ -1630,6 +1650,261 @@ class AndroidWebApiDataSource(
             methodMap = repository.queryMethods().associate { it.id to it.label }
         )
     }
+
+    // ---- Portfolios -------------------------------------------------------
+
+    override suspend fun createPortfolio(body: PortfolioWriteDto): AccountDto {
+        val label = requirePortfolioLabel(body.label)
+        val currency = requireCurrency(body.currency)
+        val type = repository.loadAccountType(parseAccountTypeId(body.type))
+        val dynamic = body.dynamicExchangeRates ?: false
+        val homeCurrency = currencyContext.homeCurrencyUnit
+        val isFx = currency != homeCurrency.code
+        val exchangeRate = portfolioExchangeRate(body.exchangeRate, currency, dynamic, isFx)
+        requirePortfolioLicence()
+        val account = AccountModel(
+            label = label,
+            currency = currency,
+            type = type,
+            color = body.color ?: AccountModel.DEFAULT_COLOR,
+            portfolioRole = PORTFOLIO_CONTAINER,
+            dynamicExchangeRates = dynamic,
+            exchangeRate = exchangeRate
+        )
+        val created = repository.createAccount(account)
+        if (isFx) {
+            // Same flow as the app's `createPortfolio`: the fixed rate is stored
+            // on the account so the provider can convert it.
+            repository.storeExchangeRate(created.id, exchangeRate, currency, homeCurrency.code)
+        }
+        return account(created.id) ?: throw ApiException(
+            HttpStatusCode.InternalServerError,
+            "save_failed",
+            "Could not create the portfolio"
+        )
+    }
+
+    override suspend fun updatePortfolio(id: Long, body: PortfolioWriteDto): AccountDto {
+        val existing = account(id) ?: throw ApiException(
+            HttpStatusCode.NotFound,
+            "portfolio_not_found",
+            "Portfolio not found"
+        )
+        if (existing.portfolioRole != "CONTAINER") {
+            throw ApiException(
+                HttpStatusCode.NotFound,
+                "portfolio_not_found",
+                "Portfolio not found"
+            )
+        }
+        val label = requirePortfolioLabel(body.label)
+        val currency = requireCurrency(body.currency)
+        val dynamic = body.dynamicExchangeRates ?: false
+        val values = ContentValues().apply {
+            put(KEY_LABEL, label)
+            put(KEY_CURRENCY, currency)
+            put(KEY_COLOR, body.color ?: existing.color)
+            put(KEY_DYNAMIC, dynamic)
+            put(KEY_TYPE, parseAccountTypeId(body.type))
+        }
+        val homeCurrency = currencyContext.homeCurrencyUnit
+        val isFx = currency != homeCurrency.code
+        if (currency != existing.currency && accountHasTransactions(id)) {
+            throw ApiException(
+                HttpStatusCode.UnprocessableEntity,
+                "unsupported_account_change",
+                "The currency of a portfolio with transactions cannot change"
+            )
+        }
+        val exchangeRate = portfolioExchangeRate(body.exchangeRate, currency, dynamic, isFx)
+        repository.updateAccount(id) { putAll(values) }
+        if (isFx && !dynamic) {
+            repository.storeExchangeRate(id, exchangeRate, currency, homeCurrency.code)
+        }
+        return account(id)!!
+    }
+
+    override suspend fun portfolioAssets(id: Long): PortfolioAssetsDto {
+        val rows = repository.queryAccounts(currencyContext)
+        val container = rows.firstOrNull { it.id == id } ?: throw ApiException(
+            HttpStatusCode.NotFound,
+            "portfolio_not_found",
+            "Portfolio not found"
+        )
+        if (container.portfolioRole != "CONTAINER") {
+            throw ApiException(
+                HttpStatusCode.NotFound,
+                "portfolio_not_found",
+                "Portfolio not found"
+            )
+        }
+        val prices = repository.queryLatestPrices()
+        val children = rows.filter { it.parentId == id }
+        val cash = children.firstOrNull { it.portfolioRole == "CASH" }
+        val assets = children.filter { it.portfolioRole == "ASSET" }.map { child ->
+            val rate = conversionRate(
+                child.currency,
+                child.dynamicExchangeRates,
+                container.currency,
+                prices
+            )
+            AssetDto(
+                id = child.id,
+                label = child.label,
+                symbol = child.currency,
+                fractionDigits = child.fractionDigits,
+                quantityMinor = child.currentBalanceMinor,
+                priceMinor = prices[child.currency to container.currency],
+                valuationMinor = (child.currentBalanceMinor * rate).roundToLong()
+            )
+        }
+        return PortfolioAssetsDto(
+            portfolioId = id,
+            label = container.label,
+            currency = container.currency,
+            fractionDigits = container.fractionDigits,
+            cashAccountId = cash?.id,
+            cashMinor = cash?.currentBalanceMinor ?: 0,
+            valuationMinor = container.valuationMinor ?: container.currentBalanceMinor,
+            assets = assets
+        )
+    }
+
+    override fun tradePage(portfolioId: Long, limit: Int, offset: Int): PageDto<TradeDto> {
+        requirePortfolioContainer(portfolioId)
+        val uri = TRANSACTIONS_URI.buildUpon()
+            .appendQueryParameter(KEY_ACCOUNTID, portfolioId.toString())
+            .appendQueryParameter(TransactionProvider.QUERY_PARAMETER_SEARCH, "1")
+            .build()
+        // Same query shape as the app's `TradePagingSource`: the trade parents
+        // of the portfolio account, newest first, then the domain loader.
+        val total = repository.contentResolver.query(
+            uri,
+            arrayOf("count(*)"),
+            WHERE_NOT_SPLIT_PART,
+            null,
+            null
+        )?.use { if (it.moveToFirst()) it.getLong(0) else 0L } ?: 0L
+        val ids = repository.contentResolver.query(
+            uri.withLimit(limit, offset),
+            arrayOf(KEY_ROWID),
+            WHERE_NOT_SPLIT_PART,
+            null,
+            DataBaseAccount.sortOrder(KEY_DATE, SortDirection.DESC)
+        )?.use { cursor ->
+            buildList {
+                while (cursor.moveToNext()) add(cursor.getLong(0))
+            }
+        } ?: emptyList()
+        val withTime = prefHandler.getBoolean(PrefKey.TRANSACTION_WITH_TIME, false)
+        return PageDto(
+            items = repository.loadTrades(ids).map { it.toTradeDto(withTime) },
+            total = total,
+            limit = limit,
+            offset = offset
+        )
+    }
+
+    override fun trade(portfolioId: Long, transactionId: Long): TradeDto? {
+        requirePortfolioContainer(portfolioId)
+        val withTime = prefHandler.getBoolean(PrefKey.TRANSACTION_WITH_TIME, false)
+        return repository.loadTrade(transactionId)
+            ?.takeIf { it.portfolioId == portfolioId }
+            ?.let { it.toTradeDto(withTime) }
+    }
+
+    private fun requirePortfolioContainer(portfolioId: Long) {
+        val container = try {
+            repository.loadAccount(portfolioId)
+        } catch (_: IllegalArgumentException) {
+            null
+        }
+        if (container == null || container.portfolioRole != PORTFOLIO_CONTAINER) {
+            throw ApiException(
+                HttpStatusCode.NotFound,
+                "portfolio_not_found",
+                "Portfolio not found"
+            )
+        }
+    }
+
+    private fun requirePortfolioLicence() {
+        val existing = repository.queryAccounts(currencyContext).count {
+            it.portfolioRole == "CONTAINER"
+        }
+        if (existing > 0 && !licenceHandler.hasAccessTo(ContribFeature.PORTFOLIO)) {
+            throw ApiException(
+                HttpStatusCode.Conflict,
+                "portfolio_limit_reached",
+                "A licence is needed for more than one portfolio"
+            )
+        }
+    }
+
+    private fun requirePortfolioLabel(label: String?): String {
+        val value = label?.trim().orEmpty()
+        if (value.isBlank()) {
+            throw ApiException(
+                HttpStatusCode.UnprocessableEntity,
+                "validation_failed",
+                "Missing label",
+                mapOf("label" to "Required")
+            )
+        }
+        return value
+    }
+
+    /**
+     * The rate travels as a real (major to major) rate and is stored raw, like
+     * the app's `PortfolioSetupDialog` does before calling `createPortfolio`.
+     */
+    private fun portfolioExchangeRate(
+        exchangeRate: Double?,
+        currency: String,
+        dynamic: Boolean,
+        isFx: Boolean
+    ): Double {
+        if (!isFx || dynamic) return 1.0
+        if (exchangeRate == null || exchangeRate <= 0.0) {
+            throw ApiException(
+                HttpStatusCode.UnprocessableEntity,
+                "missing_exchangeRate",
+                "A fixed exchange rate above zero is required for a foreign currency",
+                mapOf("exchangeRate" to "Required")
+            )
+        }
+        return calculateRawExchangeRate(
+            BigDecimal.valueOf(exchangeRate),
+            currencyContext[currency],
+            currencyContext.homeCurrencyUnit
+        )
+    }
+
+    private fun Trade.toTradeDto(withTime: Boolean) = TradeDto(
+        id = id,
+        type = when (val tradeType = type) {
+            TradeType.AssetTrade.BUY -> "BUY"
+            TradeType.AssetTrade.SELL -> "SELL"
+            TradeType.CashMovement.DEPOSIT -> "DEPOSIT"
+            TradeType.CashMovement.WITHDRAW -> "WITHDRAW"
+            is TradeType.Transfer -> if (tradeType.isIncoming) "TRANSFER_IN" else "TRANSFER_OUT"
+        },
+        accountId = portfolioId,
+        currency = currency,
+        date = date.toLocalDate().toString(),
+        time = if (withTime) date.toLocalTime().toString() else null,
+        comment = comment.orEmpty(),
+        assetSymbol = assetSymbol,
+        fractionDigits = runCatching {
+            currencyContext[assetSymbol].fractionDigits
+        }.getOrDefault(2),
+        quantityMinor = quantity.amountMinor,
+        price = if (quantity.amountMinor == 0L) null else price.toPlainString(),
+        principalMinor = principal.amountMinor,
+        feeMinor = fee?.takeIf { it.amountMinor != 0L }?.amountMinor,
+        peerAccountId = peerAccount?.first,
+        peerAccountLabel = peerAccount?.second
+    )
 
     private fun validateAccount(accountId: Long) {
         if (repository.getCurrencyUnitForAccount(accountId) == null) {

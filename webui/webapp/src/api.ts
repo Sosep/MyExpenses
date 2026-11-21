@@ -17,9 +17,12 @@ import type {
   Method,
   Page,
   Payee,
+  PortfolioAssets,
+  PortfolioWrite,
   ReportSummary,
   SplitWrite,
   Tag,
+  Trade,
   Transaction,
   TransactionWrite,
   TransferWrite,
@@ -58,6 +61,11 @@ export function describeError(error: unknown, fallback?: string): string {
         return t`This item no longer exists on the phone.`
       case 'conflict':
         return t`This change is not allowed here.`
+      case 'portfolio_limit_reached':
+        return t`The free version tracks one portfolio. More need the Professional licence.`
+      case 'portfolio_not_found':
+      case 'trade_not_found':
+        return t`This item no longer exists on the phone.`
       case 'http_error':
         return error.status >= 500
           ? t`The phone could not complete the request.`
@@ -174,6 +182,29 @@ export const createAccount = (payload: AccountWrite) =>
   request<Account>('/accounts', { method: 'POST', body: payload })
 
 export const getAccounts = (signal?: AbortSignal) => request<Account[]>('/accounts', { signal })
+
+export const createPortfolio = (payload: PortfolioWrite) =>
+  request<Account>('/portfolios', { method: 'POST', body: payload })
+
+export const updatePortfolio = (id: number, payload: PortfolioWrite) =>
+  request<Account>(`/portfolios/${id}`, { method: 'PUT', body: payload })
+
+export const getPortfolioAssets = (id: number, signal?: AbortSignal) =>
+  request<PortfolioAssets>(`/portfolios/${id}/assets`, { signal })
+
+export const getTrades = (
+  portfolioId: number,
+  limit: number,
+  offset: number,
+  signal?: AbortSignal,
+) =>
+  request<Page<Trade>>(
+    `/portfolios/${portfolioId}/trades?limit=${limit}&offset=${offset}`,
+    { signal },
+  )
+
+export const getTrade = (portfolioId: number, id: number, signal?: AbortSignal) =>
+  request<Trade>(`/portfolios/${portfolioId}/trades/${id}`, { signal })
 
 export const getCategories = (signal?: AbortSignal) =>
   request<Category[]>('/categories', { signal })

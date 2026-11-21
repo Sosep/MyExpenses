@@ -75,6 +75,11 @@ interface WebApiDataSource {
     fun createSplit(body: SplitWriteDto): TransactionDto
     fun updateSplit(id: Long, body: SplitWriteDto): TransactionDto
     fun deleteTransaction(id: Long): Boolean
+    suspend fun createPortfolio(body: PortfolioWriteDto): AccountDto
+    suspend fun updatePortfolio(id: Long, body: PortfolioWriteDto): AccountDto
+    suspend fun portfolioAssets(id: Long): PortfolioAssetsDto
+    fun tradePage(portfolioId: Long, limit: Int, offset: Int): PageDto<TradeDto>
+    fun trade(portfolioId: Long, transactionId: Long): TradeDto?
 }
 
 /** Criteria of the transaction list, all optional and combined with AND. */

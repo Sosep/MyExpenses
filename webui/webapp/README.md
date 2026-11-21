@@ -176,6 +176,10 @@ El detalle de una transacción abre una entrada de historial: atrás lo cierra.
 | `?view=budgets&edit=1` | Edita el primer presupuesto |
 | `?view=budgets&edit=1&periodOverride=1` | Prueba el total distinto de este periodo |
 | `?view=files` | Ficheros |
+| `?view=transactions&accountId=7` | Operaciones de la cartera *Investments* (sin Presupuestos en el rail) |
+| `?accountId=7` | Resumen de la cartera: valoración, efectivo y activos |
+| `?new=1&kind=portfolio` | Alta de cartera (el `+` abre el editor con Cartera preseleccionada) |
+| `?portfolioLimit=1` | El mock responde `409 portfolio_limit_reached` al crear una cartera |
 | `?panel=split` / `?panel=transfer` | Detalle de dividida / transferencia |
 | `?new=1` | Selector de tipo de alta |
 | `?new=1&kind=transfer` / `&kind=split` | Editor de transferencia / dividida |
@@ -209,8 +213,11 @@ Sirve para comprobar:
 
 - **Sí**: transacciones simples (`POST/PUT/DELETE`), presupuestos, asignaciones,
   rollover, total por periodo, duplicación, informes y descarga de ficheros.
-- **No**: guardar transferencias ni divididas; se abren y editan visualmente,
-  pero el guardado se prueba contra el API real del teléfono.
+- **Sí**: alta/edición de carteras (`POST/PUT /portfolios`); el límite de
+  licencia se simula con `?portfolioLimit=1`.
+- **No**: guardar transferencias, divididas ni operaciones de cartera; se abren
+  y editan visualmente, pero el guardado se prueba contra el API real del
+  teléfono.
 - Todo vive en memoria: reiniciar el mock vuelve a los datos de ejemplo.
 - El código está en `dev/mock-server.mjs`; los fixtures están al principio del
   archivo.

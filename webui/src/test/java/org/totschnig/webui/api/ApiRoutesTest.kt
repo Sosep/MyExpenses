@@ -608,6 +608,108 @@ class ApiRoutesTest {
         assertTrue(body.contains("November 2026"))
         assertTrue(body.contains("\"allocatedMinor\":40000"))
     }
+
+    @Test
+    fun `accounts carry the portfolio role`() = testApplication {
+        installRoutes(FakeDataSource())
+        val body = client.get("/api/v1/accounts").bodyAsText()
+        assertTrue(body.contains("\"portfolioRole\":\"CONTAINER\""))
+        assertTrue(body.contains("\"valuationMinor\":37500"))
+    }
+
+    @Test
+    fun `create portfolio returns 201 and the account location`() = testApplication {
+        val fake = FakeDataSource()
+        installRoutes(fake)
+        val response = client.post("/api/v1/portfolios") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """{"label":"Joint","type":"6","currency":"USD","color":0,
+                   "dynamicExchangeRates":false,"exchangeRate":1.1}"""
+            )
+        }
+        assertEquals(HttpStatusCode.Created, response.status)
+        assertEquals("/api/v1/accounts/7", response.headers[HttpHeaders.Location])
+        assertEquals("Joint", fake.createdPortfolio?.label)
+    }
+
+    @Test
+    fun `portfolio without exchange rate is a 422`() = testApplication {
+        installRoutes(FakeDataSource())
+        val response = client.post("/api/v1/portfolios") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"label":"Joint","type":"6","currency":"USD"}""")
+        }
+        assertEquals(HttpStatusCode.UnprocessableEntity, response.status)
+        assertTrue(response.bodyAsText().contains("missing_exchangeRate"))
+    }
+
+    @Test
+    fun `a second portfolio without licence is a 409`() = testApplication {
+        installRoutes(FakeDataSource())
+        val response = client.post("/api/v1/portfolios") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"label":"Limited","type":"6","currency":"EUR"}""")
+        }
+        assertEquals(HttpStatusCode.Conflict, response.status)
+        assertTrue(response.bodyAsText().contains("portfolio_limit_reached"))
+    }
+
+    @Test
+    fun `portfolio assets return valuation`() = testApplication {
+        installRoutes(FakeDataSource())
+        val response = client.get("/api/v1/portfolios/7/assets")
+        assertEquals(HttpStatusCode.OK, response.status)
+        val body = response.bodyAsText()
+        assertTrue(body.contains("\"cashMinor\":25000"))
+        assertTrue(body.contains("\"valuationMinor\":37500"))
+        assertTrue(body.contains("\"symbol\":\"AAPL\""))
+    }
+
+    @Test
+    fun `unknown portfolio assets are a 404`() = testApplication {
+        installRoutes(FakeDataSource())
+        val response = client.get("/api/v1/portfolios/99/assets")
+        assertEquals(HttpStatusCode.NotFound, response.status)
+        assertTrue(response.bodyAsText().contains("portfolio_not_found"))
+    }
+
+    @Test
+    fun `portfolio trades are paginated`() = testApplication {
+        installRoutes(FakeDataSource())
+        val response = client.get("/api/v1/portfolios/7/trades?limit=10&offset=0")
+        assertEquals(HttpStatusCode.OK, response.status)
+        val body = response.bodyAsText()
+        assertTrue(body.contains("\"type\":\"BUY\""))
+        assertTrue(body.contains("\"limit\":10"))
+    }
+
+    @Test
+    fun `portfolio trade detail is returned`() = testApplication {
+        installRoutes(FakeDataSource())
+        val response = client.get("/api/v1/portfolios/7/trades/71")
+        assertEquals(HttpStatusCode.OK, response.status)
+        assertTrue(response.bodyAsText().contains("\"price\":\"50.0\""))
+    }
+
+    @Test
+    fun `unknown portfolio trade is a 404`() = testApplication {
+        installRoutes(FakeDataSource())
+        val response = client.get("/api/v1/portfolios/7/trades/99")
+        assertEquals(HttpStatusCode.NotFound, response.status)
+        assertTrue(response.bodyAsText().contains("trade_not_found"))
+    }
+
+    @Test
+    fun `portfolio update responds with the saved portfolio`() = testApplication {
+        installRoutes(FakeDataSource())
+        val response = client.put("/api/v1/portfolios/7") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"label":"Joint II","type":"6","currency":"EUR"}""")
+        }
+        assertEquals(HttpStatusCode.OK, response.status)
+        assertTrue(response.bodyAsText().contains("Joint"))
+    }
 }
 
 private fun ApplicationTestBuilder.installRoutes(dataSource: WebApiDataSource) {
@@ -671,23 +773,8 @@ private class FakeDataSource : WebApiDataSource {
     override suspend fun deleteAccount(id: Long) = id == 1L
 
     override fun accounts() = listOf(
-        AccountDto(
-            id = 1,
-            label = "Everyday",
-            type = "2",
-            typeName = "BANK",
-            currency = "EUR",
-            fractionDigits = 2,
-            openingBalanceMinor = 0,
-            currentBalanceMinor = 10000,
-            totalMinor = 10000,
-            incomeMinor = 5000,
-            expensesMinor = -1000,
-            excludeFromTotals = false,
-            sealed = false,
-            color = 0,
-            parentId = null
-        )
+        sampleAccount(),
+        samplePortfolio()
     )
 
     override fun categories() = emptyList<CategoryDto>()
@@ -946,7 +1033,128 @@ private class FakeDataSource : WebApiDataSource {
     }
 
     override fun deleteTransaction(id: Long) = id == 1L
+
+    var createdPortfolio: PortfolioWriteDto? = null
+
+    override suspend fun createPortfolio(body: PortfolioWriteDto): AccountDto {
+        if (body.label == "Limited") {
+            throw ApiException(
+                HttpStatusCode.Conflict,
+                "portfolio_limit_reached",
+                "A licence is needed for more than one portfolio"
+            )
+        }
+        // The contract the real datasource enforces: a fixed rate above zero is
+        // required for a currency that is not the home one.
+        if (body.currency == "USD" && (body.exchangeRate == null || body.exchangeRate <= 0.0)) {
+            throw ApiException(
+                HttpStatusCode.UnprocessableEntity,
+                "missing_exchangeRate",
+                "A fixed exchange rate above zero is required for a foreign currency"
+            )
+        }
+        createdPortfolio = body
+        return samplePortfolio()
+    }
+
+    override suspend fun updatePortfolio(id: Long, body: PortfolioWriteDto): AccountDto {
+        if (id != PORTFOLIO_ID) {
+            throw ApiException(
+                HttpStatusCode.NotFound,
+                "portfolio_not_found",
+                "Portfolio not found"
+            )
+        }
+        return samplePortfolio()
+    }
+
+    override suspend fun portfolioAssets(id: Long): PortfolioAssetsDto {
+        if (id != PORTFOLIO_ID) {
+            throw ApiException(
+                HttpStatusCode.NotFound,
+                "portfolio_not_found",
+                "Portfolio not found"
+            )
+        }
+        return samplePortfolioAssets()
+    }
+
+    override fun tradePage(portfolioId: Long, limit: Int, offset: Int): PageDto<TradeDto> {
+        if (portfolioId != PORTFOLIO_ID) {
+            throw ApiException(
+                HttpStatusCode.NotFound,
+                "portfolio_not_found",
+                "Portfolio not found"
+            )
+        }
+        return PageDto(items = listOf(sampleTrade()), total = 1, limit = limit, offset = offset)
+    }
+
+    override fun trade(portfolioId: Long, transactionId: Long): TradeDto? =
+        sampleTrade().takeIf { portfolioId == PORTFOLIO_ID && transactionId == 71L }
 }
+
+private const val PORTFOLIO_ID = 7L
+
+private fun samplePortfolio() = AccountDto(
+    id = PORTFOLIO_ID,
+    label = "Joint",
+    type = "6",
+    typeName = "INVESTMENT",
+    currency = "EUR",
+    fractionDigits = 2,
+    openingBalanceMinor = 0,
+    currentBalanceMinor = 25000,
+    totalMinor = 25000,
+    incomeMinor = 0,
+    expensesMinor = 0,
+    excludeFromTotals = false,
+    sealed = false,
+    color = 0,
+    parentId = null,
+    portfolioRole = "CONTAINER",
+    dynamicExchangeRates = true,
+    valuationMinor = 37500
+)
+
+private fun samplePortfolioAssets() = PortfolioAssetsDto(
+    portfolioId = PORTFOLIO_ID,
+    label = "Joint",
+    currency = "EUR",
+    fractionDigits = 2,
+    cashAccountId = 9,
+    cashMinor = 25000,
+    valuationMinor = 37500,
+    assets = listOf(
+        AssetDto(
+            id = 10,
+            label = "Apple Inc.",
+            symbol = "AAPL",
+            fractionDigits = 4,
+            quantityMinor = 100000,
+            priceMinor = 0.5,
+            valuationMinor = 12500
+        )
+    )
+)
+
+private fun sampleTrade() = TradeDto(
+    id = 71,
+    type = "BUY",
+    accountId = PORTFOLIO_ID,
+    currency = "EUR",
+    date = "2026-11-17",
+    time = null,
+    comment = "",
+    assetSymbol = "AAPL",
+    fractionDigits = 4,
+    quantityMinor = 100000,
+    price = "50.0",
+    principalMinor = 500000,
+    feeMinor = 100,
+    peerAccountId = 1,
+    peerAccountLabel = "Everyday"
+)
 
 private fun sampleTransaction() = TransactionDto(
     id = 1,

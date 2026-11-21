@@ -146,7 +146,10 @@ divisa; el cliente formatea con eso, no con un valor fijo.
     "excludeFromTotals": false,
     "sealed": false,
     "color": -16776961,
-    "parentId": null
+    "parentId": null,
+    "portfolioRole": "NONE",
+    "dynamicExchangeRates": false,
+    "valuationMinor": null
   }
 ]
 ```
@@ -202,6 +205,127 @@ Cuenta virtual para el dashboard: `GET /accounts?includeAggregate=true` añade u
 elemento con `id: "all"` (en la app son IDs negativos) y saldos convertidos a la
 divisa base. Alternativa más simple para v1: el cliente suma solo cuentas de la
 misma divisa y el dashboard avisa si hay divisas mixtas.
+
+Cada cuenta añade ahora `portfolioRole` (`NONE`, o `CONTAINER` / `CASH` /
+`ASSET`), `dynamicExchangeRates` y, en los contenedores, `valuationMinor`
+(valoración: saldo propio + hijos convertidos al último precio guardado, como
+`BalanceType.VALUATION`). Las subcuentas de cartera (efectivo y activos) se
+listan en `/accounts` pero el cliente las **oculta** del selector y del
+agregado, como hace la app.
+
+### 4.2bis Carteras
+
+Espejo de `PortfolioSetupDialog` / `createPortfolio` de la app. Una cartera es
+una cuenta con `portfolioRole = CONTAINER`; sus hijos (efectivo y activos) los
+crea la app al registrar operaciones, no el editor web.
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| POST | `/portfolios` | Alta de cartera (`201` + `Location` sobre `/accounts/{id}`) |
+| PUT | `/portfolios/{id}` | Edición |
+| GET | `/portfolios/{id}/assets` | Efectivo, activos y valoración |
+| GET | `/portfolios/{id}/trades?limit&offset` | Operaciones, paginadas (50 por página) |
+| GET | `/portfolios/{id}/trades/{transactionId}` | Detalle de una operación |
+
+`POST /portfolios`:
+
+```json
+{
+  "label": "Cartera conjunto",
+  "type": "6",
+  "currency": "USD",
+  "color": null,
+  "dynamicExchangeRates": false,
+  "exchangeRate": 1.08
+}
+```
+
+- `label`, `type` y `currency` obligatorios (422); divisa o tipo desconocidos,
+  `422 validation_failed`.
+- `exchangeRate` es el tipo de cambio **real** (unidades mayores a mayores,
+  como en el diálogo de la app); se almacena en bruto con
+  `storeExchangeRate`. Obligatorio (> 0) si `dynamicExchangeRates` es false y
+  la divisa no es la base; si falta, `422 missing_exchangeRate`.
+- Sin saldo de apertura ni «excluir de totales»: el efectivo entra con un
+  Depósito.
+- Sin licencia Profesional solo se permite **una** cartera; la segunda es
+  `409 portfolio_limit_reached` (la comprobación vive en el servidor, como
+  `ContribFeature.PORTFOLIO`).
+- `PUT` cambia etiqueta, color, divisa, tipo y modo de cambio. Cambiar la
+  divisa de una cartera con movimientos es `422 unsupported_account_change`.
+  El modo dinámico guarda el cambio solo cuando es fijo y la divisa es extranjera.
+
+`GET /portfolios/{id}/assets` (`404 portfolio_not_found` si el id no es un
+contenedor):
+
+```json
+{
+  "portfolioId": 7,
+  "label": "Investments",
+  "currency": "EUR",
+  "fractionDigits": 2,
+  "cashAccountId": 9,
+  "cashMinor": 25000,
+  "valuationMinor": 110000,
+  "assets": [
+    {
+      "id": 10,
+      "label": "Apple Inc.",
+      "symbol": "AAPL",
+      "fractionDigits": 4,
+      "quantityMinor": 30000,
+      "priceMinor": 0.05,
+      "valuationMinor": 1500
+    }
+  ]
+}
+```
+
+- `priceMinor` es el último precio **en bruto** (unidades menores de la divisa
+  de la cartera por unidad menor del activo; el valor de la tabla de
+  precios). El cliente lo muestra en unidades mayores dividiendo entre
+  `10^(fdCartera − fdActivo)`.
+- `valuationMinor` (por activo y total) usa el precio guardado y, sin precio,
+  un cambio de 1.0, igual que `FullAccount.enrich`.
+
+`GET /portfolios/{id}/trades` — mapeo directo de `Repository.loadTrades`:
+
+```json
+{
+  "items": [
+    {
+      "id": 701,
+      "type": "BUY",
+      "accountId": 7,
+      "currency": "EUR",
+      "date": "2026-11-12",
+      "time": null,
+      "comment": "",
+      "assetSymbol": "AAPL",
+      "fractionDigits": 4,
+      "quantityMinor": 30000,
+      "price": "5.0",
+      "principalMinor": 15000,
+      "feeMinor": 500,
+      "peerAccountId": 9,
+      "peerAccountLabel": "Cash"
+    }
+  ],
+  "total": 5,
+  "limit": 50,
+  "offset": 0
+}
+```
+
+- `type`: `BUY` | `SELL` | `DEPOSIT` | `WITHDRAW` | `TRANSFER_IN` |
+  `TRANSFER_OUT` (el traspaso entra y sale según la cartera).
+- `price` es el precio real como string decimal (`null` con cantidad 0);
+  Depósitos y Retiradas devuelven `"1"` y usan la divisa de la cartera como
+  `assetSymbol`.
+- `feeMinor` suma las partes de coste adicionales; `null` si no hay.
+- `peerAccountId`/`peerAccountLabel` identifican la contraparte: la
+  subcuenta de efectivo (financiación de cartera), una cuenta externa o la
+  otra cartera en un traspaso.
 
 ### 4.3 Transacciones
 

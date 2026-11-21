@@ -76,6 +76,55 @@ class ApiRoutes(
             get("/methods") {
                 call.respond(dataSource.methods())
             }
+            post("/portfolios") {
+                val created = dataSource.createPortfolio(call.receive<PortfolioWriteDto>())
+                call.response.headers.append(
+                    HttpHeaders.Location,
+                    "/api/v1/accounts/${created.id}"
+                )
+                call.respond(HttpStatusCode.Created, created)
+            }
+            put("/portfolios/{id}") {
+                val id = call.requirePathId()
+                call.respond(dataSource.updatePortfolio(id, call.receive<PortfolioWriteDto>()))
+            }
+            get("/portfolios/{id}/assets") {
+                val id = call.requirePathId()
+                call.respond(dataSource.portfolioAssets(id))
+            }
+            get("/portfolios/{id}/trades") {
+                val id = call.requirePathId()
+                val limit = call.intParamOrNull("limit")?.also {
+                    if (it !in 1..500) {
+                        throw ApiException(
+                            HttpStatusCode.BadRequest,
+                            "invalid_limit",
+                            "Query parameter 'limit' must be between 1 and 500"
+                        )
+                    }
+                } ?: 50
+                val offset = call.intParamOrNull("offset")?.also {
+                    if (it < 0) {
+                        throw ApiException(
+                            HttpStatusCode.BadRequest,
+                            "invalid_offset",
+                            "Query parameter 'offset' must be zero or positive"
+                        )
+                    }
+                } ?: 0
+                call.respond(dataSource.tradePage(id, limit, offset))
+            }
+            get("/portfolios/{id}/trades/{transactionId}") {
+                val id = call.requirePathId()
+                val transactionId = call.requirePathId("transactionId")
+                val trade = dataSource.trade(id, transactionId)
+                    ?: throw ApiException(
+                        HttpStatusCode.NotFound,
+                        "trade_not_found",
+                        "Trade not found"
+                    )
+                call.respond(trade)
+            }
             get("/transactions") {
                 val accountId = call.requireLong("accountId")
                 val limit = call.intParamOrNull("limit")?.also {
@@ -392,12 +441,12 @@ private fun ApplicationCall.reportAccountId(): Long {
         )
 }
 
-private fun ApplicationCall.requirePathId(): Long =
-    parameters["id"]?.toLongOrNull()
+private fun ApplicationCall.requirePathId(name: String = "id"): Long =
+    parameters[name]?.toLongOrNull()
         ?: throw ApiException(
             HttpStatusCode.BadRequest,
-            "invalid_id",
-            "id must be a number"
+            "invalid_$name",
+            "$name must be a number"
         )
 
 private fun ApplicationCall.requireLong(name: String): Long {

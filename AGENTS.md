@@ -11,7 +11,7 @@ Read this before changing code. Detailed sources:
 
 - `/api/v1`: read endpoints plus create/update/delete for simple transactions,
   transfers and splits.
-- API routes covered on the JVM by 68 tests — 52 `ApiRoutesTest`, 7
+- API routes covered on the JVM by 79 tests — 63 `ApiRoutesTest`, 7
   `CategoryBranchTest`, 5 `LoginThrottleTest` and 4 `SessionStoreTest` — with a
   fake `WebApiDataSource` and Ktor `testApplication`.
 - SPA: dashboard, transactions, detail, reports, files, budgets, and the simple,
@@ -29,6 +29,16 @@ Read this before changing code. Detailed sources:
   the **budget's own** spending by category from
   `GET /budgets/{id}/breakdown` (filter + descendants, parents rolled up, split
   parts; zero rows hidden). `Historial` no longer exists as a separate button.
+- Portfolios: `POST/PUT /portfolios` mirror `PortfolioSetupDialog`, with the
+  licence limit on the server (`409 portfolio_limit_reached`); `GET
+  /portfolios/{id}/assets` returns cash, assets and the valuation at the latest
+  stored price, and `GET /portfolios/{id}/trades[/{tid}]` maps
+  `Repository.loadTrades`. `GET /accounts` adds `portfolioRole`,
+  `dynamicExchangeRates` and the container's `valuationMinor`; the SPA hides the
+  sub-accounts (cash/assets) from the picker. The `+` editor is dual (Account |
+  Portfolio), and the rail hides Budgets on a portfolio. The portfolio overview
+  is the valuation hero plus cash/assets; Transacciones lists operations and
+  opens their detail in a side panel. Trade **writing** is not in this slice.
 - Budget filters: `criteria` (categories, payees, methods, tags, states) is read
   and written in the app preference `budgetFilter_<id>`, so a budget created or
   edited from the web is scoped exactly like one from the phone. A filter the web
@@ -260,6 +270,12 @@ Update the docs while the change is fresh; do not defer them to a later commit.
 - Device QA remains for the new slices (cookie, PWA, allocations/rollover,
   reports drill-down and all-account aggregation). The mock can be checked at
   390×844 to catch responsive regressions.
+- Portfolios need device QA the mock cannot fake: create one from the web and
+  confirm the phone shows it exactly like one created in Android (type, currency,
+  fixed/dynamic rate, colour); confirm the valuation matches `BalanceType.VALUATION`
+  (cash plus assets at the latest stored price) and that the second portfolio
+  answers `409` without the Professional licence. Trade writing
+  (`POST/PUT /portfolios/{id}/trades`) is the next portfolio slice.
 - Every side panel is a history entry (`useHistoryPanel`): transaction detail and
   editor, report drill-down and the budget panel (detail and editor share one
   entry). Back closes them; closing from the UI pops the entry.

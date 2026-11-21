@@ -23,6 +23,7 @@ import { AmountsProvider } from './privacy'
 import { Reports } from './components/Reports'
 import { Shell } from './components/Shell'
 import type { View } from './components/Shell'
+import { Trades } from './components/Trades'
 import { TransactionEditor } from './components/TransactionEditor'
 import { Transactions } from './components/Transactions'
 
@@ -47,6 +48,13 @@ function initialAccountId(): number | null {
   return Number.isFinite(parsed) ? parsed : null
 }
 
+/** Top-level accounts only: portfolio sub-accounts (cash, assets) are hidden. */
+export function topLevelAccounts(accounts: Account[]): Account[] {
+  return accounts.filter(
+    (account) => account.portfolioRole === 'NONE' || account.portfolioRole === 'CONTAINER',
+  )
+}
+
 export default function App({ initialLocale: initial }: { initialLocale: Locale }) {
   const [status, setStatus] = useState<Status>('checking')
   const [authError, setAuthError] = useState<string | null>(null)
@@ -60,6 +68,9 @@ export default function App({ initialLocale: initial }: { initialLocale: Locale 
   const [toast, setToast] = useState<string | null>(null)
   const [locale, setLocale] = useState<Locale>(() => initial ?? initialLocale())
   const wasReady = useRef(false)
+  // A newly created account may not be in the list until the refetch lands;
+  // the auto-selection effect must not bounce back to the first account.
+  const pendingAccount = useRef<number | null>(null)
 
   // Back/forward rehydrate the view from the URL; changing the view pushes an
   // entry so the browser's back button returns to the previous screen. The
@@ -120,7 +131,7 @@ export default function App({ initialLocale: initial }: { initialLocale: Locale 
       .then(([nextMeta, nextAccounts]) => {
         if (cancelled) return
         setMeta(nextMeta)
-        setAccounts(nextAccounts)
+        setAccounts(topLevelAccounts(nextAccounts))
         setStatus('ready')
       })
       .catch((error: unknown) => {
@@ -145,8 +156,14 @@ export default function App({ initialLocale: initial }: { initialLocale: Locale 
 
   useEffect(() => {
     if (accounts.length === 0) return
-    if (accountId === null || !accounts.some((account) => account.id === accountId)) {
+    if (accountId === null) {
       setAccountId(accounts[0].id)
+    } else if (!accounts.some((account) => account.id === accountId)) {
+      // Wait for the refetch that will bring the account just created.
+      if (pendingAccount.current === accountId) return
+      setAccountId(accounts[0].id)
+    } else if (pendingAccount.current === accountId) {
+      pendingAccount.current = null
     }
   }, [accounts, accountId])
 
@@ -177,7 +194,7 @@ export default function App({ initialLocale: initial }: { initialLocale: Locale 
     const nextMeta = await login(password)
     const nextAccounts = await getAccounts()
     setMeta(nextMeta)
-    setAccounts(nextAccounts)
+    setAccounts(topLevelAccounts(nextAccounts))
     setAuthError(null)
     setStatus('ready')
   }
@@ -194,7 +211,9 @@ export default function App({ initialLocale: initial }: { initialLocale: Locale 
 
   function refreshData(message?: string) {
     void queryClient.invalidateQueries()
-    getAccounts().then(setAccounts).catch(() => {})
+    getAccounts()
+      .then((next) => setAccounts(topLevelAccounts(next)))
+      .catch(() => {})
     if (message) setToast(message)
   }
 
@@ -221,6 +240,10 @@ export default function App({ initialLocale: initial }: { initialLocale: Locale 
   }
 
   const account = accounts.find((candidate) => candidate.id === accountId) ?? accounts[0]
+  // A portfolio shows the operations screens: budgets need categories a
+  // portfolio does not track, so the overview takes their rail slot.
+  const isPortfolio = account?.portfolioRole === 'CONTAINER'
+  const activeView: View = isPortfolio && view === 'budgets' ? 'dashboard' : view
 
   return (
     <AmountsProvider>
@@ -247,23 +270,25 @@ export default function App({ initialLocale: initial }: { initialLocale: Locale 
             </div>
           </div>
         ) : account ? (
-          view === 'dashboard' ? (
+          activeView === 'dashboard' ? (
             <Dashboard
               account={account}
               onOpenTransactions={() => setView('transactions')}
               onNewTransaction={() => setEditor({ mode: 'create' })}
             />
-          ) : view === 'reports' ? (
+          ) : activeView === 'reports' ? (
             <Reports account={account} accounts={accounts} />
-          ) : view === 'files' ? (
+          ) : activeView === 'files' ? (
             <Files />
-          ) : view === 'budgets' ? (
+          ) : activeView === 'budgets' ? (
             <Budgets
               accounts={accounts}
               defaultAccountId={account?.id ?? accountId ?? accounts[0]?.id ?? 0}
               onDataChanged={refreshData}
               onNavigate={navigate}
             />
+          ) : isPortfolio ? (
+            <Trades account={account} />
           ) : (
             <Transactions
               account={account}
@@ -285,15 +310,19 @@ export default function App({ initialLocale: initial }: { initialLocale: Locale 
             ...new Set([...(meta ? [meta.homeCurrency] : []), ...accounts.map((item) => item.currency)]),
           ]}
           defaultCurrency={account?.currency ?? meta?.homeCurrency ?? 'EUR'}
+          homeCurrency={meta?.homeCurrency ?? 'EUR'}
           onClose={() => setAccountEditor(false)}
-          onSaved={(created) => {
+          onSaved={(created, kind) => {
             setAccountEditor(false)
+            pendingAccount.current = created.id
             setAccountId(created.id)
-            refreshData(t`Account created.`)
+            refreshData(
+              kind === 'portfolio' ? t`Portfolio created.` : t`Account created.`,
+            )
           }}
         />
       ) : null}
-      {(view === 'dashboard' || view === 'transactions') && accounts.length > 0 ? (
+      {(view === 'dashboard' || view === 'transactions') && accounts.length > 0 && !isPortfolio ? (
         <button
           type="button"
           className="fab"

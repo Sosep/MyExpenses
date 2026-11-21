@@ -25,6 +25,7 @@ data class PreferencesDto(
     val valueDateEnabled: Boolean
 )
 
+/** Portfolio role of an account, mirroring the app's `is_portfolio` column. */
 @Keep
 data class AccountDto(
     val id: Long,
@@ -43,7 +44,92 @@ data class AccountDto(
     val excludeFromTotals: Boolean,
     val sealed: Boolean,
     val color: Int,
-    val parentId: Long?
+    val parentId: Long?,
+    /** NONE, or one of CONTAINER (a portfolio), CASH, ASSET (its sub-accounts). */
+    val portfolioRole: String = "NONE",
+    val dynamicExchangeRates: Boolean = false,
+    /**
+     * Containers only: current balance plus the valuation of every child at the
+     * latest stored price, in the portfolio's currency minor units (the app's
+     * `BalanceType.VALUATION`). Null for every other account.
+     */
+    val valuationMinor: Long? = null
+)
+
+@Keep
+data class PortfolioWriteDto(
+    val label: String? = null,
+    /** Id of the account type, from `GET /account-types`. */
+    val type: String? = null,
+    /** The portfolio's fiat currency; asset sub-accounts use the asset symbol. */
+    val currency: String? = null,
+    val color: Int? = null,
+    val dynamicExchangeRates: Boolean? = null,
+    /**
+     * Price of one major unit of the currency in home currency major units.
+     * Required when [dynamicExchangeRates] is false and the currency differs
+     * from the home one.
+     */
+    val exchangeRate: Double? = null
+)
+
+@Keep
+data class AssetDto(
+    val id: Long,
+    val label: String,
+    /** Asset symbol; the "currency" code of the asset sub-account. */
+    val symbol: String,
+    val fractionDigits: Int,
+    /** Quantity in asset minor units: the sub-account balance. */
+    val quantityMinor: Long,
+    /**
+     * Latest price in raw form: portfolio minor units per asset minor unit.
+     * Null when no price is stored; the valuation then falls back to an
+     * exchange rate of 1.0, like the app's `FullAccount.enrich`.
+     */
+    val priceMinor: Double?,
+    val valuationMinor: Long
+)
+
+@Keep
+data class PortfolioAssetsDto(
+    val portfolioId: Long,
+    val label: String,
+    val currency: String,
+    val fractionDigits: Int,
+    val cashAccountId: Long?,
+    /** Balance of the cash sub-account, in portfolio minor units. */
+    val cashMinor: Long,
+    /** Container balance + cash + every asset valuation. */
+    val valuationMinor: Long,
+    val assets: List<AssetDto>
+)
+
+@Keep
+data class TradeDto(
+    val id: Long,
+    /** BUY, SELL, DEPOSIT, WITHDRAW, TRANSFER_IN or TRANSFER_OUT. */
+    val type: String,
+    val accountId: Long,
+    val currency: String,
+    val date: String,
+    val time: String?,
+    val comment: String,
+    /** Asset symbol; the portfolio's currency for deposits and withdrawals. */
+    val assetSymbol: String,
+    /** Fraction digits of the asset currency. */
+    val fractionDigits: Int,
+    val quantityMinor: Long,
+    /**
+     * Price of one major asset unit in major portfolio units as a decimal
+     * string, or null when the quantity is zero.
+     */
+    val price: String?,
+    val principalMinor: Long,
+    /** Sum of the additional cost parts, null when the trade has none. */
+    val feeMinor: Long?,
+    val peerAccountId: Long?,
+    val peerAccountLabel: String?
 )
 
 /** Account type as the app knows it. `name` is CASH, BANK, ... without underscores. */

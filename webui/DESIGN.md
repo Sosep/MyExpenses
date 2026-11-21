@@ -213,6 +213,10 @@ píxeles como especificación.
   Overview, Transactions, Reports, Budgets, Files; Settings abajo. En móvil se
 convierte en una barra inferior fija con icono y etiqueta, y el contenido reserva
 espacio para no quedar tapado.
+- Con una **cartera** seleccionada (`portfolioRole = CONTAINER`) el rail muestra
+  Overview, Transactions, Reports y Files: Budgets se oculta porque la cartera no
+  usa categorías. El selector de cuenta lista contenedores y cuentas normales,
+  nunca sus subcuentas de efectivo o activo.
 - Contenido: ancho máximo 1440 px; grid de 12 columnas, gap 16 px.
 - Panel lateral de edición: 380-420 px, sticky, con cabecera y pie fijos.
 - Breakpoints: 1280, 1024, 768, 560.
@@ -403,6 +407,38 @@ Page title · period                         Export   New transaction
 - Presupuestos con estado explícito (en curso, en riesgo, sobregirado).
 - Últimas transacciones: 5-8, con enlace a la lista.
 - Si hay varias divisas, el patrimonio se muestra en la divisa base y se avisa.
+
+### Carteras (overview y operaciones)
+
+```text
+Overview · Investments                     Transactions   Refresh
+┌ Valuación (hero) ┬ Efectivo ┬ Activos ┐
+│ €1,100.00        │ €250.00  │ €875.00 │
+└──────────────────┴──────────┴─────────┘
+┌ Activos ──────────────────────────────────────┐
+│ Activo · Cantidad · Precio · Valoración        │
+│ Apple Inc. 3 AAPL   5 EUR     €15.00 ▓░░░░     │
+└───────────────────────────────────────────────┘
+```
+
+- El héroe es la **valoración** (saldo del contenedor + efectivo + activos al
+  último precio guardado); efectivo y activos son las tarjetas de contexto. Las
+  cifras salen de `GET /portfolios/{id}/assets`, nunca de sumar filas aquí.
+- Cada activo muestra cantidad con los dígitos de su divisa, precio real en la
+  divisa de la cartera y una barra fina (`asset-share`) con su peso en la
+  valoración. La valoración y los precios responden a la privacidad `totals`.
+- Las operaciones (`Buy/Sell/Deposit/Withdraw/Transfer`) se listan con palabra,
+  no icono; cantidad y precio en columnas a la derecha; la fila abre el panel de
+  detalle (historial, como la transacción). El importe principal es una magnitud
+  sin signo: la palabra del tipo ya dice la dirección. En móvil se ocultan
+  activo, precio, comisión y contraparte; la tabla no provoca scroll horizontal.
+- El botón `+` abre un panel con segmentado **Account | Portfolio**. Una cartera
+  pide nombre, tipo (default INVESTMENT), divisa y, si la divisa no es la base,
+  cambio fijo o dinámico (sin saldo de apertura ni «excluir de totales»). El
+  aviso `Price of one USD in EUR.` interpola las divisas activas.
+- Las divisas que no son ISO-4217 (AAPL, BTC) se formatean como número + código
+  cuando `Intl` no acepta el estilo de moneda; la cantidad usa los dígitos de la
+  divisa del activo.
 
 ### Transacciones agrupadas por mes
 
