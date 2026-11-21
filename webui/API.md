@@ -960,9 +960,11 @@ los criterios no aparece.
 
 `returnsMinor` son los importes **positivos** asignados a categorías de gasto (una
 devolución). El KPI de gasto del cliente es `|expensesMinor| − returnsMinor` y el
-de ingresos `incomeMinor − returnsMinor`; `netMinor` no cambia. Una dividida
-cuenta por la categoría de cada parte; una devolución nunca se presenta como
-ingreso ordinario.
+de ingresos `incomeMinor − returnsMinor`; `netMinor` no cambia. `incomeMinor` y
+`expensesMinor` agregan las **partes** de una dividida por su propia categoría y
+signo (nunca el padre, que es el total técnico); `count` sigue contando
+operaciones completas, así que una dividida es una operación y no una por parte.
+Una devolución nunca se presenta como ingreso ordinario.
 
 `BreakdownDto`:
 
@@ -985,10 +987,14 @@ ingreso ordinario.
 - Importes del reparto en **magnitud positiva**; `share` es porcentaje 0–100
   calculado en el servidor sobre el total de las filas devueltas.
 - `from`/`to` son inclusivos; si se omiten, últimos 12 meses hasta hoy.
-- Se excluyen transferencias, movimientos `VOID` y cuentas sin divisa. `type`
-  filtra por signo del importe (`expense` por defecto).
-- `by=category` agrega las partes de una dividida y excluye el padre; `payee` y
-  `tag` cuentan la transacción completa (padre) una vez.
+- Se excluyen transferencias, movimientos `VOID` y cuentas sin divisa.
+- `type=expense` incluye los importes negativos **y** los positivos asignados a
+  categorías de gasto (devoluciones), de modo que una devolución netea su fila en
+  lugar de desaparecer. `type=income` excluye esos positivos: una devolución
+  nunca aparece como ingreso. `type=both` conserva el signo de cada fila.
+- `by=category` agrega las partes de una dividida y excluye el padre; `payee`,
+  `method` y `tag` cuentan la transacción completa (padre) una vez. Los importes
+  de las filas son la magnitud de la suma neta (`|suma|`).
 - Una transacción con varias etiquetas aparece en cada etiqueta; el total del
   reparto por etiqueta puede superar el gasto real del periodo.
 - `by` admite también `method`; inválido: `400 invalid_by`; `type` inválido:
@@ -1080,8 +1086,13 @@ movimientos repiten el último saldo.
 - Valor = cantidad × último precio manual. `lastValuationDate` es siempre la
   fecha del último precio introducido; **nunca** una cotización en tiempo real.
 - Coste = coste medio ponderado de BUY/SELL (principal + comisión). Un traspaso
-  entrante o la falta de precio de compra dejan `costKnown: false` y ocultan
-  coste y resultado.
+  entrante, una cantidad que no coincide con las unidades de las operaciones o
+  la falta de precio de compra dejan `costKnown: false` y ocultan coste y
+  resultado; un activo con saldo manual y sin compras tampoco tiene coste
+  conocido.
+- `valuationMinor` incluye el efectivo de la cartera, pero `resultMinor` es el
+  valor de los **activos** menos su coste: el efectivo no se presenta como
+  beneficio.
 - Sin carteras devuelve listas vacías; la SPA muestra un estado vacío.
 
 ### 4.10 Ficheros

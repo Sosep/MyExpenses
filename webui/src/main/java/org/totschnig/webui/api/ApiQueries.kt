@@ -408,8 +408,14 @@ internal fun Repository.queryReportTransactions(
     offset: Int
 ): Pair<List<Transaction>, Long> {
     val wholeTransactions = by != "category"
-    val (baseSelection, baseArgs) =
-        reportSelection(accountId, from, to, type, wholeTransactions)
+    val (baseSelection, baseArgs) = reportSelection(
+        accountId,
+        from,
+        to,
+        type,
+        wholeTransactions,
+        expenseCategories = expenseCategoryIds(queryCategories())
+    )
     val selection: String
     val args: Array<String>
     when (by) {
@@ -474,26 +480,35 @@ internal fun Repository.queryReportSummary(
     } else {
         TransactionProvider.EXTENDED_URI to VIEW_EXTENDED
     }
-    val (selection, args) =
-        reportSelection(accountId, from, to, "both", wholeTransactions = true, alias = alias)
+    // Flows are aggregated from split parts, because each part carries its own
+    // category and sign (SPEC 9.2). The technical split parent is skipped so
+    // the total is not counted twice; the number of operations still counts
+    // whole transactions, so a split is one operation and not one per part.
+    val (flowSelection, flowArgs) =
+        reportSelection(accountId, from, to, "both", wholeTransactions = false, alias = alias)
+    val selection = "$flowSelection AND ${partsOnlyClause(alias)}"
     val projection = arrayOf(
         "sum(CASE WHEN $KEY_AMOUNT > 0 THEN $amountColumn ELSE 0 END) AS income",
-        "sum(CASE WHEN $KEY_AMOUNT < 0 THEN $amountColumn ELSE 0 END) AS expenses",
-        "count(*) AS transactions"
+        "sum(CASE WHEN $KEY_AMOUNT < 0 THEN $amountColumn ELSE 0 END) AS expenses"
     )
-    val (income, expenses, count) = contentResolver.query(
+    val (income, expenses) = contentResolver.query(
         uri,
         projection,
         selection,
-        args,
+        flowArgs,
         null
     )?.use { cursor ->
-        if (!cursor.moveToFirst()) {
-            Triple(0L, 0L, 0L)
-        } else {
-            Triple(cursor.getLong(0), cursor.getLong(1), cursor.getLong(2))
-        }
-    } ?: Triple(0L, 0L, 0L)
+        if (!cursor.moveToFirst()) 0L to 0L else cursor.getLong(0) to cursor.getLong(1)
+    } ?: (0L to 0L)
+    val (countSelection, countArgs) =
+        reportSelection(accountId, from, to, "both", wholeTransactions = true, alias = alias)
+    val count = contentResolver.query(
+        uri,
+        arrayOf("count(*)"),
+        countSelection,
+        countArgs,
+        null
+    )?.use { cursor -> if (cursor.moveToFirst()) cursor.getLong(0) else 0L } ?: 0L
     // A positive amount booked on an expense category is a refund: it nets the
     // expense KPI, never the income one. Split parts count through their own
     // category, so the parent with the technical split category is skipped.
@@ -509,10 +524,9 @@ internal fun Repository.queryReportSummary(
             wholeTransactions = false,
             alias = alias
         )
-        val placeholders = expenseCategories.joinToString(",")
+        val placeholders = expenseCategories.sorted().joinToString(",")
         val selection = "$returnsSelection AND $KEY_AMOUNT > 0 " +
-            "AND $KEY_CATID IN ($placeholders) " +
-            "AND ($KEY_PARENTID IS NOT NULL OR $KEY_CATID IS NOT $SPLIT_CATID)"
+            "AND $KEY_CATID IN ($placeholders) AND ${partsOnlyClause(alias)}"
         contentResolver.query(
             uri,
             arrayOf("sum($amountColumn)"),
@@ -755,6 +769,16 @@ private fun costBasis(trades: List<Trade>): CostBasis {
 }
 
 /**
+ * A cost is only known when the trades cover exactly the units still held and
+ * no transfer or manual adjustment introduced units without a purchase price.
+ */
+internal fun isCostKnown(
+    basisQuantity: Long,
+    currentQuantity: Long,
+    basisKnown: Boolean
+): Boolean = basisKnown && basisQuantity == currentQuantity
+
+/**
  * Aggregate dashboard of every portfolio, valued at the last manual price.
  * Nothing here is a live quote: `lastValuationDate` is always the date the user
  * entered the price.
@@ -788,6 +812,11 @@ internal fun Repository.queryInvestments(currencyContext: CurrencyContext): Inve
             )
             val valuation = (child.currentBalanceMinor * rate).roundToLong()
             val basis = costBasis(tradesBySymbol[child.currency].orEmpty())
+            val known = isCostKnown(
+                basisQuantity = basis.quantityMinor,
+                currentQuantity = child.currentBalanceMinor,
+                basisKnown = basis.known
+            )
             InvestmentAssetDto(
                 symbol = child.currency,
                 label = child.label,
@@ -796,13 +825,14 @@ internal fun Repository.queryInvestments(currencyContext: CurrencyContext): Inve
                 priceMinor = price?.value,
                 lastPriceDate = price?.date,
                 valuationMinor = valuation,
-                costKnown = basis.known,
-                costMinor = basis.costMinor,
-                resultMinor = basis.costMinor?.let { valuation - it }
+                costKnown = known,
+                costMinor = basis.costMinor.takeIf { known },
+                resultMinor = if (known) valuation - (basis.costMinor ?: 0L) else null
             )
         }
         val knownCost = assets.all { it.costKnown }
         val cost = if (knownCost) assets.sumOf { it.costMinor ?: 0L } else null
+        val assetValuation = assets.sumOf { it.valuationMinor }
         val valuation = container.valuationMinor ?: container.currentBalanceMinor
         InvestmentPortfolioDto(
             id = container.id,
@@ -813,7 +843,9 @@ internal fun Repository.queryInvestments(currencyContext: CurrencyContext): Inve
             valuationMinor = valuation,
             costKnown = knownCost,
             costMinor = cost,
-            resultMinor = cost?.let { valuation - it },
+            // Cash belongs to the portfolio value but not to the purchase
+            // cost, so it must not be presented as an investment result.
+            resultMinor = cost?.let { assetValuation - it },
             lastValuationDate = assets.mapNotNull { it.lastPriceDate }.maxOrNull(),
             assets = assets
         )
@@ -829,7 +861,11 @@ internal fun Repository.queryInvestments(currencyContext: CurrencyContext): Inve
             valuationMinor = valuation,
             costKnown = known,
             costMinor = cost,
-            resultMinor = cost?.let { valuation - it }
+            resultMinor = if (known) {
+                matching.sumOf { it.resultMinor ?: 0L }
+            } else {
+                null
+            }
         )
     }
     return InvestmentsDto(homeCurrency = home, portfolios = portfolios, totals = totals)
@@ -852,6 +888,10 @@ internal fun Repository.queryBreakdown(
     } else {
         TransactionProvider.EXTENDED_URI to VIEW_EXTENDED
     }
+    // A refund is a positive amount on an expense category: it must net the
+    // expense rows instead of disappearing, and it must never show up as
+    // income. The category type is resolved once for every row shape.
+    val expenseCategories = expenseCategoryIds(queryCategories())
     val items = when (by) {
         "category", "payee", "method" -> queryGroupedBreakdown(
             accountId,
@@ -862,7 +902,8 @@ internal fun Repository.queryBreakdown(
             amountColumn,
             baseUri,
             alias,
-            if (by == "category") categoryIds else emptyList()
+            if (by == "category") categoryIds else emptyList(),
+            expenseCategories
         )
 
         "tag" -> queryTagBreakdown(
@@ -872,7 +913,8 @@ internal fun Repository.queryBreakdown(
             to,
             amountColumn,
             baseUri,
-            alias
+            alias,
+            expenseCategories
         )
 
         else -> throw IllegalArgumentException("Unknown breakdown $by")
@@ -911,11 +953,19 @@ private fun Repository.queryGroupedBreakdown(
     amountColumn: String,
     baseUri: Uri,
     alias: String,
-    categoryIds: List<Long>
+    categoryIds: List<Long>,
+    expenseCategories: Set<Long>
 ): List<BreakdownItemDto> {
     val wholeTransactions = by != "category"
-    val (baseSelection, args) =
-        reportSelection(accountId, from, to, type, wholeTransactions, alias)
+    val (baseSelection, args) = reportSelection(
+        accountId,
+        from,
+        to,
+        type,
+        wholeTransactions,
+        alias,
+        expenseCategories
+    )
     // A split parent holds the total while its parts hold the categories, so the
     // parent must stay out. Uncategorized rows (catid null or 0) must stay in:
     // dropping them made the category report total disagree with the summary.
@@ -929,44 +979,11 @@ private fun Repository.queryGroupedBreakdown(
     } else {
         baseSelection
     }
-    val projection: Array<String>
-    val groupBy: String
-    when (by) {
-        "category" -> {
-            projection = arrayOf(
-                "$KEY_CATID AS group_id",
-                "CASE WHEN $KEY_CATID IS NULL OR $KEY_CATID <= 0 THEN 'No category' " +
-                    "ELSE coalesce($KEY_PATH, 'Category ' || $KEY_CATID) END AS group_label",
-                "sum($amountColumn) AS amount_minor",
-                "count(*) AS transaction_count"
-            )
-            groupBy = "$KEY_CATID, $KEY_PATH"
-        }
-
-        "payee" -> {
-            projection = arrayOf(
-                "coalesce($KEY_PAYEEID, 0) AS group_id",
-                "coalesce($KEY_PAYEE_NAME, 'No payee') AS group_label",
-                "sum($amountColumn) AS amount_minor",
-                "count(*) AS transaction_count"
-            )
-            groupBy = "coalesce($KEY_PAYEEID, 0), coalesce($KEY_PAYEE_NAME, 'No payee')"
-        }
-
-        else -> {
-            projection = arrayOf(
-                "coalesce($KEY_METHODID, 0) AS group_id",
-                "coalesce($KEY_METHOD_LABEL, 'No method') AS group_label",
-                "sum($amountColumn) AS amount_minor",
-                "count(*) AS transaction_count"
-            )
-            groupBy = "coalesce($KEY_METHODID, 0), coalesce($KEY_METHOD_LABEL, 'No method')"
-        }
-    }
+    val grouping = breakdownGrouping(by, amountColumn)
     val uri = baseUri.buildUpon()
-        .appendQueryParameter(QUERY_PARAMETER_GROUP_BY, groupBy)
+        .appendQueryParameter(QUERY_PARAMETER_GROUP_BY, grouping.groupBy)
         .build()
-    return contentResolver.query(uri, projection, selection, args, null)
+    return contentResolver.query(uri, grouping.projection, selection, args, null)
         ?.useAndMapToList { cursor ->
             BreakdownItemDto(
                 id = cursor.getLong(0),
@@ -978,6 +995,48 @@ private fun Repository.queryGroupedBreakdown(
         } ?: emptyList()
 }
 
+private data class BreakdownGrouping(
+    val projection: Array<String>,
+    val groupBy: String
+)
+
+private fun breakdownGrouping(by: String, amountColumn: String): BreakdownGrouping {
+    val total = "sum($amountColumn) AS amount_minor"
+    val count = "count(*) AS transaction_count"
+    return when (by) {
+        "category" -> BreakdownGrouping(
+            arrayOf(
+                "$KEY_CATID AS group_id",
+                "CASE WHEN $KEY_CATID IS NULL OR $KEY_CATID <= 0 THEN 'No category' " +
+                    "ELSE coalesce($KEY_PATH, 'Category ' || $KEY_CATID) END AS group_label",
+                total,
+                count
+            ),
+            "$KEY_CATID, $KEY_PATH"
+        )
+
+        "payee" -> BreakdownGrouping(
+            arrayOf(
+                "coalesce($KEY_PAYEEID, 0) AS group_id",
+                "coalesce($KEY_PAYEE_NAME, 'No payee') AS group_label",
+                total,
+                count
+            ),
+            "coalesce($KEY_PAYEEID, 0), coalesce($KEY_PAYEE_NAME, 'No payee')"
+        )
+
+        else -> BreakdownGrouping(
+            arrayOf(
+                "coalesce($KEY_METHODID, 0) AS group_id",
+                "coalesce($KEY_METHOD_LABEL, 'No method') AS group_label",
+                total,
+                count
+            ),
+            "coalesce($KEY_METHODID, 0), coalesce($KEY_METHOD_LABEL, 'No method')"
+        )
+    }
+}
+
 private fun Repository.queryTagBreakdown(
     accountId: Long?,
     type: String,
@@ -985,10 +1044,18 @@ private fun Repository.queryTagBreakdown(
     to: LocalDate,
     amountColumn: String,
     baseUri: Uri,
-    alias: String
+    alias: String,
+    expenseCategories: Set<Long>
 ): List<BreakdownItemDto> = queryTags().mapNotNull { tag ->
-    val (baseSelection, baseArgs) =
-        reportSelection(accountId, from, to, type, wholeTransactions = true, alias = alias)
+    val (baseSelection, baseArgs) = reportSelection(
+        accountId,
+        from,
+        to,
+        type,
+        wholeTransactions = true,
+        alias = alias,
+        expenseCategories = expenseCategories
+    )
     val selection = "$baseSelection AND EXISTS (" +
         "SELECT 1 FROM $TABLE_TRANSACTIONS_TAGS tag_link " +
         "WHERE tag_link.$KEY_TRANSACTIONID = $alias.$KEY_ROWID " +
@@ -1024,7 +1091,8 @@ private fun reportSelection(
     to: LocalDate,
     type: String,
     wholeTransactions: Boolean,
-    alias: String = VIEW_EXTENDED
+    alias: String = VIEW_EXTENDED,
+    expenseCategories: Set<Long> = emptySet()
 ): Pair<String, Array<String>?> {
     val clauses = mutableListOf<String>()
     val args = mutableListOf<String>()
@@ -1038,13 +1106,40 @@ private fun reportSelection(
     args.add(CrStatus.VOID.name)
     clauses.add("$alias.$KEY_TRANSFER_ACCOUNT IS NULL")
     appendDateRange(clauses, args, from, to, alias)
-    when (type) {
-        "income" -> clauses.add("$KEY_AMOUNT > 0")
-        "expense" -> clauses.add("$KEY_AMOUNT < 0")
-    }
+    breakdownAmountClause(type, expenseCategories)?.let { clauses.add(it) }
     if (wholeTransactions) clauses.add("$KEY_PARENTID IS NULL")
     return clauses.joinToString(" AND ") to args.takeIf { it.isNotEmpty() }?.toTypedArray()
 }
+
+/**
+ * The signed rows that belong to a flow type. An expense report keeps the
+ * negative rows and adds positive amounts on expense categories, so a refund
+ * nets its own group instead of vanishing. An income report excludes those
+ * positives: a refund is never income. Kept pure so the rule is covered by a
+ * JVM test.
+ */
+internal fun breakdownAmountClause(type: String, expenseCategories: Set<Long>): String? {
+    val ids = expenseCategories.sorted().joinToString(",")
+    return when (type) {
+        "expense" -> if (ids.isEmpty()) {
+            "$KEY_AMOUNT < 0"
+        } else {
+            "($KEY_AMOUNT < 0 OR ($KEY_AMOUNT > 0 AND $KEY_CATID IN ($ids)))"
+        }
+
+        "income" -> if (ids.isEmpty()) {
+            "$KEY_AMOUNT > 0"
+        } else {
+            "($KEY_AMOUNT > 0 AND ($KEY_CATID IS NULL OR $KEY_CATID NOT IN ($ids)))"
+        }
+
+        else -> null
+    }
+}
+
+/** Split parts and simple rows; the split parent is the technical total. */
+internal fun partsOnlyClause(alias: String): String =
+    "($alias.$KEY_PARENTID IS NOT NULL OR $alias.$KEY_CATID IS NOT $SPLIT_CATID)"
 
 /**
  * Period groups. A null [accountId] asks the provider for the home-currency

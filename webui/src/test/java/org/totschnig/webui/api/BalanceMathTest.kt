@@ -140,6 +140,80 @@ class BalanceMathTest {
     }
 
     @Test
+    fun `the last point reconciles with the provider current balance`() {
+        // Fixture for the reconciliation acceptance: opening balance, both
+        // legs of an internal transfer, a split counted by its parent and a
+        // VOID row that the query excludes. A retroactive movement only moves
+        // the points after its effective date.
+        val opening = 100000L
+        val transferOut = -25000L
+        val transferIn = 25000L
+        val splitParent = -10000L
+        val laterSale = 5000L
+        val from = LocalDate.parse("2026-11-01")
+        val to = LocalDate.parse("2026-11-21")
+        val earlier = LocalDate.parse("2026-11-05")
+        val retroactive = LocalDate.parse("2026-11-10")
+
+        val outgoing = foldBalanceSeries(
+            opening,
+            listOf(
+                BalanceDay(earlier, transferOut),
+                BalanceDay(earlier, splitParent),
+                BalanceDay(retroactive, laterSale)
+            ),
+            from,
+            to,
+            BalanceGranularity.DAY
+        )
+        val incoming = foldBalanceSeries(
+            0,
+            listOf(BalanceDay(earlier, transferIn)),
+            from,
+            to,
+            BalanceGranularity.DAY
+        )
+        val providerCurrent = opening + transferOut + splitParent + laterSale
+        assertEquals(providerCurrent, outgoing.last().balanceMinor)
+        // The retroactive movement is not visible before its effective date.
+        assertEquals(
+            opening + transferOut + splitParent,
+            outgoing.first { it.date == "2026-11-09" }.balanceMinor
+        )
+        assertEquals(transferIn, incoming.last().balanceMinor)
+        val total = totalBalanceSeries(listOf(outgoing, incoming))
+        assertEquals(providerCurrent + transferIn, total.last().balanceMinor)
+        // The two legs of the internal transfer cancel in the total.
+        val transferTotal = totalBalanceSeries(
+            listOf(
+                foldBalanceSeries(
+                    0,
+                    listOf(BalanceDay(earlier, transferOut)),
+                    from,
+                    to,
+                    BalanceGranularity.DAY
+                ),
+                foldBalanceSeries(
+                    0,
+                    listOf(BalanceDay(earlier, transferIn)),
+                    from,
+                    to,
+                    BalanceGranularity.DAY
+                )
+            )
+        )
+        assertEquals(0L, transferTotal.last().balanceMinor)
+    }
+
+    @Test
+    fun `a cost is unknown without trades or with unmatched units`() {
+        assertTrue(isCostKnown(30000, 30000, true))
+        assertFalse(isCostKnown(0, 30000, true))
+        assertFalse(isCostKnown(10000, 12000, true))
+        assertFalse(isCostKnown(30000, 30000, false))
+    }
+
+    @Test
     fun `totals add the series of the same currency`() {
         val total = totalBalanceSeries(
             listOf(

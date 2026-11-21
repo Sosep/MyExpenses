@@ -279,6 +279,84 @@ describe('mock reports', () => {
     expect(body.returnsMinor).toBeGreaterThanOrEqual(0)
   })
 
+  it('reconciles the last balance point with the account current balance', async () => {
+    const accounts = await (await api('/api/v1/accounts')).json()
+    const body = await (
+      await api(
+        `/api/v1/reports/balance-series?accountIds=1,2,3&from=${from}&to=${to}`,
+      )
+    ).json()
+    for (const account of body.accounts) {
+      const current = accounts.find(
+        (entry: { id: number }) => entry.id === account.id,
+      )?.currentBalanceMinor
+      expect(account.series.at(-1).balanceMinor).toBe(current)
+    }
+  })
+
+  it('nets refunds in the expense breakdown and keeps them out of income', async () => {
+    const expense = await (
+      await api('/api/v1/transactions', {
+        method: 'POST',
+        body: JSON.stringify({
+          accountId: 1,
+          amountMinor: -3000,
+          date: '2020-06-10',
+          valueDate: '2020-06-10',
+          categoryId: 2,
+          tagIds: [],
+        }),
+      })
+    ).json()
+    const refund = await (
+      await api('/api/v1/transactions', {
+        method: 'POST',
+        body: JSON.stringify({
+          accountId: 1,
+          amountMinor: 1000,
+          date: '2020-06-10',
+          valueDate: '2020-06-10',
+          categoryId: 2,
+          tagIds: [],
+        }),
+      })
+    ).json()
+
+    const summary = await (
+      await api(
+        '/api/v1/reports/summary?accountId=all&from=2020-06-01&to=2020-06-30',
+      )
+    ).json()
+    expect(summary).toMatchObject({
+      incomeMinor: 1000,
+      expensesMinor: -3000,
+      returnsMinor: 1000,
+      count: 2,
+    })
+
+    const expenses = await (
+      await api(
+        '/api/v1/reports/breakdown?accountId=all&by=category&type=expense' +
+          '&from=2020-06-01&to=2020-06-30',
+      )
+    ).json()
+    expect(expenses.items.find((item: { id: number }) => item.id === 2)).toMatchObject({
+      amountMinor: 2000,
+      count: 2,
+    })
+
+    const income = await (
+      await api(
+        '/api/v1/reports/breakdown?accountId=all&by=category&type=income' +
+          '&from=2020-06-01&to=2020-06-30',
+      )
+    ).json()
+    expect(income.items.some((item: { id: number }) => item.id === 2)).toBe(false)
+
+    await api(`/api/v1/transactions/${expense.id}`, { method: 'DELETE' })
+    await api(`/api/v1/transactions/${refund.id}`, { method: 'DELETE' })
+  })
+
   it('filters a category breakdown by its branch', async () => {
     const body = await (
       await api(

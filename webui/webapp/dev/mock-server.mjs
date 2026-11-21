@@ -652,6 +652,19 @@ const categories = [
   { id: 10, parentId: null, label: 'Leisure', level: 0, color: null, type: 1 },
 ]
 
+/** The app's category mask: 1 expense, 2 income, 3 neutral; a child inherits. */
+function isExpenseCategory(id) {
+  let current = categories.find((entry) => entry.id === id)
+  const seen = new Set()
+  while (current && !seen.has(current.id)) {
+    seen.add(current.id)
+    if (current.type === 1) return true
+    if (current.type !== null && current.type !== undefined) return false
+    current = categories.find((entry) => entry.id === current.parentId)
+  }
+  return false
+}
+
 const currencies = [
   { code: 'EUR', label: 'Euro', symbol: '€', fractionDigits: 2, commodityType: 'FIAT' },
   { code: 'USD', label: 'US dollar', symbol: '$', fractionDigits: 2, commodityType: 'FIAT' },
@@ -752,6 +765,17 @@ const special = [
     comment: 'Savings transfer',
     transferPeerId: 22,
     transferAccountId: 2,
+  }),
+  tx({
+    id: 22,
+    kind: 'TRANSFER',
+    accountId: 2,
+    amountMinor: 50000,
+    date: iso(12),
+    valueDate: iso(12),
+    comment: 'Savings transfer',
+    transferPeerId: 12,
+    transferAccountId: 1,
   }),
   tx({
     id: 13,
@@ -1683,7 +1707,16 @@ function balanceSeriesFor(account, from, to, granularity) {
     income += item.income
     expense += item.expense
   }
-  let balance = account.openingBalanceMinor + prior
+  // The fixture's `currentBalanceMinor` is the authoritative account balance.
+  // Anchor the series to it when the range ends today, so the last point
+  // reconciles exactly like the provider does; historical ranges keep the
+  // movements that predate `from` as their opening balance.
+  const today = iso(now.getDate())
+  const inRange = movements
+    .filter((item) => item.date >= from && item.date <= to)
+    .reduce((sum, item) => sum + item.amount, 0)
+  const start = to >= today ? account.currentBalanceMinor - inRange : account.openingBalanceMinor + prior
+  let balance = start
   const points = []
   const dates = balanceBucketDates(from, to, granularity)
   let cursor = isoToDate(from)
@@ -1703,7 +1736,7 @@ function balanceSeriesFor(account, from, to, granularity) {
     color: account.color,
     currency: account.currency,
     fractionDigits: account.fractionDigits,
-    startBalanceMinor: account.openingBalanceMinor + prior,
+    startBalanceMinor: start,
     firstTransactionDate: first,
     periodIncomeMinor: income,
     periodExpensesMinor: expense,
@@ -1772,7 +1805,11 @@ function mockInvestments(url) {
     const costMinor = costKnown
       ? assets.reduce((sum, asset) => sum + (asset.costMinor ?? 0), 0)
       : null
-    const valuationMinor = assets.reduce((sum, asset) => sum + asset.valuationMinor, 0) + portfolio.cashMinor
+    const assetValuationMinor = assets.reduce(
+      (sum, asset) => sum + asset.valuationMinor,
+      0,
+    )
+    const valuationMinor = assetValuationMinor + portfolio.cashMinor
     const lastValuationDate =
       assets.map((asset) => asset.lastPriceDate).filter(Boolean).sort().at(-1) ?? null
     return {
@@ -1784,7 +1821,9 @@ function mockInvestments(url) {
       valuationMinor,
       costKnown,
       costMinor,
-      resultMinor: costMinor === null ? null : valuationMinor - costMinor,
+      // Cash is part of the portfolio value but not of the purchase cost, so
+      // it must not turn into an investment result.
+      resultMinor: costMinor === null ? null : assetValuationMinor - costMinor,
       lastValuationDate,
       assets,
     }
@@ -1806,7 +1845,9 @@ function mockInvestments(url) {
         valuationMinor,
         costKnown,
         costMinor,
-        resultMinor: costMinor === null ? null : valuationMinor - costMinor,
+        resultMinor: costKnown
+          ? matching.reduce((sum, portfolio) => sum + (portfolio.resultMinor ?? 0), 0)
+          : null,
       }
     },
   )
@@ -2971,7 +3012,10 @@ createServer(async (request, response) => {
         }
       }
       if (url.searchParams.get('noHistory') === '1' || qaFlags.noHistory) {
-        for (const entry of series) {
+        // The total series is what the default "Total" view draws, so it must
+        // be shortened too; otherwise the empty-history QA state contradicts
+        // its own summary.
+        for (const entry of [...series, ...totals]) {
           entry.series = [entry.series[0]]
           entry.periodIncomeMinor = 0
           entry.periodExpensesMinor = 0
@@ -3009,26 +3053,27 @@ createServer(async (request, response) => {
           item.crStatus !== 'VOID' &&
           (all || item.accountId === Number(accountId)),
       )
-      const income = items
+      // Flows use split parts, the same rule as the Kotlin aggregate: a parent
+      // is only the technical total and would count the parts twice. The
+      // operation count still counts whole transactions.
+      const flowRows = items.flatMap((item) =>
+        item.kind === 'SPLIT' ? transactionSplitParts(item) : [item],
+      )
+      const income = flowRows
         .filter((item) => item.amountMinor > 0)
         .reduce((total, item) => total + item.amountMinor, 0)
-      const expenses = items
+      const expenses = flowRows
         .filter((item) => item.amountMinor < 0)
         .reduce((total, item) => total + item.amountMinor, 0)
       // Refunds: positive amounts on expense categories. Split parts carry
       // their own category, so they are counted one by one.
-      const returnsMinor = items.reduce((total, item) => {
-        const parts = item.kind === 'SPLIT' ? (item.splitParts ?? splitParts) : [item]
-        return (
-          total +
-          parts.reduce((sum, part) => {
-            const category = categories.find((entry) => entry.id === part.category?.id)
-            return part.amountMinor > 0 && category?.type === 1
-              ? sum + part.amountMinor
-              : sum
-          }, 0)
-        )
-      }, 0)
+      const returnsMinor = flowRows.reduce(
+        (total, part) =>
+          part.amountMinor > 0 && isExpenseCategory(part.category?.id)
+            ? total + part.amountMinor
+            : total,
+        0,
+      )
       return sendJson(response, 200, {
         accountId: all ? 0 : Number(accountId),
         from,
@@ -3048,8 +3093,18 @@ createServer(async (request, response) => {
       const to = url.searchParams.get('to') ?? ''
       const by = url.searchParams.get('by') ?? 'category'
       const type = url.searchParams.get('type') ?? 'expense'
-      const matchesType = (item) =>
-        type === 'both' || (type === 'income' ? item.amountMinor > 0 : item.amountMinor < 0)
+      // A refund is a positive amount on an expense category: it nets the
+      // expense rows and is never part of the income rows.
+      const matchesType = (item, categoryId = item.category?.id) => {
+        if (type === 'both') return true
+        if (type === 'expense') {
+          return (
+            item.amountMinor < 0 ||
+            (item.amountMinor > 0 && isExpenseCategory(categoryId))
+          )
+        }
+        return item.amountMinor > 0 && !isExpenseCategory(categoryId)
+      }
       const accountId = url.searchParams.get('accountId')
       const all = accountId === 'all' || accountId === null || Number(accountId) === 0
       const categoryIds = url.searchParams
@@ -3076,57 +3131,59 @@ createServer(async (request, response) => {
           item.date <= to &&
           !item.transferPeerId &&
           item.crStatus !== 'VOID' &&
-          (all || item.accountId === Number(accountId)) &&
-          matchesType(item),
+          (all || item.accountId === Number(accountId)),
       )
       const entries = []
       if (by === 'category') {
         for (const item of parents) {
           if (item.kind === 'SPLIT') {
-            for (const part of item.splitParts ?? splitParts) {
-              if (!matchesType(part)) continue
+            for (const part of transactionSplitParts(item)) {
+              if (!matchesType(part, part.category?.id)) continue
               entries.push({
                 id: part.category?.id ?? 0,
                 label: part.category?.path ?? 'No category',
-                amountMinor: Math.abs(part.amountMinor),
+                amountMinor: part.amountMinor,
                 count: 1,
               })
             }
-          } else if (item.category) {
+          } else if (item.category && matchesType(item)) {
             entries.push({
               id: item.category.id,
               label: item.category.path ?? item.category.label,
-              amountMinor: Math.abs(item.amountMinor),
+              amountMinor: item.amountMinor,
               count: 1,
             })
           }
         }
       } else if (by === 'payee') {
         for (const item of parents) {
+          if (!matchesType(item)) continue
           entries.push({
             id: item.payee?.id ?? 0,
             label: item.payee?.label ?? 'No payee',
-            amountMinor: Math.abs(item.amountMinor),
+            amountMinor: item.amountMinor,
             count: 1,
           })
         }
       } else if (by === 'method') {
         for (const item of parents) {
+          if (!matchesType(item)) continue
           entries.push({
             id: item.method?.id ?? 0,
             label: item.method?.label ?? 'No method',
-            amountMinor: Math.abs(item.amountMinor),
+            amountMinor: item.amountMinor,
             count: 1,
           })
         }
       } else {
         for (const item of parents) {
+          if (!matchesType(item)) continue
           const list = item.tags?.length ? item.tags : []
           for (const tag of list) {
             entries.push({
               id: tag.id,
               label: tag.label,
-              amountMinor: Math.abs(item.amountMinor),
+              amountMinor: item.amountMinor,
               count: 1,
             })
           }
@@ -3140,9 +3197,9 @@ createServer(async (request, response) => {
         current.amountMinor += entry.amountMinor
         grouped.set(key, current)
       }
-      const items = [...grouped.values()].filter(
-        (item) => by !== 'category' || inBranch(item.id),
-      )
+      const items = [...grouped.values()]
+        .filter((item) => by !== 'category' || inBranch(item.id))
+        .map((item) => ({ ...item, amountMinor: Math.abs(item.amountMinor) }))
       const total = items.reduce((sum, item) => sum + item.amountMinor, 0)
       const result = items
         .map((item) => ({
