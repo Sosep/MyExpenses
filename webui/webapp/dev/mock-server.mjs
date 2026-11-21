@@ -353,6 +353,7 @@ const portfolioTradesByPortfolio = {
 
 let nextAccountId = 20
 let nextTradeId = 1000
+let nextDataId = 500
 
 const monthName = new Intl.DateTimeFormat('en-GB', { month: 'long', year: 'numeric' }).format(
   new Date(year, month - 1, 1),
@@ -520,6 +521,19 @@ const categories = [
   { id: 8, parentId: 6, label: 'Household', level: 1, color: null, type: -1 },
   { id: 9, parentId: 1, label: 'Treats', level: 1, color: null, type: -1 },
   { id: 10, parentId: null, label: 'Leisure', level: 0, color: null, type: -1 },
+]
+
+const currencies = [
+  { code: 'EUR', label: 'Euro', symbol: '€', fractionDigits: 2, commodityType: 'FIAT' },
+  { code: 'USD', label: 'US dollar', symbol: '$', fractionDigits: 2, commodityType: 'FIAT' },
+  { code: 'AAPL', label: 'Apple Inc.', symbol: 'AAPL', fractionDigits: 4, commodityType: 'SECURITY' },
+  { code: 'BTC', label: 'Bitcoin', symbol: 'BTC', fractionDigits: 8, commodityType: 'CRYPTO' },
+]
+
+let prices = [
+  { commodity: 'AAPL', currency: 'EUR', date: iso(19), value: 5.0, source: 'USER' },
+  { commodity: 'AAPL', currency: 'EUR', date: iso(12), value: 4.8, source: 'USER' },
+  { commodity: 'BTC', currency: 'EUR', date: iso(18), value: 4300, source: 'USER' },
 ]
 
 const payees = [
@@ -1019,6 +1033,24 @@ function serveAppIndex(response) {
           }
           if (q.get('view') === 'files') {
             setTimeout(function(){ document.querySelector('button[data-view="files"]')?.click() }, 250)
+          }
+          if (q.get('view') === 'datos') {
+            setTimeout(function(){ document.querySelector('button[data-view="datos"]')?.click() }, 250)
+            var tab = q.get('tab')
+            if (tab) {
+              setTimeout(function(){
+                var buttons = document.querySelectorAll('.app-data-tabs button')
+                for (var i = 0; i < buttons.length; i++) {
+                  if (buttons[i].textContent && buttons[i].textContent.trim().toLowerCase() === tab.toLowerCase()) {
+                    buttons[i].click()
+                    break
+                  }
+                }
+              }, 700)
+            }
+            if (q.get('new') === '1') {
+              setTimeout(function(){ document.querySelector('.card-head .btn.primary')?.click() }, 700)
+            }
           }
           if (q.get('view') === 'transactions') {
             setTimeout(function(){ document.querySelector('button[data-view="transactions"]')?.click() }, 250)
@@ -1750,7 +1782,280 @@ createServer(async (request, response) => {
       return sendJson(response, 200, account)
     }
     if (path === '/api/v1/accounts') return send(response, 200, JSON.stringify(accounts))
-    if (path === '/api/v1/categories') return send(response, 200, JSON.stringify(categories))
+    if (path === '/api/v1/categories' && request.method === 'GET') {
+      return send(response, 200, JSON.stringify(categories))
+    }
+    if (path === '/api/v1/methods' && request.method === 'POST') {
+      const body = await readJson(request)
+      if (!body.label) {
+        return sendJson(response, 422, { error: 'validation_failed', message: 'label is required' })
+      }
+      const method = {
+        id: nextDataId++,
+        label: body.label,
+        isNumbered: body.isNumbered ?? false,
+        type: body.type ?? 0,
+        accountTypes: body.accountTypes ?? [],
+      }
+      methods.push(method)
+      return sendJson(response, 201, method, { Location: `/api/v1/methods/${method.id}` })
+    }
+    if (path === '/api/v1/tags' && request.method === 'POST') {
+      const body = await readJson(request)
+      if (!body.label) {
+        return sendJson(response, 422, { error: 'validation_failed', message: 'label is required' })
+      }
+      const tag = { id: nextDataId++, label: body.label, color: null }
+      tags.push(tag)
+      return sendJson(response, 201, tag, { Location: `/api/v1/tags/${tag.id}` })
+    }
+    if (path === '/api/v1/currencies' && request.method === 'GET') {
+      const withPrices = currencies.map((currency) => ({
+        ...currency,
+        priceMinor:
+          prices
+            .filter((price) => price.commodity === currency.code)
+            .sort((left, right) => right.date.localeCompare(left.date))[0]
+            ?.value ?? null,
+      }))
+      return sendJson(response, 200, withPrices)
+    }
+    if (path === '/api/v1/currencies' && request.method === 'POST') {
+      const body = await readJson(request)
+      if (!body.code) {
+        return sendJson(response, 422, { error: 'validation_failed', message: 'code is required' })
+      }
+      if (currencies.some((currency) => currency.code === body.code)) {
+        return sendJson(response, 409, {
+          error: 'currency_already_defined',
+          message: 'The currency is already defined',
+        })
+      }
+      const currency = {
+        code: String(body.code).toUpperCase(),
+        label: body.label ?? null,
+        symbol: body.symbol ?? String(body.code).toUpperCase(),
+        fractionDigits: body.fractionDigits ?? 2,
+        commodityType: body.commodityType ?? 'FIAT',
+      }
+      currencies.push(currency)
+      return sendJson(response, 201, { ...currency, priceMinor: null }, {
+        Location: `/api/v1/currencies/${currency.code}`,
+      })
+    }
+    const currencyMatch = path.match(/^\/api\/v1\/currencies\/([^/]+)$/)
+    if (currencyMatch) {
+      const currency = currencies.find((entry) => entry.code === currencyMatch[1])
+      if (!currency) {
+        return sendJson(response, 404, {
+          error: 'currency_not_found',
+          message: 'Currency not found',
+        })
+      }
+      if (request.method === 'PUT') {
+        const body = await readJson(request)
+        if (body.symbol) currency.symbol = body.symbol
+        if (body.label !== undefined) currency.label = body.label
+        if (body.fractionDigits !== undefined) currency.fractionDigits = body.fractionDigits
+        if (body.commodityType) currency.commodityType = body.commodityType
+        return sendJson(response, 200, { ...currency, priceMinor: null })
+      }
+      if (request.method === 'DELETE') {
+        const used =
+          accounts.some((account) => account.currency === currency.code) ||
+          transactions.some(
+            (item) =>
+              item.currency === currency.code ||
+              (item.splitParts ?? []).some((part) => part.category?.id && false),
+          )
+        if (used) {
+          return sendJson(response, 409, {
+            error: 'currency_still_used',
+            message: 'The currency is still used by an account or a transaction',
+          })
+        }
+        currencies.splice(currencies.indexOf(currency), 1)
+        response.writeHead(204, { 'Cache-Control': 'no-store' })
+        return response.end()
+      }
+      return sendJson(response, 200, { ...currency, priceMinor: null })
+    }
+    if (path === '/api/v1/prices' && request.method === 'GET') {
+      const commodity = (url.searchParams.get('commodity') ?? '').toUpperCase()
+      return sendJson(
+        response,
+        200,
+        prices
+          .filter((price) => price.commodity === commodity)
+          .sort((left, right) => right.date.localeCompare(left.date)),
+      )
+    }
+    if (path === '/api/v1/prices' && request.method === 'POST') {
+      const body = await readJson(request)
+      if (!body.commodity || !body.date || !(Number(body.value) > 0)) {
+        return sendJson(response, 422, {
+          error: 'validation_failed',
+          message: 'commodity, date and a positive value are required',
+        })
+      }
+      const commodity = String(body.commodity).toUpperCase()
+      prices = prices.filter(
+        (price) => !(price.commodity === commodity && price.date === body.date && price.source === 'USER'),
+      )
+      const price = {
+        commodity,
+        currency: meta.homeCurrency,
+        date: body.date,
+        value: Number(body.value),
+        source: 'USER',
+      }
+      prices.push(price)
+      return sendJson(response, 201, price)
+    }
+    const priceMatch = path.match(/^\/api\/v1\/prices\/([^/]+)\/(\d{4}-\d{2}-\d{2})$/)
+    if (priceMatch) {
+      const commodity = priceMatch[1].toUpperCase()
+      const date = priceMatch[2]
+      if (request.method === 'PUT') {
+        const body = await readJson(request)
+        const existing = prices.find(
+          (price) => price.commodity === commodity && price.date === date && price.source === 'USER',
+        )
+        if (!existing) {
+          return sendJson(response, 404, { error: 'price_not_found', message: 'Price not found' })
+        }
+        existing.value = Number(body.value ?? existing.value)
+        return sendJson(response, 200, existing)
+      }
+      if (request.method === 'DELETE') {
+        const before = prices.length
+        prices = prices.filter(
+          (price) => !(price.commodity === commodity && price.date === date && price.source === 'USER'),
+        )
+        if (prices.length === before) {
+          return sendJson(response, 404, { error: 'price_not_found', message: 'Price not found' })
+        }
+        response.writeHead(204, { 'Cache-Control': 'no-store' })
+        return response.end()
+      }
+    }
+    const categoryMatch = path.match(/^\/api\/v1\/categories\/(\d+)$/)
+    if (categoryMatch) {
+      const category = categories.find((entry) => entry.id === Number(categoryMatch[1]))
+      if (!category) {
+        return sendJson(response, 404, {
+          error: 'category_not_found',
+          message: 'Category not found',
+        })
+      }
+      if (request.method === 'PUT') {
+        const body = await readJson(request)
+        if (body.label) category.label = body.label
+        if (body.color !== undefined) category.color = body.color
+        return sendJson(response, 200, category)
+      }
+      if (request.method === 'DELETE') {
+        const remapTo = url.searchParams.get('remapTo')
+        const branch = [category.id]
+        for (let index = 0; index < branch.length; index += 1) {
+          categories
+            .filter((entry) => entry.parentId === branch[index])
+            .forEach((child) => branch.push(child.id))
+        }
+        const inUse = transactions.some(
+          (item) =>
+            branch.includes(item.category?.id) ||
+            (item.splitParts ?? []).some((part) => branch.includes(part.category?.id)),
+        )
+        if (inUse && !remapTo) {
+          return sendJson(response, 409, {
+            error: 'category_in_use',
+            message: 'The category has movements; choose a category to move them to',
+          })
+        }
+        if (inUse) {
+          for (const item of transactions) {
+            if (branch.includes(item.category?.id)) {
+              item.category = categoryRef(Number(remapTo))
+            }
+          }
+        }
+        categories.splice(categories.indexOf(category), 1)
+        for (let index = categories.length - 1; index >= 0; index -= 1) {
+          if (branch.includes(categories[index].id)) categories.splice(index, 1)
+        }
+        response.writeHead(204, { 'Cache-Control': 'no-store' })
+        return response.end()
+      }
+    }
+    const methodMatch = path.match(/^\/api\/v1\/methods\/(\d+)$/)
+    if (methodMatch) {
+      const method = methods.find((entry) => entry.id === Number(methodMatch[1]))
+      if (!method) {
+        return sendJson(response, 404, { error: 'method_not_found', message: 'Method not found' })
+      }
+      if (request.method === 'PUT') {
+        const body = await readJson(request)
+        if (body.label) method.label = body.label
+        if (body.type !== undefined) method.type = body.type
+        if (body.isNumbered !== undefined) method.isNumbered = body.isNumbered
+        if (body.accountTypes !== undefined) method.accountTypes = body.accountTypes
+        return sendJson(response, 200, method)
+      }
+      if (request.method === 'DELETE') {
+        methods.splice(methods.indexOf(method), 1)
+        response.writeHead(204, { 'Cache-Control': 'no-store' })
+        return response.end()
+      }
+    }
+    const tagMatch = path.match(/^\/api\/v1\/tags\/(\d+)$/)
+    if (tagMatch) {
+      const tag = tags.find((entry) => entry.id === Number(tagMatch[1]))
+      if (!tag) {
+        return sendJson(response, 404, { error: 'tag_not_found', message: 'Tag not found' })
+      }
+      if (request.method === 'PUT') {
+        const body = await readJson(request)
+        if (body.label) tag.label = body.label
+        return sendJson(response, 200, tag)
+      }
+      if (request.method === 'DELETE') {
+        tags.splice(tags.indexOf(tag), 1)
+        response.writeHead(204, { 'Cache-Control': 'no-store' })
+        return response.end()
+      }
+    }
+    const categoryPost = path === '/api/v1/categories' && request.method === 'POST'
+    if (categoryPost) {
+      const body = await readJson(request)
+      if (!body.label) {
+        return sendJson(response, 422, { error: 'validation_failed', message: 'label is required' })
+      }
+      const parent = body.parentId
+        ? categories.find((entry) => entry.id === Number(body.parentId))
+        : null
+      const category = {
+        id: nextDataId++,
+        parentId: parent ? parent.id : null,
+        label: body.label,
+        level: parent ? (parent.level ?? 0) + 1 : 0,
+        color: body.color ?? null,
+        type: parent ? parent.type : body.type ?? -1,
+      }
+      categories.push(category)
+      return sendJson(response, 201, category, {
+        Location: `/api/v1/categories/${category.id}`,
+      })
+    }
+    if (path === '/api/v1/tags' && request.method === 'GET') {
+      return send(response, 200, JSON.stringify(tags))
+    }
+    if (path === '/api/v1/methods' && request.method === 'GET') {
+      return send(response, 200, JSON.stringify(methods))
+    }
+    if (path === '/api/v1/categories' && request.method === 'GET') {
+      return send(response, 200, JSON.stringify(categories))
+    }
     if (path === '/api/v1/payees') return send(response, 200, JSON.stringify(payees))
     if (path === '/api/v1/tags') return send(response, 200, JSON.stringify(tags))
     if (path === '/api/v1/methods') return send(response, 200, JSON.stringify(methods))

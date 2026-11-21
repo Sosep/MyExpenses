@@ -14,6 +14,7 @@ import { activateLocale, initialLocale, LOCALES } from './i18n'
 import type { Account, Meta } from './types'
 import { ApiError, describeError, getAccounts, getMeta, login, logout, UNAUTHORIZED_EVENT } from './api'
 import { AccountEditor } from './components/AccountEditor'
+import { AppData } from './components/AppData'
 import { Budgets } from './components/Budgets'
 import { Dashboard } from './components/Dashboard'
 import { Files } from './components/Files'
@@ -266,7 +267,9 @@ export default function App({ initialLocale: initial }: { initialLocale: Locale 
         onLogout={handleLogout}
         meta={meta}
       >
-        {accounts.length === 0 ? (
+        {activeView === 'datos' ? (
+          <AppData />
+        ) : accounts.length === 0 ? (
           <div className="empty-page">
             <div className="card empty-card">
               <h2>{t`No accounts yet`}</h2>

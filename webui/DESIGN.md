@@ -645,6 +645,22 @@ November 2026                     All budgets
   resumen `Sin filtro: toda la cuenta` / `n filtros`. Si el presupuesto trae un
   filtro que la web no puede expresar, el editor lo dice y no lo reescribe.
 
+### Datos de la app
+
+- Vista `?view=datos` con pestañas segmentadas (`Categorías · Métodos ·
+  Etiquetas · Divisas · Precios`) sobre una tarjeta por entidad; el botón de
+  ajustes del rail la abre.
+- Categorías en árbol: sangría por `level`, tipo con texto (Gasto/Ingreso/
+  Neutro), `+ Nueva categoría` en la cabecera. Al borrar una categoría con
+  movimientos, el panel «Borrar categoría» pide el destino con `SearchSelect`
+  antes de mover y borrar; el `409` nunca deja la categoría a medias.
+- Divisas: tabla código/símbolo/dígitos/tipo; el alta pide el código y la
+  edición no (es la clave). Precios: selector de activo (solo no fiat), tabla
+  fecha/valor/fuente y panel fecha+precio; guardar reemplaza el precio manual
+  de esa fecha.
+- En móvil las pestañas hacen wrap y la tabla conserva sus columnas (sin
+  scroll horizontal); los paneles son de ancho completo como el resto.
+
 ### Maestros
 
 - Categorías: árbol con indentación; arrastrar para mover en v2; acciones

@@ -318,12 +318,15 @@ export function Shell({
           <div className="rail-spacer" />
           <button
             type="button"
-            className="rail-item"
-            disabled
-            title={t`Settings (next milestone)`}
-            aria-label={t`Settings (next milestone)`}
+            className={`rail-item ${view === 'datos' ? 'active' : ''}`}
+            data-view="datos"
+            onClick={() => onView('datos')}
+            title={t`App data`}
+            aria-label={t`App data`}
+            aria-current={view === 'datos' ? 'page' : undefined}
           >
             <IconSettings />
+            <span className="rail-label">{t`Data`}</span>
           </button>
         </nav>
         <main className="main">{children}</main>

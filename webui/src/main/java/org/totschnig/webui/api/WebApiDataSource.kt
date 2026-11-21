@@ -86,6 +86,25 @@ interface WebApiDataSource {
         transactionId: Long,
         body: TradeWriteDto
     ): TradeDto
+
+    suspend fun createCategory(body: CategoryWriteDto): CategoryDto
+    suspend fun updateCategory(id: Long, body: CategoryWriteDto): CategoryDto
+
+    /** `remapTo` moves the branch's movements before deleting. */
+    suspend fun deleteCategory(id: Long, remapTo: Long?): Boolean
+    suspend fun createMethod(body: MethodWriteDto): MethodDto
+    suspend fun updateMethod(id: Long, body: MethodWriteDto): MethodDto
+    suspend fun deleteMethod(id: Long): Boolean
+    suspend fun createTag(body: TagWriteDto): TagDto
+    suspend fun updateTag(id: Long, body: TagWriteDto): TagDto
+    suspend fun deleteTag(id: Long): Boolean
+    suspend fun currencies(): List<CurrencyDto>
+    suspend fun createCurrency(body: CurrencyWriteDto): CurrencyDto
+    suspend fun updateCurrency(code: String, body: CurrencyWriteDto): CurrencyDto
+    suspend fun deleteCurrency(code: String): Boolean
+    suspend fun prices(commodity: String): List<PriceDto>
+    suspend fun savePrice(body: PriceWriteDto): PriceDto
+    suspend fun deletePrice(commodity: String, date: String): Boolean
 }
 
 /** Criteria of the transaction list, all optional and combined with AND. */

@@ -76,6 +76,169 @@ class ApiRoutes(
             get("/methods") {
                 call.respond(dataSource.methods())
             }
+            post("/categories") {
+                val created = dataSource.createCategory(call.receive<CategoryWriteDto>())
+                call.response.headers.append(
+                    HttpHeaders.Location,
+                    "/api/v1/categories/${created.id}"
+                )
+                call.respond(HttpStatusCode.Created, created)
+            }
+            put("/categories/{id}") {
+                val id = call.requirePathId()
+                call.respond(dataSource.updateCategory(id, call.receive<CategoryWriteDto>()))
+            }
+            delete("/categories/{id}") {
+                val id = call.requirePathId()
+                val remapTo = call.parameters["remapTo"]?.let {
+                    it.toLongOrNull()?.takeIf { value -> value > 0 } ?: throw ApiException(
+                        HttpStatusCode.BadRequest,
+                        "invalid_remapTo",
+                        "remapTo must be a positive category id"
+                    )
+                }
+                if (!dataSource.deleteCategory(id, remapTo)) {
+                    throw ApiException(
+                        HttpStatusCode.NotFound,
+                        "category_not_found",
+                        "Category not found"
+                    )
+                }
+                call.respond(HttpStatusCode.NoContent)
+            }
+            post("/methods") {
+                val created = dataSource.createMethod(call.receive<MethodWriteDto>())
+                call.response.headers.append(
+                    HttpHeaders.Location,
+                    "/api/v1/methods/${created.id}"
+                )
+                call.respond(HttpStatusCode.Created, created)
+            }
+            put("/methods/{id}") {
+                val id = call.requirePathId()
+                call.respond(dataSource.updateMethod(id, call.receive<MethodWriteDto>()))
+            }
+            delete("/methods/{id}") {
+                val id = call.requirePathId()
+                if (!dataSource.deleteMethod(id)) {
+                    throw ApiException(
+                        HttpStatusCode.NotFound,
+                        "method_not_found",
+                        "Method not found"
+                    )
+                }
+                call.respond(HttpStatusCode.NoContent)
+            }
+            post("/tags") {
+                val created = dataSource.createTag(call.receive<TagWriteDto>())
+                call.response.headers.append(
+                    HttpHeaders.Location,
+                    "/api/v1/tags/${created.id}"
+                )
+                call.respond(HttpStatusCode.Created, created)
+            }
+            put("/tags/{id}") {
+                val id = call.requirePathId()
+                call.respond(dataSource.updateTag(id, call.receive<TagWriteDto>()))
+            }
+            delete("/tags/{id}") {
+                val id = call.requirePathId()
+                if (!dataSource.deleteTag(id)) {
+                    throw ApiException(
+                        HttpStatusCode.NotFound,
+                        "tag_not_found",
+                        "Tag not found"
+                    )
+                }
+                call.respond(HttpStatusCode.NoContent)
+            }
+            get("/currencies") {
+                call.respond(dataSource.currencies())
+            }
+            post("/currencies") {
+                val created = dataSource.createCurrency(call.receive<CurrencyWriteDto>())
+                call.response.headers.append(
+                    HttpHeaders.Location,
+                    "/api/v1/currencies/${created.code}"
+                )
+                call.respond(HttpStatusCode.Created, created)
+            }
+            put("/currencies/{code}") {
+                val code = call.parameters["code"] ?: throw ApiException(
+                    HttpStatusCode.BadRequest,
+                    "invalid_code",
+                    "code is required"
+                )
+                call.respond(
+                    dataSource.updateCurrency(code, call.receive<CurrencyWriteDto>())
+                )
+            }
+            delete("/currencies/{code}") {
+                val code = call.parameters["code"] ?: throw ApiException(
+                    HttpStatusCode.BadRequest,
+                    "invalid_code",
+                    "code is required"
+                )
+                if (!dataSource.deleteCurrency(code)) {
+                    throw ApiException(
+                        HttpStatusCode.NotFound,
+                        "currency_not_found",
+                        "Currency not found"
+                    )
+                }
+                call.respond(HttpStatusCode.NoContent)
+            }
+            get("/prices") {
+                val commodity = call.parameters["commodity"]?.takeIf { it.isNotBlank() }
+                    ?: throw ApiException(
+                        HttpStatusCode.BadRequest,
+                        "missing_commodity",
+                        "Query parameter 'commodity' is required"
+                    )
+                call.respond(dataSource.prices(commodity.uppercase(Locale.ROOT)))
+            }
+            post("/prices") {
+                call.respond(
+                    HttpStatusCode.Created,
+                    dataSource.savePrice(call.receive<PriceWriteDto>())
+                )
+            }
+            put("/prices/{commodity}/{date}") {
+                val commodity = call.parameters["commodity"] ?: throw ApiException(
+                    HttpStatusCode.BadRequest,
+                    "invalid_commodity",
+                    "commodity is required"
+                )
+                val date = call.parameters["date"] ?: throw ApiException(
+                    HttpStatusCode.BadRequest,
+                    "invalid_date",
+                    "date is required"
+                )
+                val body = call.receive<PriceWriteDto>()
+                call.respond(
+                    dataSource.savePrice(body.copy(commodity = commodity, date = date))
+                )
+            }
+            delete("/prices/{commodity}/{date}") {
+                val commodity = call.parameters["commodity"] ?: throw ApiException(
+                    HttpStatusCode.BadRequest,
+                    "invalid_commodity",
+                    "commodity is required"
+                )
+                val date = call.parameters["date"] ?: throw ApiException(
+                    HttpStatusCode.BadRequest,
+                    "invalid_date",
+                    "date is required"
+                )
+                if (!dataSource.deletePrice(commodity, date)) {
+                    throw ApiException(
+                        HttpStatusCode.NotFound,
+                        "price_not_found",
+                        "Price not found"
+                    )
+                }
+                call.respond(HttpStatusCode.NoContent)
+            }
             post("/portfolios") {
                 val created = dataSource.createPortfolio(call.receive<PortfolioWriteDto>())
                 call.response.headers.append(

@@ -11,17 +11,24 @@ import type {
   BudgetProgress,
   BudgetWrite,
   Category,
+  CategoryWrite,
+  CurrencyEntry,
+  CurrencyWrite,
   FileEntry,
   Group,
   Meta,
   Method,
+  MethodWrite,
   Page,
   Payee,
   PortfolioAssets,
   PortfolioWrite,
+  Price,
+  PriceWrite,
   ReportSummary,
   SplitWrite,
   Tag,
+  TagWrite,
   Trade,
   TradeWrite,
   Transaction,
@@ -67,6 +74,12 @@ export function describeError(error: unknown, fallback?: string): string {
       case 'portfolio_not_found':
       case 'trade_not_found':
         return t`This item no longer exists on the phone.`
+      case 'currency_still_used':
+        return t`The currency is used by an account or a transaction and cannot be deleted.`
+      case 'currency_already_defined':
+        return t`That currency code is already defined.`
+      case 'category_in_use':
+        return t`The category has movements; choose where to move them.`
       case 'http_error':
         return error.status >= 500
           ? t`The phone could not complete the request.`
@@ -439,3 +452,63 @@ export const getBudgetBreakdown = (
     year !== undefined && second !== undefined ? `?year=${year}&second=${second}` : ''
   return request<BudgetBreakdown>(`/budgets/${id}/breakdown${query}`, { signal })
 }
+
+// ---- App data (settings > data) -----------------------------------------
+
+export const createCategory = (payload: CategoryWrite) =>
+  request<Category>('/categories', { method: 'POST', body: payload })
+
+export const updateCategory = (id: number, payload: CategoryWrite) =>
+  request<Category>(`/categories/${id}`, { method: 'PUT', body: payload })
+
+export const deleteCategory = (id: number, remapTo?: number) =>
+  request<void>(`/categories/${id}${remapTo ? `?remapTo=${remapTo}` : ''}`, {
+    method: 'DELETE',
+  })
+
+export const createMethod = (payload: MethodWrite) =>
+  request<Method>('/methods', { method: 'POST', body: payload })
+
+export const updateMethod = (id: number, payload: MethodWrite) =>
+  request<Method>(`/methods/${id}`, { method: 'PUT', body: payload })
+
+export const deleteMethod = (id: number) =>
+  request<void>(`/methods/${id}`, { method: 'DELETE' })
+
+export const createTag = (payload: TagWrite) =>
+  request<Tag>('/tags', { method: 'POST', body: payload })
+
+export const updateTag = (id: number, payload: TagWrite) =>
+  request<Tag>(`/tags/${id}`, { method: 'PUT', body: payload })
+
+export const deleteTag = (id: number) => request<void>(`/tags/${id}`, { method: 'DELETE' })
+
+export const getCurrencies = (signal?: AbortSignal) =>
+  request<CurrencyEntry[]>('/currencies', { signal })
+
+export const createCurrency = (payload: CurrencyWrite) =>
+  request<CurrencyEntry>('/currencies', { method: 'POST', body: payload })
+
+export const updateCurrency = (code: string, payload: CurrencyWrite) =>
+  request<CurrencyEntry>(`/currencies/${encodeURIComponent(code)}`, {
+    method: 'PUT',
+    body: payload,
+  })
+
+export const deleteCurrency = (code: string) =>
+  request<void>(`/currencies/${encodeURIComponent(code)}`, { method: 'DELETE' })
+
+export const getPrices = (commodity: string, signal?: AbortSignal) =>
+  request<Price[]>(`/prices?commodity=${encodeURIComponent(commodity)}`, { signal })
+
+export const savePrice = (payload: PriceWrite) =>
+  request<Price>('/prices', { method: 'POST', body: payload })
+
+export const updatePrice = (commodity: string, date: string, payload: PriceWrite) =>
+  request<Price>(`/prices/${encodeURIComponent(commodity)}/${date}`, {
+    method: 'PUT',
+    body: payload,
+  })
+
+export const deletePrice = (commodity: string, date: string) =>
+  request<void>(`/prices/${encodeURIComponent(commodity)}/${date}`, { method: 'DELETE' })

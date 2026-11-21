@@ -524,3 +524,66 @@ data class BudgetHistoryPointDto(
     val spentMinor: Long,
     val remainingMinor: Long
 )
+
+@Keep
+data class CategoryWriteDto(
+    val parentId: Long? = null,
+    val label: String? = null,
+    val color: Int? = null,
+    /** 1 = expense, 2 = income (a child always takes its parent's type). */
+    val type: Int? = null
+)
+
+@Keep
+data class MethodWriteDto(
+    val label: String? = null,
+    /** -1 expense, 0 neutral, 1 income. */
+    val type: Int? = null,
+    val isNumbered: Boolean? = null,
+    /** Ids of /account-types the method is limited to. */
+    val accountTypes: List<String>? = null
+)
+
+@Keep
+data class TagWriteDto(
+    val label: String? = null
+)
+
+@Keep
+data class CurrencyDto(
+    val code: String,
+    val label: String?,
+    val symbol: String,
+    val fractionDigits: Int,
+    /** FIAT, SECURITY, CRYPTO or COMMODITY. */
+    val commodityType: String,
+    /** Latest raw price to the home currency (home minor per unit minor). */
+    val priceMinor: Double?
+)
+
+@Keep
+data class CurrencyWriteDto(
+    val code: String? = null,
+    val label: String? = null,
+    val symbol: String? = null,
+    val fractionDigits: Int? = null,
+    val commodityType: String? = null
+)
+
+@Keep
+data class PriceDto(
+    val commodity: String,
+    val currency: String,
+    val date: String,
+    /** Price of one major commodity unit in major base units. */
+    val value: Double,
+    /** MANUAL prices come from the web; the app also stores network sources. */
+    val source: String
+)
+
+@Keep
+data class PriceWriteDto(
+    val commodity: String? = null,
+    val date: String? = null,
+    val value: Double? = null
+)

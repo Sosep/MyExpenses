@@ -758,6 +758,90 @@ class ApiRoutesTest {
     }
 
     @Test
+    fun `create category returns 201 and location`() = testApplication {
+        installRoutes(FakeDataSource())
+        val response = client.post("/api/v1/categories") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"label":"Travel","type":1}""")
+        }
+        assertEquals(HttpStatusCode.Created, response.status)
+        assertEquals("/api/v1/categories/8", response.headers[HttpHeaders.Location])
+    }
+
+    @Test
+    fun `deleting a category in use is a 409 without remap`() = testApplication {
+        installRoutes(FakeDataSource())
+        val response = client.delete("/api/v1/categories/2")
+        assertEquals(HttpStatusCode.Conflict, response.status)
+        assertTrue(response.bodyAsText().contains("category_in_use"))
+    }
+
+    @Test
+    fun `deleting a category with remap returns 204`() = testApplication {
+        installRoutes(FakeDataSource())
+        val response = client.delete("/api/v1/categories/2?remapTo=1")
+        assertEquals(HttpStatusCode.NoContent, response.status)
+    }
+
+    @Test
+    fun `create and delete a method`() = testApplication {
+        installRoutes(FakeDataSource())
+        val created = client.post("/api/v1/methods") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"label":"Bizum","type":0,"accountTypes":["2"]}""")
+        }
+        assertEquals(HttpStatusCode.Created, created.status)
+        val deleted = client.delete("/api/v1/methods/4")
+        assertEquals(HttpStatusCode.NoContent, deleted.status)
+    }
+
+    @Test
+    fun `create tag returns 201`() = testApplication {
+        installRoutes(FakeDataSource())
+        val response = client.post("/api/v1/tags") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"label":"holiday"}""")
+        }
+        assertEquals(HttpStatusCode.Created, response.status)
+    }
+
+    @Test
+    fun `currencies list and create`() = testApplication {
+        installRoutes(FakeDataSource())
+        val list = client.get("/api/v1/currencies")
+        assertEquals(HttpStatusCode.OK, list.status)
+        assertTrue(list.bodyAsText().contains("\"code\":\"EUR\""))
+        val created = client.post("/api/v1/currencies") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """{"code":"TSLA","symbol":"TSLA","fractionDigits":4,"commodityType":"SECURITY"}"""
+            )
+        }
+        assertEquals(HttpStatusCode.Created, created.status)
+    }
+
+    @Test
+    fun `deleting a used currency is a 409`() = testApplication {
+        installRoutes(FakeDataSource())
+        val response = client.delete("/api/v1/currencies/EUR")
+        assertEquals(HttpStatusCode.Conflict, response.status)
+        assertTrue(response.bodyAsText().contains("currency_still_used"))
+    }
+
+    @Test
+    fun `prices are listed and saved`() = testApplication {
+        installRoutes(FakeDataSource())
+        val list = client.get("/api/v1/prices?commodity=AAPL")
+        assertEquals(HttpStatusCode.OK, list.status)
+        assertTrue(list.bodyAsText().contains("\"value\":5.0"))
+        val saved = client.post("/api/v1/prices") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"commodity":"AAPL","date":"2026-11-20","value":5.5}""")
+        }
+        assertEquals(HttpStatusCode.Created, saved.status)
+    }
+
+    @Test
     fun `unknown trade update is a 404`() = testApplication {
         installRoutes(FakeDataSource())
         val response = client.put("/api/v1/portfolios/7/trades/99") {
@@ -1186,6 +1270,89 @@ private class FakeDataSource : WebApiDataSource {
         createdTrade = body
         return sampleTrade()
     }
+
+    override suspend fun createCategory(body: CategoryWriteDto) =
+        CategoryDto(8, body.parentId, body.label ?: "Category", 1, body.color, body.type)
+
+    override suspend fun updateCategory(id: Long, body: CategoryWriteDto) =
+        CategoryDto(id, null, body.label ?: "Category", 1, body.color, body.type)
+
+    override suspend fun deleteCategory(id: Long, remapTo: Long?): Boolean {
+        if (id == 2L && remapTo == null) {
+            throw ApiException(
+                HttpStatusCode.Conflict,
+                "category_in_use",
+                "The category has movements"
+            )
+        }
+        return id in setOf(1L, 2L)
+    }
+
+    override suspend fun createMethod(body: MethodWriteDto) =
+        MethodDto(4, body.label ?: "Method", body.isNumbered ?: false, body.type ?: 0, emptyList())
+
+    override suspend fun updateMethod(id: Long, body: MethodWriteDto) =
+        MethodDto(id, body.label ?: "Method", false, body.type ?: 0, emptyList())
+
+    override suspend fun deleteMethod(id: Long) = id == 4L
+
+    override suspend fun createTag(body: TagWriteDto) =
+        TagDto(5, body.label ?: "Tag", null)
+
+    override suspend fun updateTag(id: Long, body: TagWriteDto) =
+        TagDto(id, body.label ?: "Tag", null)
+
+    override suspend fun deleteTag(id: Long) = id == 5L
+
+    override suspend fun currencies(): List<CurrencyDto> = listOf(
+        CurrencyDto("EUR", "Euro", "€", 2, "FIAT", null),
+        CurrencyDto("AAPL", "Apple Inc.", "AAPL", 4, "SECURITY", 0.05)
+    )
+
+    override suspend fun createCurrency(body: CurrencyWriteDto) =
+        CurrencyDto(
+            body.code ?: "X",
+            body.label,
+            body.symbol ?: body.code ?: "X",
+            body.fractionDigits ?: 2,
+            body.commodityType ?: "FIAT",
+            null
+        )
+
+    override suspend fun updateCurrency(code: String, body: CurrencyWriteDto) =
+        CurrencyDto(
+            code,
+            body.label,
+            body.symbol ?: code,
+            body.fractionDigits ?: 2,
+            body.commodityType ?: "FIAT",
+            null
+        )
+
+    override suspend fun deleteCurrency(code: String): Boolean {
+        if (code.uppercase() == "EUR") {
+            throw ApiException(
+                HttpStatusCode.Conflict,
+                "currency_still_used",
+                "The currency is still used"
+            )
+        }
+        return true
+    }
+
+    override suspend fun prices(commodity: String): List<PriceDto> = listOf(
+        PriceDto(commodity, "EUR", "2026-11-19", 5.0, "USER")
+    )
+
+    override suspend fun savePrice(body: PriceWriteDto) = PriceDto(
+        body.commodity ?: "AAPL",
+        "EUR",
+        body.date ?: "2026-11-20",
+        body.value ?: 1.0,
+        "USER"
+    )
+
+    override suspend fun deletePrice(commodity: String, date: String) = true
 }
 
 private const val PORTFOLIO_ID = 7L

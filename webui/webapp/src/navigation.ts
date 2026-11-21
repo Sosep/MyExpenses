@@ -6,7 +6,7 @@ import { useCallback, useEffect, useRef } from 'react'
  * reload keeps the user where they were. Screen filters are written by each
  * screen and preserved here.
  */
-export const VIEWS = ['dashboard', 'transactions', 'reports', 'budgets', 'files'] as const
+export const VIEWS = ['dashboard', 'transactions', 'reports', 'budgets', 'files', 'datos'] as const
 export type View = (typeof VIEWS)[number]
 
 export function readView(search: string): View {

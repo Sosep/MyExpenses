@@ -561,7 +561,43 @@ Los filtros `categoryId`, `payeeId`, `tagId` y `methodId` son opcionales y se co
 y **transfer peer** (la otra cara de una transferencia). El API las expone por
 separado; el editor de transferencias no usa `payee` para elegir la cuenta.
 
-### 4.5 Presupuestos
+### 4.5 Datos de la app
+
+CRUD de los maestros de Ajustes > Datos. Las reglas viven en el repositorio de
+la app; el API las expone tal cual.
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| POST/PUT | `/categories[/{id}]` | Alta y edición (`parentId`, `label`, `color`, `type`) |
+| DELETE | `/categories/{id}?remapTo=` | Borrado con remapeo de movimientos |
+| POST/PUT | `/methods[/{id}]` | Alta y edición (`label`, `type`, `isNumbered`, `accountTypes`) |
+| DELETE | `/methods/{id}` | Borrado |
+| POST/PUT | `/tags[/{id}]` | Alta y edición (`label`) |
+| DELETE | `/tags/{id}` | Borrado |
+| GET/POST | `/currencies` | Lista y alta (`code`, `label`, `symbol`, `fractionDigits`, `commodityType`) |
+| PUT/DELETE | `/currencies/{code}` | Edición y borrado |
+| GET | `/prices?commodity=` | Historial manual del activo a la divisa base |
+| POST | `/prices` | Alta/actualización manual (`commodity`, `date`, `value`) |
+| PUT/DELETE | `/prices/{commodity}/{date}` | Edición y borrado del precio manual |
+
+- **Categorías**: `label` obligatorio; un hijo toma el tipo de su padre; `PUT`
+  no cambia de padre (`422 unsupported_move`). El borrado de una rama con
+  movimientos exige `remapTo` (si no, `409 category_in_use`), mueve el `catid`
+  de la rama (partes de split incluidas) y luego borra; `remapTo` no puede
+  estar dentro de la rama.
+- **Métodos**: `type` -1 (gasto), 0 (neutro) o 1 (ingreso); `accountTypes`
+  son ids de `/account-types`.
+- **Divisas**: `commodityType` es `FIAT`, `SECURITY`, `CRYPTO` o `COMMODITY`;
+  `fractionDigits` entre 0 y 8; `priceMinor` es el último precio en bruto
+  (unidades menores de la base por unidad menor del activo). Un código
+  existente es `409 currency_already_defined`; una divisa usada por una cuenta
+  o transacción no se borra (`409 currency_still_used`).
+- **Precios**: `value` es el precio real (mayor a mayor) de una unidad del
+  activo en la divisa base, > 0. El precio manual es único por
+  (activo, fecha): `POST` reemplaza, `PUT` exige que exista y `DELETE` de uno
+  inexistente es `404 price_not_found`. La fuente almacenada es `User`.
+
+### 4.6 Presupuestos
 
 | Método | Ruta | Descripción |
 |---|---|---|
@@ -796,7 +832,7 @@ las rutas de arriba; lo que sigue solo en la app Android es la preferencia
 "agregar neutrales" por presupuesto y los criterios compuestos (`Or`/`Not`),
 que la web detecta pero no reescribe.
 
-### 4.6 Informes y agrupaciones
+### 4.7 Informes y agrupaciones
 
 | Método | Ruta | Descripción |
 |---|---|---|
@@ -878,7 +914,7 @@ los criterios no aparece.
 - `/reports/transactions` lista las transacciones de un grupo (`by` + `id`); no
   admite `accountId=all` (`422 unsupported_all_accounts`).
 
-### 4.7 Ficheros
+### 4.8 Ficheros
 
 | Método | Ruta | Descripción |
 |---|---|---|
@@ -907,7 +943,7 @@ Modelo de lectura:
 - Implementación: rutas en `WebInputService` porque dependen de `AppDirHelper` y
   del `ContentResolver`; no pasan por `WebApiDataSource`.
 
-### 4.8 Plantillas y planes (v2)
+### 4.9 Plantillas y planes (v2)
 
 `GET /templates`, `POST /templates/{id}/instantiate`. Fuera de v1.
 

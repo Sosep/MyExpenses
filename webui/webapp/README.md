@@ -176,6 +176,9 @@ El detalle de una transacción abre una entrada de historial: atrás lo cierra.
 | `?view=budgets&edit=1` | Edita el primer presupuesto |
 | `?view=budgets&edit=1&periodOverride=1` | Prueba el total distinto de este periodo |
 | `?view=files` | Ficheros |
+| `?view=datos` | Datos de la app (categorías, métodos, etiquetas, divisas, precios) |
+| `?view=datos&tab=divisas` | Abre esa pestaña (`métodos`, `etiquetas`, `precios`) |
+| `?view=datos&new=1` | Abre el alta de la pestaña activa |
 | `?view=transactions&accountId=7` | Operaciones de la cartera *Investments* (sin Presupuestos en el rail) |
 | `?accountId=7` | Resumen de la cartera: valoración, efectivo y activos |
 | `?new=1&kind=portfolio` | Alta de cartera (el `+` abre el editor con Cartera preseleccionada) |

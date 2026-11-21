@@ -11,7 +11,7 @@ Read this before changing code. Detailed sources:
 
 - `/api/v1`: read endpoints plus create/update/delete for simple transactions,
   transfers and splits.
-- API routes covered on the JVM by 79 tests — 63 `ApiRoutesTest`, 7
+- API routes covered on the JVM by 91 tests — 75 `ApiRoutesTest`, 7
   `CategoryBranchTest`, 5 `LoginThrottleTest` and 4 `SessionStoreTest` — with a
   fake `WebApiDataSource` and Ktor `testApplication`.
 - SPA: dashboard, transactions, detail, reports, files, budgets, and the simple,
@@ -43,6 +43,13 @@ Read this before changing code. Detailed sources:
   ViewModel into `db2/RepositoryTrades.kt`, which the Android trade screens
   use too; the web editor mirrors `TradeIntent` and the mock applies the
   operation deltas in memory.
+- App data: `?view=datos` mirrors Android's Settings > Data with tabs for
+  categories (tree, delete with remap), payment methods, tags, currencies
+  (fiat and custom assets) and the manual price history. The writes go through
+  `POST/PUT/DELETE /categories`, `/methods`, `/tags`, `/currencies` and
+  `/prices` with the repository rules: `409 category_in_use` without
+  `remapTo`, `409 currency_still_used`, one manual price per commodity and
+  date. The rail's settings button opens it.
 - Budget filters: `criteria` (categories, payees, methods, tags, states) is read
   and written in the app preference `budgetFilter_<id>`, so a budget created or
   edited from the web is scoped exactly like one from the phone. A filter the web
@@ -281,10 +288,13 @@ Update the docs while the change is fresh; do not defer them to a later commit.
   answers `409` without the Professional licence. A trade of each kind created
   from the web must appear in the phone exactly like one created there
   (quantity, price, fee, funding, transfer between two portfolios) — the
-  `RepositoryTrades` extraction must not change the Android save flow.
+  `RepositoryTrades` extraction must not change the Android save flow. The data
+  screen also needs device QA: a remapped category and an edited price from the
+  web must show in the app at once.
 - Every side panel is a history entry (`useHistoryPanel`): transaction detail and
-  editor, report drill-down and the budget panel (detail and editor share one
-  entry). Back closes them; closing from the UI pops the entry.
+  editor, report drill-down, the budget panel (detail and editor share one
+  entry), the trade detail and editor, and the app-data editors. Back closes
+  them; closing from the UI pops the entry.
 - Budget detail and its filter need device checks that the mock cannot fake:
   January and a 12-month history (the two contract fixes), a split inside a
   budget counted once, and a budget created from the web with two categories and

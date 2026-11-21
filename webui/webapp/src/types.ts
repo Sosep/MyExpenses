@@ -418,3 +418,55 @@ export interface Trade {
   peerAccountId: number | null
   peerAccountLabel: string | null
 }
+
+export interface CategoryWrite {
+  parentId?: number | null
+  label: string
+  color?: number | null
+  type?: number | null
+}
+
+export interface MethodWrite {
+  label: string
+  type?: number
+  isNumbered?: boolean
+  accountTypes?: string[]
+}
+
+export interface TagWrite {
+  label: string
+}
+
+export interface CurrencyEntry {
+  code: string
+  label: string | null
+  symbol: string
+  fractionDigits: number
+  /** FIAT, SECURITY, CRYPTO or COMMODITY. */
+  commodityType: string
+  /** Latest raw price to the home currency, if any. */
+  priceMinor: number | null
+}
+
+export interface CurrencyWrite {
+  code?: string
+  label?: string | null
+  symbol?: string
+  fractionDigits?: number
+  commodityType?: string
+}
+
+export interface Price {
+  commodity: string
+  currency: string
+  date: string
+  /** Price of one major commodity unit in major base units. */
+  value: number
+  source: string
+}
+
+export interface PriceWrite {
+  commodity: string
+  date: string
+  value: number
+}
