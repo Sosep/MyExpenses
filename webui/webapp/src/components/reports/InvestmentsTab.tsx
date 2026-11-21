@@ -4,11 +4,12 @@ import type { InvestmentAsset, InvestmentPortfolio } from '../../types'
 import { describeError, getInvestments, getPrices } from '../../api'
 import { formatDate, formatMoney } from '../../format'
 import { useAsync } from '../../hooks'
-import { Money } from '../../privacy'
+import { Money, useMoney } from '../../privacy'
 import { SearchSelect } from '../SearchSelect'
 import { Card, Kpi } from './shared'
 
 function PriceHistory({ asset, currency }: { asset: InvestmentAsset; currency: string }) {
+  const money = useMoney('totals')
   const prices = useAsync(() => getPrices(asset.symbol), ['prices', asset.symbol])
   return (
     <div className="price-history">
@@ -33,7 +34,7 @@ function PriceHistory({ asset, currency }: { asset: InvestmentAsset; currency: s
             {prices.data.map((price) => (
               <tr key={`${price.date}-${price.source}`}>
                 <td>{formatDate(price.date, { day: '2-digit', month: 'short', year: 'numeric' })}</td>
-                <td className="num">{formatMoney(Math.round(price.value * 100), currency, 2)}</td>
+                <td className="num">{money(Math.round(price.value * 100), currency, 2)}</td>
                 <td>{price.source}</td>
               </tr>
             ))}
@@ -156,6 +157,7 @@ export function InvestmentsTab({ homeCurrency }: { homeCurrency: string }) {
         <PortfolioCard
           key={portfolio.id}
           portfolio={portfolio}
+          homeCurrency={homeCurrency}
           expanded={expanded}
           onExpand={(key) => setExpanded((current) => (current === key ? null : key))}
         />
@@ -251,10 +253,12 @@ function investmentSummaryCards(
 
 function PortfolioCard({
   portfolio,
+  homeCurrency,
   expanded,
   onExpand,
 }: {
   portfolio: InvestmentPortfolio
+  homeCurrency: string
   expanded: string | null
   onExpand: (key: string) => void
 }) {
@@ -357,7 +361,7 @@ function PortfolioCard({
                     {expanded === key ? (
                       <tr>
                         <td colSpan={5}>
-                          <PriceHistory asset={asset} currency={portfolio.currency} />
+                          <PriceHistory asset={asset} currency={homeCurrency} />
                         </td>
                       </tr>
                     ) : null}
