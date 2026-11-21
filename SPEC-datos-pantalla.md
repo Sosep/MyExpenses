@@ -12,6 +12,7 @@ pestañas por entidad, tablas, paneles de edición y confirmación de borrado.
   `Eliminar`.
 - **Categorías**: árbol con sangría por nivel, tipo (Gasto/Ingreso/Neutro),
   panel con nombre, padre (`SearchSelect`, sin descendientes propios) y tipo.
+  Una subcategoría hereda el tipo del padre y el selector queda desactivado.
   El borrado pide confirmación. Si la rama está en uso (transacciones,
   plantillas o asignaciones) se abre «Borrar categoría» con `Move to`
   (`SearchSelect`) y `Mover y borrar`; sin uso borra directo.
@@ -20,7 +21,9 @@ pestañas por entidad, tablas, paneles de edición y confirmación de borrado.
 - **Divisas**: código, símbolo, dígitos, tipo; alta con código editable y
   edición sin él; el error de «en uso» se muestra en la tarjeta.
 - **Precios**: selector de activo (divisas no fiat), tabla fecha/valor/fuente y
-  panel de fecha + precio; guardar reemplaza el precio manual de esa fecha.
+  panel de fecha + precio; guardar reemplaza el precio manual de esa fecha. La
+  columna del valor sigue la privacidad `totals`, como la valoración de la
+  cartera; el panel abierto se mantiene legible.
   Todos los borrados (categoría, método, etiqueta, divisa, precio) piden
   confirmación y nombran el objeto.
 - Todo el texto por `t`/`<Trans>`; los datos no dependen de la cuenta

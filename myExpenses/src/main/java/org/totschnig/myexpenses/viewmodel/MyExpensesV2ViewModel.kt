@@ -1,7 +1,6 @@
 package org.totschnig.myexpenses.viewmodel
 
 import android.app.Application
-import android.content.ContentValues
 import android.content.Intent
 import androidx.annotation.OpenForTesting
 import androidx.annotation.StringRes
@@ -42,25 +41,13 @@ import org.totschnig.myexpenses.adapter.ClearingLastPagingSourceFactory
 import org.totschnig.myexpenses.adapter.TradePagingSource
 import org.totschnig.myexpenses.compose.transactions.Action
 import org.totschnig.myexpenses.compose.transactions.FabStyle
-import org.totschnig.myexpenses.db2.RepositoryTransaction
 import org.totschnig.myexpenses.db2.createAccount
-import org.totschnig.myexpenses.db2.createDualSplitTransaction
-import org.totschnig.myexpenses.db2.createTransaction
-import org.totschnig.myexpenses.db2.entities.Transaction
-import org.totschnig.myexpenses.db2.findAccountType
-import org.totschnig.myexpenses.db2.findSiblingParentId
 import org.totschnig.myexpenses.db2.getCategoryPath
-import org.totschnig.myexpenses.db2.loadAccount
-import org.totschnig.myexpenses.db2.loadSubAccounts
 import org.totschnig.myexpenses.db2.loadTrade
-import org.totschnig.myexpenses.db2.loadTransaction
-import org.totschnig.myexpenses.db2.savePrice
 import org.totschnig.myexpenses.db2.saveTrades
 import org.totschnig.myexpenses.db2.setBalanceType
 import org.totschnig.myexpenses.db2.storeExchangeRate
 import org.totschnig.myexpenses.db2.updateAccount
-import org.totschnig.myexpenses.db2.updateDualSplitTransaction
-import org.totschnig.myexpenses.db2.updateTransaction
 import org.totschnig.myexpenses.dialog.MenuItem
 import org.totschnig.myexpenses.model.AccountFlag
 import org.totschnig.myexpenses.model.AccountGrouping
@@ -71,7 +58,6 @@ import org.totschnig.myexpenses.model.ContribFeature
 import org.totschnig.myexpenses.model.CurrencyUnit
 import org.totschnig.myexpenses.model.Grouping
 import org.totschnig.myexpenses.model.Money
-import org.totschnig.myexpenses.model.generateUuid
 import org.totschnig.myexpenses.model.sort.Sort
 import org.totschnig.myexpenses.model.sort.TransactionSort
 import org.totschnig.myexpenses.model2.Account
@@ -94,33 +80,22 @@ import org.totschnig.myexpenses.provider.KEY_LABEL
 import org.totschnig.myexpenses.provider.KEY_PARENTID
 import org.totschnig.myexpenses.provider.KEY_ROWID
 import org.totschnig.myexpenses.provider.KEY_TRANSFER_PEER
-import org.totschnig.myexpenses.provider.KEY_UUID
-import org.totschnig.myexpenses.provider.PORTFOLIO_ASSET
-import org.totschnig.myexpenses.provider.PORTFOLIO_CASH
 import org.totschnig.myexpenses.provider.PORTFOLIO_CONTAINER
-import org.totschnig.myexpenses.provider.SPLIT_CATID
 import org.totschnig.myexpenses.provider.TransactionProvider
 import org.totschnig.myexpenses.provider.TransactionProvider.ACCOUNTS_URI
 import org.totschnig.myexpenses.provider.TransactionProvider.QUERY_PARAMETER_SEARCH
 import org.totschnig.myexpenses.provider.mapToListCatching
 import org.totschnig.myexpenses.provider.triggerAccountListRefresh
-import org.totschnig.myexpenses.retrofit.ExchangeRateSource
 import org.totschnig.myexpenses.util.enumValueOrDefault
-import org.totschnig.myexpenses.util.toEpoch
 import org.totschnig.myexpenses.viewmodel.data.AggregateAccount
 import org.totschnig.myexpenses.viewmodel.data.CategoryRef
 import org.totschnig.myexpenses.viewmodel.data.FullAccount
 import org.totschnig.myexpenses.viewmodel.data.FullAccount.Companion.fromCursor
 import org.totschnig.myexpenses.viewmodel.data.FullAccount.Companion.nest
-import org.totschnig.myexpenses.viewmodel.data.FundingSource
 import org.totschnig.myexpenses.viewmodel.data.PageAccount
 import org.totschnig.myexpenses.viewmodel.data.Trade
 import org.totschnig.myexpenses.viewmodel.data.TradeIntent
-import org.totschnig.myexpenses.viewmodel.data.TradeType
 import org.totschnig.myexpenses.viewmodel.data.Transaction2
-import org.totschnig.myexpenses.viewmodel.data.TransactionEditData
-import org.totschnig.myexpenses.viewmodel.data.TransferEditData
-import org.totschnig.myexpenses.viewmodel.data.mapper.TransactionMapper.mapTransaction
 import timber.log.Timber
 
 enum class AccountsScreenTab(@param:StringRes val resourceId: Int) {

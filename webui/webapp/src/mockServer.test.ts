@@ -144,6 +144,44 @@ describe('mock portfolio operations', () => {
   })
 })
 
+describe('mock validation', () => {
+  it('rejects an asset that is not a registered commodity', async () => {
+    const portfolio = await (
+      await api('/api/v1/portfolios', {
+        method: 'POST',
+        body: JSON.stringify({ label: 'Mock asset guard', type: '6', currency: 'EUR' }),
+      })
+    ).json()
+    const response = await api(`/api/v1/portfolios/${portfolio.id}/trades`, {
+      method: 'POST',
+      body: JSON.stringify({
+        type: 'BUY',
+        assetSymbol: 'FAKE',
+        quantity: '1',
+        price: '1',
+        fundingSource: 'PORTFOLIO',
+        date: '2026-11-21',
+      }),
+    })
+    expect(response.status).toBe(422)
+    expect(await response.json()).toMatchObject({ error: 'unknown_asset' })
+  })
+
+  it('rejects a portfolio whose currency is not fiat', async () => {
+    const response = await api('/api/v1/portfolios', {
+      method: 'POST',
+      body: JSON.stringify({
+        label: 'Mock BTC',
+        type: '6',
+        currency: 'BTC',
+        dynamicExchangeRates: true,
+      }),
+    })
+    expect(response.status).toBe(422)
+    expect(await response.json()).toMatchObject({ error: 'validation_failed' })
+  })
+})
+
 describe('mock category rules', () => {
   it('refuses to delete a category used only by a split part', async () => {
     const before = await (await api('/api/v1/transactions/13')).json()

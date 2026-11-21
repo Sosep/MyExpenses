@@ -1529,6 +1529,13 @@ createServer(async (request, response) => {
           message: 'label, type and currency are required',
         })
       }
+      const portfolioCurrency = currencies.find((entry) => entry.code === body.currency)
+      if (!portfolioCurrency || portfolioCurrency.commodityType !== 'FIAT') {
+        return sendJson(response, 422, {
+          error: 'validation_failed',
+          message: 'A portfolio needs a fiat currency',
+        })
+      }
       if (
         body.currency !== meta.homeCurrency &&
         !body.dynamicExchangeRates &&
@@ -1654,6 +1661,17 @@ createServer(async (request, response) => {
           : String(body.assetSymbol).toUpperCase()
       const assetFd = currencyFractionDigits(assetSymbol)
       const isCashMovement = body.type === 'DEPOSIT' || body.type === 'WITHDRAW'
+      if (
+        !isCashMovement &&
+        !currencies.some(
+          (entry) => entry.code === assetSymbol && entry.commodityType !== 'FIAT',
+        )
+      ) {
+        return sendJson(response, 422, {
+          error: 'unknown_asset',
+          message: 'The asset is not defined in the app',
+        })
+      }
       const isBuySell = body.type === 'BUY' || body.type === 'SELL'
       if (isCashMovement || (isBuySell && body.fundingSource === 'PORTFOLIO')) {
         ensureCashAccount(portfolioId)
@@ -1768,6 +1786,17 @@ createServer(async (request, response) => {
         const funding = body.fundingSource
         const isBuySell = nextType === 'BUY' || nextType === 'SELL'
         const isCashMovement = nextType === 'DEPOSIT' || nextType === 'WITHDRAW'
+        if (
+          !isCashMovement &&
+          !currencies.some(
+            (entry) => entry.code === nextAssetSymbol && entry.commodityType !== 'FIAT',
+          )
+        ) {
+          return sendJson(response, 422, {
+            error: 'unknown_asset',
+            message: 'The asset is not defined in the app',
+          })
+        }
         if (isCashMovement || (isBuySell && funding === 'PORTFOLIO')) {
           ensureCashAccount(portfolioId)
         }

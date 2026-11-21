@@ -280,6 +280,72 @@ class AndroidWebApiDataSource(
         }
     }
 
+    /**
+     * The commodity type the app has registered for a code, or null when the
+     * code is not a currency of the app. Fiat rows keep the column empty, which
+     * the app reads as `CommodityType.FIAT`.
+     */
+    private fun currencyCommodityType(code: String): String? =
+        repository.contentResolver.query(
+            TransactionProvider.CURRENCIES_URI,
+            arrayOf(KEY_COMMODITY_TYPE),
+            "$KEY_CODE = ?",
+            arrayOf(code),
+            null
+        )?.use { cursor ->
+            if (cursor.moveToFirst()) {
+                cursor.getStringOrNull(KEY_COMMODITY_TYPE) ?: "FIAT"
+            } else {
+                null
+            }
+        }
+
+    /**
+     * A portfolio is an account whose currency is money: the app only offers
+     * fiat currencies in its setup dialog, and a commodity would have no
+     * meaningful exchange rate.
+     */
+    private fun requirePortfolioCurrency(currency: String?): String {
+        val code = requireCurrency(currency)
+        val commodityType = currencyCommodityType(code) ?: throw ApiException(
+            HttpStatusCode.UnprocessableEntity,
+            "validation_failed",
+            "Unknown currency",
+            mapOf("currency" to "Unknown")
+        )
+        if (!commodityType.equals("FIAT", ignoreCase = true)) {
+            throw ApiException(
+                HttpStatusCode.UnprocessableEntity,
+                "validation_failed",
+                "A portfolio needs a fiat currency",
+                mapOf("currency" to "Must be fiat")
+            )
+        }
+        return code
+    }
+
+    /**
+     * A buy, sell or transfer holds a real commodity: the app only lists the
+     * non fiat currencies registered in Settings > Data, and an unknown code
+     * would create a sub-account without a currency row.
+     */
+    private fun requireTradableAsset(code: String) {
+        val commodityType = currencyCommodityType(code) ?: throw ApiException(
+            HttpStatusCode.UnprocessableEntity,
+            "unknown_asset",
+            "The asset is not defined in the app",
+            mapOf("assetSymbol" to "Add it in App data first")
+        )
+        if (commodityType.equals("FIAT", ignoreCase = true)) {
+            throw ApiException(
+                HttpStatusCode.UnprocessableEntity,
+                "unknown_asset",
+                "A fiat currency cannot be held as an asset",
+                mapOf("assetSymbol" to "Must be a security, crypto or commodity")
+            )
+        }
+    }
+
     /** Sub-accounts exist in the app; the web editor does not offer them yet. */
     private fun rejectAccountHierarchy(body: AccountWriteDto) {
         if (body.parentId != null) {
@@ -1689,7 +1755,7 @@ class AndroidWebApiDataSource(
 
     override suspend fun createPortfolio(body: PortfolioWriteDto): AccountDto {
         val label = requirePortfolioLabel(body.label)
-        val currency = requireCurrency(body.currency)
+        val currency = requirePortfolioCurrency(body.currency)
         val type = repository.loadAccountType(parseAccountTypeId(body.type))
         val dynamic = body.dynamicExchangeRates ?: false
         val homeCurrency = currencyContext.homeCurrencyUnit
@@ -1732,7 +1798,7 @@ class AndroidWebApiDataSource(
             )
         }
         val label = requirePortfolioLabel(body.label)
-        val currency = requireCurrency(body.currency)
+        val currency = requirePortfolioCurrency(body.currency)
         val dynamic = body.dynamicExchangeRates ?: false
         val values = ContentValues().apply {
             put(KEY_LABEL, label)
@@ -1946,6 +2012,7 @@ class AndroidWebApiDataSource(
                     mapOf("assetSymbol" to "Required")
                 )
         }
+        if (!isCashMovement) requireTradableAsset(assetCode)
         val assetUnit = currencyContext[assetCode]
         val quantityMajor = quantity.requireDecimal("quantity")
         if (quantityMajor <= BigDecimal.ZERO) {
@@ -2169,7 +2236,7 @@ class AndroidWebApiDataSource(
                     mapOf("parentId" to "Does not exist")
                 )
         }
-        val type = parentType ?: body.type?.takeIf { it in setOf(1, 2) } ?: 1
+        val type = parentType ?: body.type?.takeIf { it in setOf(1, 2, 3) } ?: 1
         val created = repository.saveCategory(
             org.totschnig.myexpenses.model2.Category(
                 parentId = parentId,
@@ -2211,7 +2278,9 @@ class AndroidWebApiDataSource(
                 parentId = existing.parentId,
                 label = label,
                 color = body.color ?: existing.color,
-                type = (body.type ?: existing.type ?: 1).toByte()
+                // Same range as the app: 1 expense, 2 income, 3 neutral. A
+                // sub-category takes its parent's type, as in `saveCategory`.
+                type = (body.type?.takeIf { it in 1..3 } ?: existing.type ?: 1).toByte()
             )
         )
         return repository.queryCategories().firstOrNull { it.id == id }

@@ -530,7 +530,7 @@ data class CategoryWriteDto(
     val parentId: Long? = null,
     val label: String? = null,
     val color: Int? = null,
-    /** 1 = expense, 2 = income (a child always takes its parent's type). */
+    /** 1 = expense, 2 = income, 3 = neutral (both flags); a child takes its parent's type. */
     val type: Int? = null
 )
 

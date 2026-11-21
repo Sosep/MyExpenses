@@ -5,6 +5,7 @@ import {
   createTrade,
   deleteTransaction,
   describeError,
+  getCurrencies,
   getTrade,
   updateTrade,
 } from '../api'
@@ -70,6 +71,7 @@ export function TradeEditor({
     () => (mode === 'edit' && id ? getTrade(account.id, id) : Promise.resolve(null)),
     ['trade-edit', account.id, id ?? 0],
   )
+  const currencies = useAsync(() => getCurrencies(), ['currencies'])
   const [type, setType] = useState<TradeType>('BUY')
   const [assetSymbol, setAssetSymbol] = useState('')
   const [quantity, setQuantity] = useState('')
@@ -145,7 +147,11 @@ export function TradeEditor({
     (candidate) => candidate.portfolioRole === 'CONTAINER' && candidate.id !== account.id,
   )
   const peerAccounts = fundingAccounts(account, accounts)
-  const assetOptions = ['AAPL', 'BTC', 'ETH', 'MSFT', 'VWCE', 'GOLD']
+  // Suggestions come from the app's own commodities, so a new operation does
+  // not invent a symbol the phone does not know.
+  const assetOptions = (currencies.data ?? [])
+    .filter((entry) => entry.commodityType !== 'FIAT')
+    .map((entry) => entry.code)
   const quantityValue = Number(quantity.replace(',', '.'))
   const priceValue = Number(price.replace(',', '.'))
   const principalMinor =

@@ -208,6 +208,18 @@ export function Trades({ account, onNewTrade, onEditTrade }: TradesProps) {
   const [selected, setSelected] = useState<Trade | null>(null)
   const closePanel = useHistoryPanel(selected !== null, () => setSelected(null))
 
+  // Saving or deleting from the editor leaves this panel mounted behind it:
+  // keep it on the reloaded row, and close it when the operation is gone.
+  useEffect(() => {
+    if (!selected || !page.data) return
+    const fresh = page.data.items.find((trade) => trade.id === selected.id)
+    if (!fresh) {
+      closePanel()
+    } else if (fresh !== selected) {
+      setSelected(fresh)
+    }
+  }, [page.data, selected, closePanel])
+
   return (
     <>
       <div className="page-head">

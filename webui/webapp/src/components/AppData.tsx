@@ -37,14 +37,17 @@ import {
 import {
   accountTypeNames,
   branchIds,
+  effectiveCategoryType,
   FLAG_EXPENSE,
   FLAG_INCOME,
+  FLAG_NEUTRAL,
   nonFiatCurrencies,
   remapCandidates,
 } from '../appDataUi'
-import { decimalInputValue, formatDate } from '../format'
+import { decimalInputValue, formatDate, maskedMoney } from '../format'
 import { useAsync } from '../hooks'
 import { useHistoryPanel } from '../navigation'
+import { useAmounts } from '../privacy'
 import { useFocusTrap } from '../useFocusTrap'
 import { SearchSelect } from './SearchSelect'
 import { IconX } from './Icons'
@@ -169,6 +172,13 @@ function ErrorText({ message }: { message: string | null }) {
   return message ? <p className="error-text">{message}</p> : null
 }
 
+/** The app stores expense and income as flags; neutral is both of them. */
+function categoryTypeLabel(type: number): string {
+  if (type === FLAG_INCOME) return t`Income`
+  if (type === FLAG_NEUTRAL) return t`Neutral`
+  return t`Expense`
+}
+
 // ---- categories ----------------------------------------------------------
 
 function CategoriesTab() {
@@ -238,11 +248,9 @@ function CategoriesTab() {
                     {category.label}
                   </td>
                   <td>
-                    {category.type === FLAG_INCOME
-                      ? t`Income`
-                      : category.type === FLAG_EXPENSE
-                        ? t`Expense`
-                        : t`Neutral`}
+                    {categoryTypeLabel(
+                      effectiveCategoryType(categories.data ?? [], category),
+                    )}
                   </td>
                   <td className="num">
                     <button
@@ -311,10 +319,13 @@ function CategoryEditor({
     category?.parentId ? String(category.parentId) : '',
   )
   const [type, setType] = useState(
-    category?.type === FLAG_INCOME ? String(FLAG_INCOME) : String(FLAG_EXPENSE),
+    String(category ? effectiveCategoryType(categories, category) : FLAG_EXPENSE),
   )
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  // A sub-category takes its parent's type; the app only writes it for main
+  // categories, so the field is not editable here either.
+  const typeInherited = category ? category.parentId !== null : parentId !== ''
   const descendants = category
     ? new Set(branchIds(categories, category.id))
     : new Set<number>()
@@ -336,7 +347,7 @@ function CategoryEditor({
       const payload = {
         label: label.trim(),
         parentId: parentId ? Number(parentId) : null,
-        type: Number(type),
+        ...(typeInherited ? {} : { type: Number(type) }),
       }
       if (category) await updateCategory(category.id, payload)
       else await createCategory(payload)
@@ -385,7 +396,13 @@ function CategoryEditor({
           value={parentId}
           options={parentOptions}
           disabled={category !== null}
-          onChange={setParentId}
+          onChange={(value) => {
+            setParentId(value)
+            // The child will inherit the parent type: show it instead of the
+            // default the user picked before choosing a parent.
+            const parent = categories.find((entry) => String(entry.id) === value)
+            if (parent) setType(String(effectiveCategoryType(categories, parent)))
+          }}
         />
       </label>
       <label className="field">
@@ -394,10 +411,12 @@ function CategoryEditor({
           className="input"
           aria-label={t`Category type`}
           value={type}
+          disabled={typeInherited}
           onChange={(event) => setType(event.target.value)}
         >
           <option value={FLAG_EXPENSE}>{t`Expense`}</option>
           <option value={FLAG_INCOME}>{t`Income`}</option>
+          <option value={FLAG_NEUTRAL}>{t`Neutral`}</option>
         </select>
       </label>
       <ErrorText message={error} />
@@ -1036,6 +1055,9 @@ function PricesTab() {
   const [editing, setEditing] = useState<Price | 'new' | null>(null)
   const [error, setError] = useState<string | null>(null)
   const closeEditor = useHistoryPanel(editing !== null, () => setEditing(null))
+  // A price is the value of a holding: the same figure the portfolio masks with
+  // the totals switch, so the manual history follows it too.
+  const amounts = useAmounts()
 
   async function remove(price: Price) {
     if (!window.confirm(t`Delete the price from ${formatDate(price.date)}?`)) return
@@ -1104,8 +1126,11 @@ function PricesTab() {
                 <tr key={`${price.date}-${price.source}`} data-price-date={price.date}>
                   <td>{formatDate(price.date, { day: '2-digit', month: 'short', year: 'numeric' })}</td>
                   <td className="num">
-                    {price.value.toLocaleString(undefined, { maximumFractionDigits: 8 })}{' '}
-                    {price.currency}
+                    {amounts.totals
+                      ? maskedMoney(price.currency)
+                      : `${price.value.toLocaleString(undefined, {
+                          maximumFractionDigits: 8,
+                        })} ${price.currency}`}
                   </td>
                   <td>{price.source}</td>
                   <td className="num">

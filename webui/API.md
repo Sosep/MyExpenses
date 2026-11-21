@@ -241,7 +241,8 @@ crea la app al registrar operaciones, no el editor web.
 ```
 
 - `label`, `type` y `currency` obligatorios (422); divisa o tipo desconocidos,
-  `422 validation_failed`.
+  `422 validation_failed`. La divisa debe ser **fiat** como en el diálogo de la
+  app: un activo (Security, Crypto, Commodity) es `422 validation_failed`.
 - `exchangeRate` es el tipo de cambio **real** (unidades mayores a mayores,
   como en el diálogo de la app); se almacena en bruto con
   `storeExchangeRate`. Obligatorio (> 0) si `dynamicExchangeRates` es false y
@@ -361,6 +362,10 @@ mismo dominio que la app (`TradeIntent` → `RepositoryTrades`). El borrado usa
   (`422`); entre carteras se permite cualquier divisa, como en la app.
 - Cantidad y precio > 0, comisión ≥ 0 (`422 validation_failed` con `fields`).
   El guardado actualiza además el histórico de precios con fuente `USER`.
+- `assetSymbol` debe ser una divisa **no fiat** registrada en la app (las de
+  Ajustes > Datos); un código desconocido o una divisa fiat es
+  `422 unknown_asset` con `fields.assetSymbol`. Depósitos y Retiradas no lo
+  necesitan (usan la divisa de la cartera).
 - `PUT` reemplaza la operación conservando sus piernas; id desconocido o de
   otra cartera, `404 trade_not_found`. No cambia de familia (`422
   unsupported_trade_change`): una Compra/Venta sigue siéndolo, un
@@ -583,7 +588,9 @@ la app; el API las expone tal cual.
 | POST | `/prices` | Alta/actualización manual (`commodity`, `date`, `value`) |
 | PUT/DELETE | `/prices/{commodity}/{date}` | Edición y borrado del precio manual |
 
-- **Categorías**: `label` obligatorio; un hijo toma el tipo de su padre; `PUT`
+- **Categorías**: `label` obligatorio; `type` es la máscara de la app
+  (1 gasto, 2 ingreso, 3 neutro); un hijo toma el tipo de su padre y en la
+  edición el servidor ignora el tipo de un hijo, como `saveCategory`; `PUT`
   no cambia de padre (`422 unsupported_move`). Una rama está en uso si la
   referencian transacciones (partes de split incluidas), plantillas o
   asignaciones de presupuesto; sin `remapTo` responde `409 category_in_use`.

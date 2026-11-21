@@ -3,6 +3,8 @@ import type { AccountTypeEntry, Category, CurrencyEntry, Method } from './types'
 import {
   accountTypeNames,
   branchIds,
+  effectiveCategoryType,
+  FLAG_NEUTRAL,
   nonFiatCurrencies,
   remapCandidates,
 } from './appDataUi'
@@ -28,6 +30,24 @@ describe('category branch', () => {
     expect(remapCandidates(categories, 1).map((candidate) => candidate.id)).toEqual([
       4, 5,
     ])
+  })
+})
+
+describe('inherited category type', () => {
+  const tree: Category[] = [
+    { id: 1, parentId: null, label: 'Neutral', level: 0, color: null, type: FLAG_NEUTRAL },
+    { id: 2, parentId: 1, label: 'Child', level: 1, color: null, type: 0 },
+    { id: 3, parentId: null, label: 'Income', level: 0, color: null, type: 2 },
+    { id: 4, parentId: 3, label: 'Salary', level: 1, color: null, type: 0 },
+  ]
+
+  it('keeps a neutral main category neutral instead of turning it into an expense', () => {
+    expect(effectiveCategoryType(tree, tree[0])).toBe(FLAG_NEUTRAL)
+  })
+
+  it('reads the parent type for a sub-category that stores none', () => {
+    expect(effectiveCategoryType(tree, tree[1])).toBe(FLAG_NEUTRAL)
+    expect(effectiveCategoryType(tree, tree[3])).toBe(2)
   })
 })
 

@@ -346,7 +346,8 @@ espacio para no quedar tapado.
 - Ámbito de cada botón:
   - **Totales**: patrimonio del héroe, KPIs del panel y de informes, cabeceras de
     periodo, "N groups · X total", desglose de informes, tooltip del gráfico y
-    resumen, tarjetas y detalle de presupuesto.
+    resumen, tarjetas y detalle de presupuesto, precio de los activos de la
+    cartera e histórico manual de precios.
   - **Transacciones**: importes de fila (lista, últimas del panel, drill-down),
     panel de detalle, partes y total de partes, y el chip de rango de importes.
 - Nunca se tapan los campos de un editor abierto (`TransactionEditor`,
@@ -660,14 +661,17 @@ November 2026                     All budgets
   Etiquetas · Divisas · Precios`) sobre una tarjeta por entidad; el botón de
   ajustes del rail la abre.
 - Categorías en árbol: sangría por `level`, tipo con texto (Gasto/Ingreso/
-  Neutro), `+ Nueva categoría` en la cabecera. El borrado pregunta antes. Si la
-  rama tiene movimientos, plantillas o asignaciones de presupuesto, el panel
-  «Borrar categoría» pide un destino del mismo tipo con `SearchSelect` antes de
-  mover y borrar; el `409` nunca deja la categoría a medias.
+  Neutro), `+ Nueva categoría` en la cabecera. El tipo es la máscara de la app;
+  una subcategoría lo hereda del padre y el selector se desactiva, como en el
+  diálogo de Android. El borrado pregunta antes. Si la rama tiene movimientos,
+  plantillas o asignaciones de presupuesto, el panel «Borrar categoría» pide un
+  destino del mismo tipo con `SearchSelect` antes de mover y borrar; el `409`
+  nunca deja la categoría a medias.
 - Divisas: tabla código/símbolo/dígitos/tipo; el alta pide el código y la
   edición no (es la clave). Precios: selector de activo (solo no fiat), tabla
   fecha/valor/fuente y panel fecha+precio; guardar reemplaza el precio manual
-  de esa fecha.
+  de esa fecha. La columna de valor responde a la privacidad `totals` (es el
+  mismo dato que la valoración de la cartera); el panel abierto queda legible.
 - En móvil las pestañas hacen wrap y ninguna tabla provoca scroll horizontal:
   en Divisas se ocultan símbolo y dígitos para que las acciones queden dentro
   de la tarjeta; en el resto se conservan las columnas con padding compacto. Los

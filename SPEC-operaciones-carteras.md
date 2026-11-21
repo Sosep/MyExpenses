@@ -64,6 +64,9 @@ Cuerpo (`TradeWriteDto`):
   (`CONTAINER`) y distinta; la divisa/valoración viaja en `quantity` y
   `price`.
 - `feeMinor` ≥ 0 con `feeCategoryId` opcional (categoría de gasto).
+- `assetSymbol` debe existir en las divisas de la app y no ser fiat (Security,
+  Crypto o Commodity); un código desconocido es `422 unknown_asset` con
+  `fields.assetSymbol`. El editor sugiere los activos registrados.
 - Cantidad y precio > 0 (`422 validation_failed` con `fields`).
 - `PUT` reemplaza la operación (misma lógica que la app: conserva uuids y
   piernas); id desconocido o de otra cartera → `404 trade_not_found`. La

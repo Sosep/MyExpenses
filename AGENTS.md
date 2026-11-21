@@ -45,8 +45,10 @@ Read this before changing code. Detailed sources:
   operation deltas in memory and creates the cash sub-account on the first
   operation, like the app. Editing an operation keeps its family (buy/sell,
   deposit/withdraw, transfer) and its funding source, like the Android editor;
-  bank funding is limited to accounts in the portfolio currency. The mock
-  honours `?portfolioLimit=1` with `409 portfolio_limit_reached`.
+  bank funding is limited to accounts in the portfolio currency, the portfolio
+  needs a fiat currency and an operation a registered non-fiat asset
+  (`422 unknown_asset`). The mock honours `?portfolioLimit=1` with
+  `409 portfolio_limit_reached`.
 - App data: `?view=datos` mirrors Android's Settings > Data with tabs for
   categories (tree, delete with remap), payment methods, tags, currencies
   (fiat and custom assets) and the manual price history. The writes go through
@@ -57,7 +59,8 @@ Read this before changing code. Detailed sources:
   remap delegates to the app's `mergeCategories` (transactions, split parts,
   templates, change log, budget allocations) and updates the saved
   account/budget filters. Destructive deletes ask for confirmation. The rail's
-  settings button opens it.
+  settings button opens it. A category's type is the app's mask (1 expense,
+  2 income, 3 neutral) and a child inherits its parent's.
 - Budget filters: `criteria` (categories, payees, methods, tags, states) is read
   and written in the app preference `budgetFilter_<id>`, so a budget created or
   edited from the web is scoped exactly like one from the phone. A filter the web
@@ -81,12 +84,13 @@ Read this before changing code. Detailed sources:
   the topbar rewrites it with `replaceState` so the two never disagree.
 - Search: `q` folds case and diacritics on both sides (`Cafetería` = `cafeteria`).
 - Privacy: two topbar switches mask money as `€ ••••` (no digits in the DOM) —
-  `totals` for net worth, KPIs, report and budget aggregates and the chart
-  tooltip; `transactions` for row amounts, the detail panel and its parts, period
-  sums, the amount filter chip, report drill-down and budget cards. Each state
-  lives in `localStorage`, never goes to the server, and open editors stay
-  readable. Amounts render through `Money`/`useMoney` in `webui/webapp/src/privacy.tsx`;
-  `formatMoney` and `maskedMoney` are in `format.ts`.
+  `totals` for net worth, KPIs, report and budget aggregates, the portfolio
+  price and the manual price history, and the chart tooltip; `transactions` for
+  row amounts, the detail panel and its parts, period sums, the amount filter
+  chip, report drill-down and budget cards. Each state lives in `localStorage`,
+  never goes to the server, and open editors stay readable. Amounts render
+  through `Money`/`useMoney` in `webui/webapp/src/privacy.tsx`; `formatMoney`
+  and `maskedMoney` are in `format.ts`.
 - Remembered selections: theme, language, account, grouping, the privacy
   switches and the screen choices (report month/range/breakdown/type/all
   accounts, budget month, transaction type) live in `localStorage`, so a reload

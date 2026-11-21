@@ -87,6 +87,8 @@ export function describeError(error: unknown, fallback?: string): string {
         return t`That currency code is already defined.`
       case 'category_in_use':
         return t`The category is in use; choose where to move its data.`
+      case 'unknown_asset':
+        return t`The asset is not registered on the phone. Add it in App data first.`
       case 'http_error':
         return error.status >= 500
           ? t`The phone could not complete the request.`

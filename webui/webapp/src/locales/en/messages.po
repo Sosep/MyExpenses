@@ -1816,6 +1816,10 @@ msgid "That currency code is already defined."
 msgstr "That currency code is already defined."
 
 #: src/api.ts
+msgid "The asset is not registered on the phone. Add it in App data first."
+msgstr "The asset is not registered on the phone. Add it in App data first."
+
+#: src/api.ts
 #~ msgid "The category has movements; choose where to move them."
 #~ msgstr "The category has movements; choose where to move them."
 
