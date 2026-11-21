@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { t } from '@lingui/core/macro'
 import {
@@ -10,7 +10,7 @@ import {
   viewUrl,
 } from './navigation'
 import type { Locale } from './i18n'
-import { activateLocale, initialLocale, LOCALES } from './i18n'
+import { activateLocale, i18n, initialLocale, LOCALES } from './i18n'
 import type { Account, Meta, UiPreferences } from './types'
 import { topLevelAccounts } from './accountUi'
 import {
@@ -80,7 +80,18 @@ export default function App({ initialLocale: initial }: { initialLocale: Locale 
   const [tradeEditor, setTradeEditor] = useState<TradeEditorState | null>(null)
   const [accountEditor, setAccountEditor] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
-  const [locale, setLocale] = useState<Locale>(() => initial ?? initialLocale())
+  const [locale, setLocaleState] = useState<Locale>(() => {
+    // Activate before the first render: an effect runs after children have
+    // already produced English strings, which left the rail in English while
+    // Spanish data blocks re-rendered later.
+    const value = initial ?? initialLocale()
+    i18n.activate(value)
+    return value
+  })
+  const setLocale = useCallback((next: Locale) => {
+    i18n.activate(next)
+    setLocaleState(next)
+  }, [])
   const wasReady = useRef(false)
   // A newly created account may not be in the list until the refetch lands;
   // the auto-selection effect must not bounce back to the first account.

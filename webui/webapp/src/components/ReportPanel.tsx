@@ -1,5 +1,5 @@
 import { useRef } from 'react'
-import { t } from '@lingui/core/macro'
+import { plural, t } from '@lingui/core/macro'
 import type { BreakdownItem, Transaction } from '../types'
 import { describeError, getReportTransactions } from '../api'
 import { useFocusTrap } from '../useFocusTrap'
@@ -59,7 +59,10 @@ export function ReportPanel({
             <div className="panel-kicker">{t`Drill-down`}</div>
             <h2>{item.label}</h2>
             <p className="card-note">
-              {t`${page.data?.total ?? item.count} transactions`}
+              {t`${plural(page.data?.total ?? item.count, {
+                one: '# transaction',
+                other: '# transactions',
+              })}`}
             </p>
           </div>
           <button type="button" className="icon-btn" onClick={onClose} aria-label={t`Close details`}>

@@ -1,5 +1,10 @@
 import { pad2, todayIso } from './format'
-import type { ReportBalanceRange, ReportPeriod } from './preferences'
+import type {
+  ReportBalanceRange,
+  ReportCompare,
+  ReportPeriod,
+  ReportTab,
+} from './preferences'
 
 export interface DateRange {
   from: string
@@ -8,6 +13,141 @@ export interface DateRange {
 
 function iso(date: Date): string {
   return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`
+}
+
+/** A real calendar date in the API's ISO shape; `2026-02-31` is not valid. */
+export function isValidDate(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
+  const [year, month, day] = value.split('-').map(Number)
+  const date = new Date(year, month - 1, day)
+  return (
+    date.getFullYear() === year &&
+    date.getMonth() === month - 1 &&
+    date.getDate() === day
+  )
+}
+
+export function isValidRange(range: DateRange): boolean {
+  return isValidDate(range.from) && isValidDate(range.to)
+}
+
+/**
+ * The last usable custom range. A native date input can briefly emit an empty
+ * value while the user edits it; the report must keep the previous range
+ * instead of sending an empty `from`/`to` that the API rejects (or that a
+ * fixture widens to the whole database).
+ */
+export function safeRange(range: DateRange, fallback: DateRange): DateRange {
+  if (!isValidRange(range)) return fallback
+  return range.from <= range.to ? range : { from: range.to, to: range.from }
+}
+
+export interface ReportUrlState {
+  tab: ReportTab | null
+  period: ReportPeriod | null
+  compare: ReportCompare | null
+  custom: DateRange | null
+  balanceRange: ReportBalanceRange | null
+  balanceCustom: DateRange | null
+  balanceMode: 'total' | 'perAccount' | null
+  accountIds: number[]
+  categoryIds: number[]
+  /** The topbar account, used by the Cuentas deep link. */
+  accountId: number | null
+}
+
+const URL_TABS: readonly ReportTab[] = [
+  'summary',
+  'expenses',
+  'income',
+  'accounts',
+  'investments',
+  'budgets',
+]
+const REPORT_PERIODS: readonly ReportPeriod[] = [
+  'week',
+  'month',
+  'quarter',
+  'year',
+  'lastYear',
+  'custom',
+]
+const REPORT_COMPARES: readonly ReportCompare[] = ['none', 'previous']
+const REPORT_BALANCE_RANGES: readonly ReportBalanceRange[] = [
+  'm1',
+  'm3',
+  'm6',
+  'y1',
+  'y2',
+  'y5',
+  'all',
+  'custom',
+]
+
+function oneOf<T extends string>(
+  value: string | null,
+  allowed: readonly T[],
+): T | null {
+  return value !== null && (allowed as readonly string[]).includes(value)
+    ? (value as T)
+    : null
+}
+
+function ids(search: string, name: string): number[] {
+  return [
+    ...new Set(
+      new URLSearchParams(search)
+        .getAll(name)
+        .flatMap((value) => value.split(','))
+        .map(Number)
+        .filter((value) => Number.isInteger(value) && value > 0),
+    ),
+  ]
+}
+
+function dateParam(search: string, name: string): string | null {
+  const value = new URLSearchParams(search).get(name)
+  return value !== null && isValidDate(value) ? value : null
+}
+
+function customParam(search: string): DateRange | null {
+  const from = dateParam(search, 'from')
+  const to = dateParam(search, 'to')
+  return from !== null && to !== null ? { from, to } : null
+}
+
+function balanceCustomParam(search: string): DateRange | null {
+  const from = dateParam(search, 'balanceFrom')
+  const to = dateParam(search, 'balanceTo')
+  return from !== null && to !== null ? { from, to } : null
+}
+
+/**
+ * Reads the report deep link. Only valid values are returned, so an invalid
+ * URL falls back to the remembered preferences instead of feeding a stale
+ * option to the screen. Custom dates must be complete and real dates.
+ */
+export function parseReportUrl(search: string): ReportUrlState {
+  const params = new URLSearchParams(search)
+  const mode = params.get('balanceMode')
+  const accountId = Number(params.get('accountId'))
+  return {
+    tab: oneOf(params.get('tab'), URL_TABS),
+    period: oneOf(params.get('period'), REPORT_PERIODS),
+    compare: oneOf(params.get('compare'), REPORT_COMPARES),
+    custom: customParam(search),
+    balanceRange: oneOf(params.get('balanceRange'), REPORT_BALANCE_RANGES),
+    balanceCustom: balanceCustomParam(search),
+    balanceMode: mode === 'perAccount' || mode === 'total' ? mode : null,
+    accountIds: ids(search, 'reportAccount'),
+    categoryIds: ids(search, 'reportCategory'),
+    accountId:
+      params.get('accountId') !== null &&
+      Number.isInteger(accountId) &&
+      accountId > 0
+        ? accountId
+        : null,
+  }
 }
 
 function startOfWeek(now: Date): Date {

@@ -27,9 +27,10 @@ presupuestos e informes.
   comparten divisa y periodo, sobregiro explícito y días restantes. Alta,
   edición y borrado desde un panel lateral, con asignación por categoría para el
   periodo actual, total específico del periodo, rollover del importe no gastado y duplicación.
-- Informes: KPIs y desglose por categoría, beneficiario, etiqueta o método, con
-  presets de periodo, tipo gasto/ingreso/ambos, todas las cuentas y drill-down al
-  detalle de cada grupo.
+- Informes: seis vistas (Resumen, Gastos, Ingresos, Cuentas, Inversiones y
+  Presupuestos), histórico de saldos total o por cuenta, evolución, desglose por
+  categoría, inversiones valoradas al último precio manual y seguimiento de
+  presupuestos; drill-down al detalle de cada grupo.
 - PWA: manifiesto, iconos y service worker. Cachea el shell de `/app` y trata el
   API como solo red; avisa sin conexión y cuando hay una versión nueva.
 - i18n: inglés y español con Lingui (`.po`). Selector de idioma en la barra
@@ -115,6 +116,12 @@ Como la API real, el mock devuelve `second` con **base 0** en `reports/grouped`,
 `budgets/{id}` y su historial: noviembre es `10`. La SPA guarda el mes que
 muestra como `YYYY-MM` (1–12) y lo convierte solo al llamar a la API.
 
+El mock reparte las devoluciones como la API: una devolución (positivo en una
+categoría de gasto) netea su fila en Gastos y no aparece en Ingresos; las
+divididas suman sus partes y `count` cuenta la operación. La serie de saldos se
+ancla al `currentBalanceMinor` de la cuenta cuando el rango termina hoy, y
+`?noHistory=1` acorta también la serie total para probar el estado vacío.
+
 ### Datos de volumen
 
 `MOCK_QA_SEED=1 npm run mock` sustituye los fixtures por seis meses de
@@ -168,6 +175,8 @@ El detalle de una transacción abre una entrada de historial: atrás lo cierra.
 | `?view=reports` | Informes: abre Resumen |
 | `?view=reports&tab=expenses` / `income` / `accounts` / `investments` / `budgets` | Abre esa pestaña |
 | `?view=reports&period=week\|month\|quarter\|year\|lastYear\|custom` | Periodo global; con `custom` usa `from`/`to` |
+| `?view=reports&tab=accounts&accountId=2` | Abre Cuentas en modo Por cuenta con esa cuenta |
+| `?view=reports&tab=expenses&reportCategory=2` | Filtra Gastos por esa categoría (también `income` en Ingresos) |
 | `?view=reports&compare=previous` | Compara con el periodo anterior |
 | `?view=reports&balanceRange=y1&balanceMode=perAccount` | Histórico de saldos por cuenta |
 | `?view=reports&mixedCurrency=1` | El histórico devuelve dos divisas sin convertirlas |

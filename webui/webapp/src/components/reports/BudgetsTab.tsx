@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { t } from '@lingui/core/macro'
+import { plural, t } from '@lingui/core/macro'
 import type { Account } from '../../types'
 import { describeError } from '../../api'
 import { formatPercent } from '../../format'
@@ -47,7 +47,7 @@ export function BudgetsTab({
         </div>
       ) : null}
 
-      <div className="report-filters">
+      <div className="report-filters budget-filters">
         <label className="field compact-field">
           <span>{t`Frequency`}</span>
           <select value={grouping} onChange={(event) => setGrouping(event.target.value)}>
@@ -143,8 +143,14 @@ export function BudgetsTab({
           }
           foot={
             over.length > 0
-              ? t`${over.length} budgets over the limit`
-              : t`${warn.length} close to the limit`
+              ? t`${plural(over.length, {
+                  one: '# budget over the limit',
+                  other: '# budgets over the limit',
+                })}`
+              : t`${plural(warn.length, {
+                  one: '# close to the limit',
+                  other: '# close to the limit',
+                })}`
           }
         />
       </div>

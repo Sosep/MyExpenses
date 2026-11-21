@@ -2,8 +2,12 @@ import { describe, expect, it } from 'vitest'
 import {
   balanceRange,
   evolutionGrouping,
+  isValidDate,
+  isValidRange,
+  parseReportUrl,
   previousRange,
   reportRange,
+  safeRange,
   sumLastBalances,
 } from './reportUi'
 
@@ -62,6 +66,57 @@ describe('report ranges', () => {
     expect(evolutionGrouping('2026-07-01', '2026-11-30')).toBe('WEEK')
     expect(evolutionGrouping('2026-01-01', '2026-11-30')).toBe('MONTH')
     expect(evolutionGrouping('2020-01-01', '2026-11-30')).toBe('YEAR')
+  })
+})
+
+describe('custom dates', () => {
+  it('only accepts real ISO dates', () => {
+    expect(isValidDate('2026-11-21')).toBe(true)
+    expect(isValidDate('2026-02-31')).toBe(false)
+    expect(isValidDate('')).toBe(false)
+    expect(isValidDate('21-11-2026')).toBe(false)
+  })
+
+  it('keeps the last usable range while a date input is empty', () => {
+    const fallback = { from: '2026-11-01', to: '2026-11-30' }
+    expect(safeRange({ from: '', to: '2026-11-21' }, fallback)).toEqual(fallback)
+    expect(safeRange({ from: '2026-11-30', to: '2026-11-01' }, fallback)).toEqual({
+      from: '2026-11-01',
+      to: '2026-11-30',
+    })
+    expect(isValidRange({ from: '2026-11-01', to: '2026-11-21' })).toBe(true)
+  })
+
+  it('reads the report deep link and ignores invalid values', () => {
+    expect(
+      parseReportUrl(
+        '?tab=expenses&period=custom&from=2026-01-01&to=2026-01-31' +
+          '&compare=previous&balanceRange=custom&balanceFrom=2026-02-01' +
+          '&balanceTo=2026-02-28&balanceMode=perAccount&accountId=2' +
+          '&reportAccount=1,2&reportCategory=5',
+      ),
+    ).toMatchObject({
+      tab: 'expenses',
+      period: 'custom',
+      compare: 'previous',
+      custom: { from: '2026-01-01', to: '2026-01-31' },
+      balanceRange: 'custom',
+      balanceCustom: { from: '2026-02-01', to: '2026-02-28' },
+      balanceMode: 'perAccount',
+      accountId: 2,
+      accountIds: [1, 2],
+      categoryIds: [5],
+    })
+    expect(
+      parseReportUrl(
+        '?tab=unknown&period=custom&from=2026-02-31&to=2026-01-31&balanceMode=bad',
+      ),
+    ).toMatchObject({
+      tab: null,
+      period: 'custom',
+      custom: null,
+      balanceMode: null,
+    })
   })
 })
 

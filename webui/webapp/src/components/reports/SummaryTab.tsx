@@ -183,7 +183,7 @@ export function SummaryTab({
             savingsRate === null
               ? t`Not available without income`
               : compare && previousSavings !== null && previousSavings !== 0
-                ? t`${formatPercent(savingsRate - previousSavings)} points vs the previous period`
+                ? t`${formatPercent(savingsRate - previousSavings)} difference vs the previous period`
                 : t`Balance divided by income`
           }
         />

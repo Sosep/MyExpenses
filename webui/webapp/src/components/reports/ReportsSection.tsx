@@ -16,8 +16,11 @@ import type {
 import {
   balanceRange as balanceRangeFor,
   evolutionGrouping,
+  isValidRange,
+  parseReportUrl,
   previousRange,
   reportRange,
+  safeRange,
 } from '../../reportUi'
 import { AccountsTab } from './AccountsTab'
 import type { BalanceMode } from './BalanceCard'
@@ -34,25 +37,7 @@ export const REPORT_TAB_VALUES: readonly ReportTab[] = [
   'investments',
   'budgets',
 ]
-const PERIOD_VALUES: readonly ReportPeriod[] = [
-  'week',
-  'month',
-  'quarter',
-  'year',
-  'lastYear',
-  'custom',
-]
-const COMPARE_VALUES: readonly ReportCompare[] = ['none', 'previous']
-const BALANCE_RANGES: readonly ReportBalanceRange[] = [
-  'm1',
-  'm3',
-  'm6',
-  'y1',
-  'y2',
-  'y5',
-  'all',
-  'custom',
-]
+type FlowTab = 'expenses' | 'income'
 
 function reportTabLabel(tab: ReportTab): string {
   switch (tab) {
@@ -93,18 +78,6 @@ function startOfMonth(): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
 }
 
-function oneOf<T extends string>(value: string | null, allowed: readonly T[]): T | null {
-  return value !== null && (allowed as readonly string[]).includes(value) ? (value as T) : null
-}
-
-function urlIds(search: string, name: string): number[] {
-  return new URLSearchParams(search)
-    .getAll(name)
-    .flatMap((value) => value.split(','))
-    .map(Number)
-    .filter((value) => Number.isInteger(value) && value > 0)
-}
-
 interface ReportsSectionProps {
   accounts: Account[]
   homeCurrency: string
@@ -118,40 +91,66 @@ export function ReportsSection({
 }: ReportsSectionProps) {
   const [today] = useState(() => todayIso())
   const [initial] = useState(() => readReportPreferences(startOfMonth(), today))
-  const [search] = useState(() => window.location.search)
-  const [tab, setTab] = useState<ReportTab>(
-    () => oneOf(new URLSearchParams(search).get('tab'), REPORT_TAB_VALUES) ?? initial.tab,
-  )
-  const [period, setPeriod] = useState<ReportPeriod>(
-    () => oneOf(new URLSearchParams(search).get('period'), PERIOD_VALUES) ?? initial.period,
-  )
-  const [compare, setCompare] = useState<ReportCompare>(
-    () => oneOf(new URLSearchParams(search).get('compare'), COMPARE_VALUES) ?? initial.compare,
-  )
-  const [custom, setCustom] = useState({ from: initial.customFrom, to: initial.customTo })
-  const [balanceRange, setBalanceRange] = useState<ReportBalanceRange>(
-    () =>
-      oneOf(new URLSearchParams(search).get('balanceRange'), BALANCE_RANGES) ??
-      initial.balanceRange,
-  )
-  const [balanceCustom, setBalanceCustom] = useState({
-    from: initial.balanceFrom,
-    to: initial.balanceTo,
-  })
-  const [balanceMode, setBalanceMode] = useState<BalanceMode>(
-    () => (new URLSearchParams(search).get('balanceMode') === 'perAccount' ? 'perAccount' : 'total'),
-  )
-  const [categoryIds, setCategoryIds] = useState<number[]>(() =>
-    urlIds(search, 'reportCategory'),
-  )
-
+  const [url] = useState(() => parseReportUrl(window.location.search))
   const reportAccounts = accounts.filter(
     (account) =>
       account.portfolioRole === 'NONE' && !account.excludeFromTotals && !account.sealed,
   )
+  const focusedAccountId =
+    url.accountId !== null &&
+    reportAccounts.some((account) => account.id === url.accountId)
+      ? url.accountId
+      : null
+  const [tab, setTab] = useState<ReportTab>(() => url.tab ?? initial.tab)
+  const [period, setPeriod] = useState<ReportPeriod>(
+    () => url.period ?? initial.period,
+  )
+  const [compare, setCompare] = useState<ReportCompare>(
+    () => url.compare ?? initial.compare,
+  )
+  const [custom, setCustom] = useState(() => url.custom ?? {
+    from: initial.customFrom,
+    to: initial.customTo,
+  })
+  // `custom` can be temporarily empty while a native date input is edited; the
+  // report always queries the last complete range so it never sends blank
+  // dates or divides by NaN.
+  const [lastValidCustom, setLastValidCustom] = useState(() =>
+    safeRange(url.custom ?? { from: initial.customFrom, to: initial.customTo }, {
+      from: startOfMonth(),
+      to: today,
+    }),
+  )
+  const [balanceRange, setBalanceRange] = useState<ReportBalanceRange>(
+    () => url.balanceRange ?? initial.balanceRange,
+  )
+  const [balanceCustom, setBalanceCustom] = useState(() => url.balanceCustom ?? {
+    from: initial.balanceFrom,
+    to: initial.balanceTo,
+  })
+  const [lastValidBalanceCustom, setLastValidBalanceCustom] = useState(() =>
+    safeRange(
+      url.balanceCustom ?? { from: initial.balanceFrom, to: initial.balanceTo },
+      { from: startOfMonth(), to: today },
+    ),
+  )
+  const [balanceMode, setBalanceMode] = useState<BalanceMode>(() => {
+    if (tab === 'accounts' && focusedAccountId !== null) return 'perAccount'
+    return url.balanceMode ?? 'total'
+  })
+  // Filters belong to the view: opening Gastos from the summary must not leave
+  // an expense category in Ingresos.
+  const [flowCategories, setFlowCategories] = useState<Record<FlowTab, number[]>>(
+    () => ({
+      expenses: tab === 'expenses' ? url.categoryIds : [],
+      income: tab === 'income' ? url.categoryIds : [],
+    }),
+  )
+
   const [selectedIds, setSelectedIds] = useState<number[]>(() => {
     const known = new Set(reportAccounts.map((account) => account.id))
-    const fromUrl = urlIds(search, 'reportAccount').filter((id) => known.has(id))
+    if (tab === 'accounts' && focusedAccountId !== null) return [focusedAccountId]
+    const fromUrl = url.accountIds.filter((id) => known.has(id))
     const stored = initial.accountIds.filter((id) => known.has(id))
     if (fromUrl.length > 0) return fromUrl
     // An empty stored selection is a real choice; only the very first visit
@@ -160,24 +159,58 @@ export function ReportsSection({
     return hasStored ? stored : reportAccounts.map((account) => account.id)
   })
 
-  const range = reportRange(period, custom)
+  const customRange = safeRange(custom, lastValidCustom)
+  const range = reportRange(period, customRange)
   const previous = previousRange(range.from, range.to)
-  const balanceCustomRange = balanceRangeFor(balanceRange, balanceCustom)
+  const balanceCustomValue = safeRange(balanceCustom, lastValidBalanceCustom)
+  const balanceCustomRange = balanceRangeFor(balanceRange, balanceCustomValue)
   const grouping = evolutionGrouping(range.from, range.to)
+  const activeCategoryIds =
+    tab === 'expenses'
+      ? flowCategories.expenses
+      : tab === 'income'
+        ? flowCategories.income
+        : []
+
+  function updateCustom(next: { from: string; to: string }) {
+    setCustom(next)
+    if (isValidRange(next)) setLastValidCustom(safeRange(next, lastValidCustom))
+  }
+
+  function updateBalanceCustom(next: { from: string; to: string }) {
+    setBalanceCustom(next)
+    if (isValidRange(next)) {
+      setLastValidBalanceCustom(safeRange(next, lastValidBalanceCustom))
+    }
+  }
+
+  function updateFlowCategories(type: FlowTab, ids: number[]) {
+    setFlowCategories((current) => ({ ...current, [type]: ids }))
+  }
 
   useEffect(() => {
     rememberReportPreferences({
       tab,
       period,
-      customFrom: custom.from,
-      customTo: custom.to,
+      customFrom: customRange.from,
+      customTo: customRange.to,
       compare,
       balanceRange,
-      balanceFrom: balanceCustom.from,
-      balanceTo: balanceCustom.to,
+      balanceFrom: balanceCustomValue.from,
+      balanceTo: balanceCustomValue.to,
       accountIds: selectedIds,
     })
-  }, [tab, period, custom, compare, balanceRange, balanceCustom, selectedIds])
+  }, [
+    tab,
+    period,
+    customRange.from,
+    customRange.to,
+    compare,
+    balanceRange,
+    balanceCustomValue.from,
+    balanceCustomValue.to,
+    selectedIds,
+  ])
 
   // The URL is the deep link QA and the browser history use. Filter changes
   // replace the current entry: only a view change is a navigation step.
@@ -191,15 +224,15 @@ export function ReportsSection({
     // Only a custom range needs the dates; a preset would otherwise leak into
     // the transaction list's own `from`/`to`.
     if (period === 'custom') {
-      params.set('from', custom.from)
-      params.set('to', custom.to)
+      params.set('from', customRange.from)
+      params.set('to', customRange.to)
     } else {
       params.delete('from')
       params.delete('to')
     }
     if (balanceRange === 'custom') {
-      params.set('balanceFrom', balanceCustom.from)
-      params.set('balanceTo', balanceCustom.to)
+      params.set('balanceFrom', balanceCustomValue.from)
+      params.set('balanceTo', balanceCustomValue.to)
     } else {
       params.delete('balanceFrom')
       params.delete('balanceTo')
@@ -207,7 +240,7 @@ export function ReportsSection({
     params.delete('reportAccount')
     selectedIds.forEach((id) => params.append('reportAccount', String(id)))
     params.delete('reportCategory')
-    categoryIds.forEach((id) => params.append('reportCategory', String(id)))
+    activeCategoryIds.forEach((id) => params.append('reportCategory', String(id)))
     window.history.replaceState(
       window.history.state,
       '',
@@ -219,82 +252,91 @@ export function ReportsSection({
     compare,
     balanceRange,
     balanceMode,
-    custom,
-    balanceCustom,
+    customRange.from,
+    customRange.to,
+    balanceCustomValue.from,
+    balanceCustomValue.to,
     selectedIds,
-    categoryIds,
+    activeCategoryIds.join(','),
   ])
 
   function openTab(next: ReportTab, categoryId?: number) {
-    if (categoryId !== undefined) setCategoryIds([categoryId])
+    if (categoryId !== undefined && (next === 'expenses' || next === 'income')) {
+      updateFlowCategories(next, [categoryId])
+    }
     setTab(next)
     window.scrollTo?.({ top: 0 })
   }
 
-  const accountLabel =
-    selectedIds.length === 0
-      ? t`No accounts selected`
-      : selectedIds.length === 1
-        ? (accounts.find((account) => account.id === selectedIds[0])?.label ?? t`1 account`)
-        : t`${selectedIds.length} accounts`
+  // Cuentas, Inversiones and Presupuestos have their own range/filters; the
+  // shared period would be inert there and must not be presented.
+  const showPeriod = tab === 'summary' || tab === 'expenses' || tab === 'income'
 
   return (
     <div className="reports-section">
       <div className="page-head">
         <div>
           <h1>{t`Reports`}</h1>
-          <p>
-            {t`${periodLabel(period)} · ${accountLabel}`}
-            {period === 'custom' ? ` · ${range.from} – ${range.to}` : ''}
-          </p>
-        </div>
-        <div className="page-actions report-global-filters">
-          <div className="segmented period-segmented" role="group" aria-label={t`Period`}>
-            {(['week', 'month', 'quarter', 'year', 'lastYear', 'custom'] as const).map(
-              (option) => (
-                <button
-                  key={option}
-                  type="button"
-                  className={period === option ? 'active' : ''}
-                  aria-pressed={period === option}
-                  onClick={() => setPeriod(option)}
-                >
-                  {periodLabel(option)}
-                </button>
-              ),
-            )}
-          </div>
-          <label className="field compact-field">
-            <span>{t`Compare with`}</span>
-            <select
-              value={compare}
-              onChange={(event) => setCompare(event.target.value as ReportCompare)}
-            >
-              <option value="none">{t`Nothing`}</option>
-              <option value="previous">{t`Previous period`}</option>
-            </select>
-          </label>
-          {period === 'custom' ? (
-            <>
-              <label className="field compact-field">
-                <span>{t`From`}</span>
-                <input
-                  type="date"
-                  value={custom.from}
-                  onChange={(event) => setCustom({ ...custom, from: event.target.value })}
-                />
-              </label>
-              <label className="field compact-field">
-                <span>{t`To`}</span>
-                <input
-                  type="date"
-                  value={custom.to}
-                  onChange={(event) => setCustom({ ...custom, to: event.target.value })}
-                />
-              </label>
-            </>
+          {showPeriod ? (
+            <p>
+              {periodLabel(period)}
+              {period === 'custom' ? ` · ${range.from} – ${range.to}` : ''}
+            </p>
           ) : null}
         </div>
+        {showPeriod ? (
+          <div className="page-actions report-global-filters">
+            <div className="segmented period-segmented" role="group" aria-label={t`Period`}>
+              {(['week', 'month', 'quarter', 'year', 'lastYear', 'custom'] as const).map(
+                (option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    className={period === option ? 'active' : ''}
+                    aria-pressed={period === option}
+                    onClick={() => setPeriod(option)}
+                  >
+                    {periodLabel(option)}
+                  </button>
+                ),
+              )}
+            </div>
+            <label className="field compact-field">
+              <span>{t`Compare with`}</span>
+              <select
+                value={compare}
+                onChange={(event) => setCompare(event.target.value as ReportCompare)}
+              >
+                <option value="none">{t`Nothing`}</option>
+                <option value="previous">{t`Previous period`}</option>
+              </select>
+            </label>
+            {period === 'custom' ? (
+              <>
+                <label className="field compact-field">
+                  <span>{t`From`}</span>
+                  <input
+                    type="date"
+                    value={custom.from}
+                    onChange={(event) =>
+                      updateCustom({ ...custom, from: event.target.value })
+                    }
+                  />
+                </label>
+                <label className="field compact-field">
+                  <span>{t`To`}</span>
+                  <input
+                    type="date"
+                    value={custom.to}
+                    onChange={(event) =>
+                      updateCustom({ ...custom, to: event.target.value })
+                    }
+                  />
+                </label>
+              </>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
       <nav className="report-tabs" aria-label={t`Reports sections`}>
@@ -324,7 +366,7 @@ export function ReportsSection({
           balanceRange={balanceRange}
           onBalanceRange={setBalanceRange}
           balanceCustom={balanceCustom}
-          onBalanceCustom={setBalanceCustom}
+          onBalanceCustom={updateBalanceCustom}
           balanceRangeValue={balanceCustomRange}
           balanceMode={balanceMode}
           onBalanceMode={setBalanceMode}
@@ -333,14 +375,14 @@ export function ReportsSection({
       ) : tab === 'expenses' || tab === 'income' ? (
         <FlowsTab
           type={tab === 'expenses' ? 'expense' : 'income'}
-          accountIds={selectedIds}
+          accounts={reportAccounts}
           range={range}
           previousRange={previous}
           compare={compare === 'previous'}
           grouping={grouping}
           homeCurrency={homeCurrency}
-          categoryIds={categoryIds}
-          onCategoryIds={setCategoryIds}
+          categoryIds={tab === 'expenses' ? flowCategories.expenses : flowCategories.income}
+          onCategoryIds={(ids) => updateFlowCategories(tab, ids)}
         />
       ) : tab === 'accounts' ? (
         <AccountsTab
@@ -350,7 +392,7 @@ export function ReportsSection({
           rangeKey={balanceRange}
           onRangeKey={setBalanceRange}
           custom={balanceCustom}
-          onCustom={setBalanceCustom}
+          onCustom={updateBalanceCustom}
           range={balanceCustomRange}
           mode={balanceMode}
           onMode={setBalanceMode}

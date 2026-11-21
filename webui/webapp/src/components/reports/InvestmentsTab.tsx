@@ -8,7 +8,15 @@ import { Money, useMoney } from '../../privacy'
 import { SearchSelect } from '../SearchSelect'
 import { Card, Kpi } from './shared'
 
-function PriceHistory({ asset, currency }: { asset: InvestmentAsset; currency: string }) {
+function PriceHistory({
+  asset,
+  portfolioCurrency,
+  portfolioFractionDigits,
+}: {
+  asset: InvestmentAsset
+  portfolioCurrency: string
+  portfolioFractionDigits: number
+}) {
   const money = useMoney('totals')
   const prices = useAsync(() => getPrices(asset.symbol), ['prices', asset.symbol])
   return (
@@ -31,13 +39,30 @@ function PriceHistory({ asset, currency }: { asset: InvestmentAsset; currency: s
             </tr>
           </thead>
           <tbody>
-            {prices.data.map((price) => (
-              <tr key={`${price.date}-${price.source}`}>
-                <td>{formatDate(price.date, { day: '2-digit', month: 'short', year: 'numeric' })}</td>
-                <td className="num">{money(Math.round(price.value * 100), currency, 2)}</td>
-                <td>{price.source}</td>
-              </tr>
-            ))}
+            {prices.data.map((price) => {
+              const currency = price.currency || portfolioCurrency
+              const fractionDigits =
+                currency === portfolioCurrency ? portfolioFractionDigits : 2
+              return (
+                <tr key={`${price.date}-${price.source}`}>
+                  <td>
+                    {formatDate(price.date, {
+                      day: '2-digit',
+                      month: 'short',
+                      year: 'numeric',
+                    })}
+                  </td>
+                  <td className="num">
+                    {money(
+                      Math.round(price.value * 10 ** fractionDigits),
+                      currency,
+                      fractionDigits,
+                    )}
+                  </td>
+                  <td>{price.source}</td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       ) : prices.data ? (
@@ -80,7 +105,10 @@ export function InvestmentsTab({ homeCurrency }: { homeCurrency: string }) {
       fractionDigits: entries[0].fractionDigits,
       valuation,
       cost,
-      result: cost === null ? null : valuation - cost,
+      // The API result excludes the cash held in the portfolio.
+      result: known
+        ? entries.reduce((sum, entry) => sum + (entry.result ?? 0), 0)
+        : null,
     }
   })
   const primary = summary.find((entry) => entry.currency === homeCurrency) ?? summary[0]
@@ -157,7 +185,6 @@ export function InvestmentsTab({ homeCurrency }: { homeCurrency: string }) {
         <PortfolioCard
           key={portfolio.id}
           portfolio={portfolio}
-          homeCurrency={homeCurrency}
           expanded={expanded}
           onExpand={(key) => setExpanded((current) => (current === key ? null : key))}
         />
@@ -213,7 +240,13 @@ function investmentSummaryCards(
             t`Unknown`
           )
         }
-        foot={primary?.cost === null ? t`A transfer arrived without a purchase price` : t`Known purchase cost`}
+        foot={
+          !primary
+            ? t`No portfolios`
+            : primary.cost === null
+              ? t`A transfer arrived without a purchase price`
+              : t`Known purchase cost`
+        }
       />
       <Kpi
         label={t`Estimated result`}
@@ -253,12 +286,10 @@ function investmentSummaryCards(
 
 function PortfolioCard({
   portfolio,
-  homeCurrency,
   expanded,
   onExpand,
 }: {
   portfolio: InvestmentPortfolio
-  homeCurrency: string
   expanded: string | null
   onExpand: (key: string) => void
 }) {
@@ -361,7 +392,11 @@ function PortfolioCard({
                     {expanded === key ? (
                       <tr>
                         <td colSpan={5}>
-                          <PriceHistory asset={asset} currency={homeCurrency} />
+                          <PriceHistory
+                            asset={asset}
+                            portfolioCurrency={portfolio.currency}
+                            portfolioFractionDigits={portfolio.fractionDigits}
+                          />
                         </td>
                       </tr>
                     ) : null}

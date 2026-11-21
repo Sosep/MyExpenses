@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { t } from '@lingui/core/macro'
+import { useEffect, useState } from 'react'
+import { plural, t } from '@lingui/core/macro'
 import type { Account, BalanceSeries } from '../../types'
 import { describeError, getBalanceSeries } from '../../api'
 import { formatDate, formatPercent } from '../../format'
@@ -90,6 +90,13 @@ export function BalanceCard({
     (account) =>
       account.portfolioRole === 'NONE' && !account.excludeFromTotals && !account.sealed,
   )
+  // With one account selected, the currency picker must follow it instead of
+  // keeping the first currency and hiding the requested line.
+  useEffect(() => {
+    if (selectedIds.length !== 1 || !data.data) return
+    const entry = data.data.accounts.find((account) => account.id === selectedIds[0])
+    if (entry) setCurrency(entry.currency)
+  }, [selectedIds, data.data])
   const activeCurrency =
     data.data?.currencies.find((entry) => entry.code === currency)?.code ??
     data.data?.currencies[0]?.code ??
@@ -105,7 +112,10 @@ export function BalanceCard({
         ? [
             {
               key: `total-${total.currency}`,
-              label: t`Total of ${visibleAccounts.length} accounts`,
+              label: t`${plural(visibleAccounts.length, {
+                one: 'Total of # account',
+                other: 'Total of # accounts',
+              })}`,
               color: COLORS[0],
               points: total.series.map((point) => ({
                 date: point.date,

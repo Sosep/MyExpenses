@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { t } from '@lingui/core/macro'
+import { plural, t } from '@lingui/core/macro'
 import type { BreakdownItem, Group } from '../../types'
 import { describeError, getGrouped } from '../../api'
 import { formatPercent } from '../../format'
@@ -96,6 +96,7 @@ export function EvolutionCard({
   compare,
   grouping,
   homeCurrency,
+  accountId = 'all',
 }: {
   type: 'income' | 'expense' | 'both'
   range: { from: string; to: string }
@@ -103,17 +104,26 @@ export function EvolutionCard({
   compare: boolean
   grouping: ChartGrouping
   homeCurrency: string
+  accountId?: number | 'all'
 }) {
   const current = useAsync(
-    () => getGrouped('all', grouping, range.from, range.to, type),
-    ['report-evolution', type, grouping, range.from, range.to],
+    () => getGrouped(accountId, grouping, range.from, range.to, type),
+    ['report-evolution', accountId, type, grouping, range.from, range.to],
   )
   const previous = useAsync(
     () =>
       compare
-        ? getGrouped('all', grouping, previousRange.from, previousRange.to, type)
+        ? getGrouped(accountId, grouping, previousRange.from, previousRange.to, type)
         : Promise.resolve<Group[]>([]),
-    ['report-evolution-previous', type, grouping, compare, previousRange.from, previousRange.to],
+    [
+      'report-evolution-previous',
+      accountId,
+      type,
+      grouping,
+      compare,
+      previousRange.from,
+      previousRange.to,
+    ],
   )
   const error = current.error ?? previous.error
   const title =
@@ -158,6 +168,7 @@ export function BreakdownCard({
   type,
   onOpen,
   onDrill,
+  canDrill,
   drillLabel,
 }: {
   title: string
@@ -168,6 +179,7 @@ export function BreakdownCard({
   type: 'expense' | 'income'
   onOpen?: (item: BreakdownItem) => void
   onDrill?: (item: BreakdownItem) => void
+  canDrill?: (item: BreakdownItem) => boolean
   drillLabel?: string
 }) {
   return (
@@ -200,12 +212,17 @@ export function BreakdownCard({
                 </div>
                 <div className="breakdown-meta">
                   <span>{formatPercent(item.share)}</span>
-                  <span>{t`${item.count} transactions`}</span>
+                  <span>
+                    {t`${plural(item.count, {
+                      one: '# transaction',
+                      other: '# transactions',
+                    })}`}
+                  </span>
                 </div>
               </div>
               {onOpen || onDrill ? (
                 <div className="breakdown-actions">
-                  {onDrill && item.id > 0 ? (
+                  {onDrill && item.id > 0 && (!canDrill || canDrill(item)) ? (
                     <button
                       type="button"
                       className="link"

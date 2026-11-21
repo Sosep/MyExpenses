@@ -6,6 +6,40 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
+#. placeholder {0}: reportAccounts.filter((account) => account.currency === currency).length
+#: src/components/reports/AccountsTab.tsx
+msgid "{0, plural, one {# account} other {# accounts}}"
+msgstr "{0, plural, one {# account} other {# accounts}}"
+
+#. placeholder {0}: over.length
+#: src/components/reports/BudgetsTab.tsx
+msgid "{0, plural, one {# budget over the limit} other {# budgets over the limit}}"
+msgstr "{0, plural, one {# budget over the limit} other {# budgets over the limit}}"
+
+#. placeholder {0}: warn.length
+#: src/components/reports/BudgetsTab.tsx
+msgid "{0, plural, one {# close to the limit} other {# close to the limit}}"
+msgstr "{0, plural, one {# close to the limit} other {# close to the limit}}"
+
+#. placeholder {0}: breakdown.data.items.length
+#. placeholder {1}: range.from
+#. placeholder {2}: range.to
+#: src/components/reports/FlowsTab.tsx
+msgid "{0, plural, one {# group} other {# groups}} · {1} – {2} · percentages on the filtered total"
+msgstr "{0, plural, one {# group} other {# groups}} · {1} – {2} · percentages on the filtered total"
+
+#. placeholder {0}: item.count
+#. placeholder {0}: page.data?.total ?? item.count
+#: src/components/ReportPanel.tsx
+#: src/components/reports/shared.tsx
+msgid "{0, plural, one {# transaction} other {# transactions}}"
+msgstr "{0, plural, one {# transaction} other {# transactions}}"
+
+#. placeholder {0}: visibleAccounts.length
+#: src/components/reports/BalanceCard.tsx
+msgid "{0, plural, one {Total of # account} other {Total of # accounts}}"
+msgstr "{0, plural, one {Total of # account} other {Total of # accounts}}"
+
 #. placeholder {0}: range.from
 #. placeholder {1}: range.to
 #: src/components/reports/FlowsTab.tsx
@@ -27,13 +61,13 @@ msgstr "{0} — income {1}, expenses {2}"
 
 #. placeholder {0}: periodLabel(period)
 #: src/components/reports/ReportsSection.tsx
-msgid "{0} · {accountLabel}"
-msgstr "{0} · {accountLabel}"
+#~ msgid "{0} · {accountLabel}"
+#~ msgstr "{0} · {accountLabel}"
 
 #. placeholder {0}: selectedIds.length
 #: src/components/reports/ReportsSection.tsx
-msgid "{0} accounts"
-msgstr "{0} accounts"
+#~ msgid "{0} accounts"
+#~ msgstr "{0} accounts"
 
 #. placeholder {0}: items.length
 #: src/components/Budgets.tsx
@@ -48,13 +82,18 @@ msgstr "{0} budgets · {1}"
 
 #. placeholder {0}: over.length
 #: src/components/reports/BudgetsTab.tsx
-msgid "{0} budgets over the limit"
-msgstr "{0} budgets over the limit"
+#~ msgid "{0} budgets over the limit"
+#~ msgstr "{0} budgets over the limit"
 
 #. placeholder {0}: warn.length
 #: src/components/reports/BudgetsTab.tsx
-msgid "{0} close to the limit"
-msgstr "{0} close to the limit"
+#~ msgid "{0} close to the limit"
+#~ msgstr "{0} close to the limit"
+
+#. placeholder {0}: formatPercent(savingsRate - previousSavings)
+#: src/components/reports/SummaryTab.tsx
+msgid "{0} difference vs the previous period"
+msgstr "{0} difference vs the previous period"
 
 #. placeholder {0}: breakdown.data.items.length
 #. placeholder {1}: range.from
@@ -67,8 +106,8 @@ msgstr "{0} close to the limit"
 #. placeholder {1}: range.from
 #. placeholder {2}: range.to
 #: src/components/reports/FlowsTab.tsx
-msgid "{0} groups · {1} – {2} · percentages on the filtered total"
-msgstr "{0} groups · {1} – {2} · percentages on the filtered total"
+#~ msgid "{0} groups · {1} – {2} · percentages on the filtered total"
+#~ msgstr "{0} groups · {1} – {2} · percentages on the filtered total"
 
 #. placeholder {0}: data.items.length
 #. placeholder {1}: reportMoney( data.totalMinor, data.currency, data.fractionDigits, )
@@ -97,8 +136,8 @@ msgstr "{0} over"
 
 #. placeholder {0}: formatPercent(savingsRate - previousSavings)
 #: src/components/reports/SummaryTab.tsx
-msgid "{0} points vs the previous period"
-msgstr "{0} points vs the previous period"
+#~ msgid "{0} points vs the previous period"
+#~ msgstr "{0} points vs the previous period"
 
 #. placeholder {0}: budget.title
 #: src/components/BudgetDetailPanel.tsx
@@ -110,8 +149,8 @@ msgstr "{0} spent"
 #. placeholder {0}: page.data?.total ?? item.count
 #: src/components/ReportPanel.tsx
 #: src/components/reports/shared.tsx
-msgid "{0} transactions"
-msgstr "{0} transactions"
+#~ msgid "{0} transactions"
+#~ msgstr "{0} transactions"
 
 #. placeholder {0}: formatPercent(ratio * 100, 0)
 #: src/components/BudgetDetailPanel.tsx
@@ -129,8 +168,12 @@ msgid "{count} filters"
 msgstr "{count} filters"
 
 #: src/components/reports/FlowsTab.tsx
-msgid "{days} days in the period"
-msgstr "{days} days in the period"
+msgid "{days, plural, one {# day in the period} other {# days in the period}}"
+msgstr "{days, plural, one {# day in the period} other {# days in the period}}"
+
+#: src/components/reports/FlowsTab.tsx
+#~ msgid "{days} days in the period"
+#~ msgstr "{days} days in the period"
 
 #: src/components/BudgetDetailPanel.tsx
 #: src/components/Budgets.tsx
@@ -146,8 +189,8 @@ msgid "+ Add part"
 msgstr "+ Add part"
 
 #: src/components/reports/ReportsSection.tsx
-msgid "1 account"
-msgstr "1 account"
+#~ msgid "1 account"
+#~ msgstr "1 account"
 
 #: src/components/reports/BalanceCard.tsx
 msgid "1 month"
@@ -203,6 +246,7 @@ msgstr "Above the purchase cost"
 #: src/components/Budgets.tsx
 #: src/components/reports/AccountsTab.tsx
 #: src/components/reports/BudgetsTab.tsx
+#: src/components/reports/FlowsTab.tsx
 #: src/components/Shell.tsx
 #: src/components/TradeEditor.tsx
 #: src/components/TransactionEditor.tsx
@@ -239,8 +283,8 @@ msgid "Account types"
 msgstr "Account types"
 
 #: src/components/reports/AccountsTab.tsx
-msgid "accounts"
-msgstr "accounts"
+#~ msgid "accounts"
+#~ msgstr "accounts"
 
 #: src/components/reports/AccountsTab.tsx
 #: src/components/reports/BalanceCard.tsx
@@ -280,6 +324,7 @@ msgid "All"
 msgstr "All"
 
 #: src/components/reports/BudgetsTab.tsx
+#: src/components/reports/FlowsTab.tsx
 msgid "All accounts"
 msgstr "All accounts"
 
@@ -1205,6 +1250,10 @@ msgid "Filter"
 msgstr "Filter"
 
 #: src/components/reports/FlowsTab.tsx
+msgid "Filter by account"
+msgstr "Filter by account"
+
+#: src/components/reports/FlowsTab.tsx
 #: src/components/Transactions.tsx
 msgid "Filter by category"
 msgstr "Filter by category"
@@ -1671,7 +1720,6 @@ msgid "Next month"
 msgstr "Next month"
 
 #: src/components/reports/BalanceCard.tsx
-#: src/components/reports/ReportsSection.tsx
 msgid "No accounts selected"
 msgstr "No accounts selected"
 
@@ -2573,8 +2621,8 @@ msgstr "Total amount"
 
 #. placeholder {0}: visibleAccounts.length
 #: src/components/reports/BalanceCard.tsx
-msgid "Total of {0} accounts"
-msgstr "Total of {0} accounts"
+#~ msgid "Total of {0} accounts"
+#~ msgstr "Total of {0} accounts"
 
 #: src/components/reports/InvestmentsTab.tsx
 msgid "Totals by currency"

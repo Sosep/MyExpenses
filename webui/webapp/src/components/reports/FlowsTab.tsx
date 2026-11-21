@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { t } from '@lingui/core/macro'
-import type { BreakdownItem } from '../../types'
+import { plural, t } from '@lingui/core/macro'
+import type { Account, BreakdownItem } from '../../types'
 import { describeError, getBreakdown, getCategories, getReportSummary } from '../../api'
 import { formatPercent } from '../../format'
 import { useAsync } from '../../hooks'
@@ -9,11 +9,12 @@ import { Money } from '../../privacy'
 import type { ChartGrouping } from '../Chart'
 import { MultiPicker } from '../MultiPicker'
 import { ReportPanel } from '../ReportPanel'
+import { SearchSelect } from '../SearchSelect'
 import { BreakdownCard, Card, Delta, EvolutionCard, Kpi } from './shared'
 
 interface FlowsTabProps {
   type: 'expense' | 'income'
-  accountIds: number[]
+  accounts: Account[]
   range: { from: string; to: string }
   previousRange: { from: string; to: string }
   compare: boolean
@@ -34,7 +35,7 @@ function daysBetween(from: string, to: string): number {
 
 export function FlowsTab({
   type,
-  accountIds,
+  accounts,
   range,
   previousRange,
   compare,
@@ -44,8 +45,10 @@ export function FlowsTab({
   onCategoryIds,
 }: FlowsTabProps) {
   const [selected, setSelected] = useState<BreakdownItem | null>(null)
+  const [accountFilter, setAccountFilter] = useState('all')
   const closeSelected = useHistoryPanel(selected !== null, () => setSelected(null))
-  const accountId: number | 'all' = accountIds.length === 1 ? accountIds[0] : 'all'
+  const accountId: number | 'all' =
+    accountFilter === 'all' ? 'all' : Number(accountFilter)
   const reportAccountId = accountId === 'all' ? 0 : accountId
   const categories = useAsync(() => getCategories(), ['report-categories'])
   const summary = useAsync(
@@ -81,10 +84,10 @@ export function FlowsTab({
       ? Math.abs(previous.data.expensesMinor) - previous.data.returnsMinor
       : previous.data.incomeMinor - previous.data.returnsMinor
     : null
-  const days = daysBetween(range.from, range.to)
-  const average = days > 0 ? total / days : 0
+  const days = Math.max(1, daysBetween(range.from, range.to) || 0)
+  const average = total / days
   const useMonthlyAverage = days > 31
-  const monthly = days > 0 ? total / (days / 30.44) : 0
+  const monthly = total / (days / 30.44)
   const currency = totals?.currency ?? homeCurrency
   const fractionDigits = totals?.fractionDigits ?? 2
   const error = summary.error ?? breakdown.error
@@ -96,6 +99,18 @@ export function FlowsTab({
       value: String(category.id),
       label: category.label,
     })) ?? []
+  const accountOptions = [
+    { value: 'all', label: t`All accounts` },
+    ...accounts.map((account) => ({
+      value: String(account.id),
+      label: account.label,
+    })),
+  ]
+  const childrenOf = (id: number) =>
+    (categories.data ?? []).some((category) => category.parentId === id)
+  const canDrill = (item: BreakdownItem) =>
+    childrenOf(item.id) &&
+    !(categoryIds.length === 1 && categoryIds[0] === item.id)
 
   return (
     <>
@@ -136,7 +151,10 @@ export function FlowsTab({
               fractionDigits={fractionDigits}
             />
           }
-          foot={t`${days} days in the period`}
+          foot={t`${plural(days, {
+            one: '# day in the period',
+            other: '# days in the period',
+          })}`}
         />
         <Kpi
           label={t`Operations`}
@@ -165,7 +183,7 @@ export function FlowsTab({
             value={
               breakdown.data && totals && totals.incomeMinor + totals.expensesMinor !== 0
                 ? formatPercent(
-                    (netIncome / Math.max(netIncome + Math.abs(totals.expensesMinor), 1)) * 100,
+                    (netIncome / Math.max(netIncome + Math.abs(netExpenses), 1)) * 100,
                   )
                 : '—'
             }
@@ -180,19 +198,36 @@ export function FlowsTab({
         previousRange={previousRange}
         compare={compare}
         grouping={grouping}
-        homeCurrency={homeCurrency}
+        homeCurrency={accountId === 'all' ? homeCurrency : currency}
+        accountId={accountId}
       />
 
       <Card title={t`Filters`}>
-        <div className="report-filters">
+        <div className="report-filters flows-filters">
+          <label className="field compact-field">
+            <span>{t`Account`}</span>
+            <SearchSelect
+              ariaLabel={t`Filter by account`}
+              value={accountFilter}
+              options={accountOptions}
+              onChange={setAccountFilter}
+            />
+          </label>
           <MultiPicker
             ariaLabel={t`Filter by category`}
             options={categoryOptions}
             values={categoryIds.map(String)}
-            onChange={(values) => onCategoryIds(values.map(Number))}
+            onChange={(values) => onCategoryIds([...new Set(values.map(Number))])}
           />
-          {categoryIds.length > 0 ? (
-            <button type="button" className="btn ghost" onClick={() => onCategoryIds([])}>
+          {accountFilter !== 'all' || categoryIds.length > 0 ? (
+            <button
+              type="button"
+              className="btn ghost"
+              onClick={() => {
+                setAccountFilter('all')
+                onCategoryIds([])
+              }}
+            >
               {t`Reset filters`}
             </button>
           ) : null}
@@ -203,15 +238,19 @@ export function FlowsTab({
         title={title}
         description={
           breakdown.data
-            ? t`${breakdown.data.items.length} groups · ${range.from} – ${range.to} · percentages on the filtered total`
+            ? t`${plural(breakdown.data.items.length, {
+                one: '# group',
+                other: '# groups',
+              })} · ${range.from} – ${range.to} · percentages on the filtered total`
             : t`Grouped by category, including split parts`
         }
         items={breakdown.data?.items ?? []}
         currency={breakdown.data?.currency ?? currency}
         fractionDigits={breakdown.data?.fractionDigits ?? fractionDigits}
         type={type}
+        canDrill={canDrill}
         onOpen={setSelected}
-        onDrill={(item) => onCategoryIds([...categoryIds, item.id])}
+        onDrill={(item) => onCategoryIds([item.id])}
       />
 
       {selected ? (

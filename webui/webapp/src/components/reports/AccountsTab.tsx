@@ -1,4 +1,4 @@
-import { t } from '@lingui/core/macro'
+import { plural, t } from '@lingui/core/macro'
 import type { Account } from '../../types'
 import { getBalanceSeries } from '../../api'
 import { useAsync } from '../../hooks'
@@ -77,8 +77,10 @@ export function AccountsTab({
               />
             </div>
             <div className="kpi-foot">
-              {reportAccounts.filter((account) => account.currency === currency).length}{' '}
-              {t`accounts`}
+              {t`${plural(
+                reportAccounts.filter((account) => account.currency === currency).length,
+                { one: '# account', other: '# accounts' },
+              )}`}
             </div>
           </div>
         ))}

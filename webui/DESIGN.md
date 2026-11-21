@@ -571,7 +571,7 @@ Filters: [search] [account] [All|Expenses|Income] [Month]
 
 ```text
 Reports                                              Refresh
-This month · 3 accounts
+This month
 [Week | Month | Quarter | Year | Last year | Custom]  Compare with: Previous
 
 [Summary] [Spending] [Income] [Accounts] [Investments] [Budgets]
@@ -591,10 +591,13 @@ This month · 3 accounts
   El rail sigue con Overview, Transactions, Reports, Budgets, Files y Data.
 - Pestañas secundarias desplazables, subrayado `--accent` en la activa. En móvil
   ocupan una sola fila con scroll horizontal; nunca una rejilla de seis botones.
-- Filtros globales: periodo y comparación, en una fila que se pliega. Cada vista
-  añade solo sus filtros (cuentas en el gráfico, categoría en Gastos/Ingresos,
-  cartera en Inversiones, frecuencia y cuenta en Presupuestos). Cada chip se
-  quita por separado y hay `Reset filters`.
+- Filtros globales: periodo y comparación, en una fila que se pliega, solo en
+  Resumen, Gastos e Ingresos; Cuentas, Inversiones y Presupuestos usan su propio
+  rango o filtros y no los heredan. Cada vista añade solo sus filtros (cuentas en
+  el gráfico, cuenta y categoría en Gastos/Ingresos, cartera en Inversiones,
+  frecuencia y cuenta en Presupuestos). Cada chip se quita por separado y hay
+  `Reset filters`. En móvil, los campos de filtro conservan un ancho legible
+  (≥140 px) y el botón de gestión pasa a una fila completa.
 - KPIs: Ingresos, Gastado (neto de devoluciones), Balance del periodo y Tasa de
   ahorro. La variación usa flecha y texto (`Up 8.2% vs the previous period`),
   nunca solo color. La tasa es `—` cuando no hay ingresos.
@@ -613,7 +616,8 @@ This month · 3 accounts
   (`opacity .30`) y una entrada de leyenda «Previous period».
 - Categorías: fila con importe, barra, porcentaje y número de operaciones. El
   porcentaje viene del servidor sobre el conjunto filtrado. `View subcategories`
-  añade el id al filtro de rama; `View operations` abre `ReportPanel`.
+  filtra a la rama de esa categoría (sin duplicar filtros) y se oculta en las
+  hojas; `View operations` abre `ReportPanel`.
 - Resumen de cuentas («Money available»), inversiones («Money invested», valor
   con el último precio manual y fecha) y presupuestos (dentro/cerca/superados).
 - Inversiones: valor = cantidad × último precio, coste medio ponderado y

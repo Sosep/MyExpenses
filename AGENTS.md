@@ -11,10 +11,12 @@ Read this before changing code. Detailed sources:
 
 - `/api/v1`: read endpoints plus create/update/delete for simple transactions,
   transfers and splits.
-- API routes covered on the JVM by 115 tests — 89 `ApiRoutesTest`, 10
-  `BalanceMathTest`, 7 `CategoryBranchTest`, 5 `LoginThrottleTest` and 4
-  `SessionStoreTest` — with a fake `WebApiDataSource` and Ktor `testApplication`.
-  The pure balance folding and reconciliation live in `BalanceMathTest`.
+- API routes covered on the JVM by 121 tests — 89 `ApiRoutesTest`, 12
+  `BalanceMathTest`, 4 `BreakdownSelectionTest`, 7 `CategoryBranchTest`, 5
+  `LoginThrottleTest` and 4 `SessionStoreTest` — with a fake
+  `WebApiDataSource` and Ktor `testApplication`. The pure balance folding and
+  reconciliation live in `BalanceMathTest`; the refund/income SQL rule is
+  covered by `BreakdownSelectionTest`.
 - SPA: dashboard, transactions, detail, the **Informes** section (six tabs),
   files, budgets, and the simple, transfer and split editors. The split editor uses signed amounts, a parts list
   and a part panel. It is installable as a PWA; on narrow screens the side rail
@@ -157,8 +159,12 @@ Read this before changing code. Detailed sources:
   and in `ui-preferences`. The rail label is still Reports; no new rail item.
   `/reports/summary` adds `returnsMinor` (positive amounts on expense
   categories: spent = `|expenses| − returns`, income = `income − returns`,
-  balance unchanged). `/reports/breakdown` accepts repeated `categoryId` with
-  branch expansion and recomputes `totalMinor`/`share` on the filtered set;
+  balance unchanged); its flows aggregate split **parts** by their own category
+  and sign, while `count` still counts whole operations.
+  `/reports/breakdown` accepts repeated `categoryId` with branch expansion and
+  recomputes `totalMinor`/`share` on the filtered set; `expense` keeps refunds
+  (positive amounts on expense categories) so a row nets its refund, `income`
+  excludes them (a refund is never income), and each row is `|sum|`.
   `grouped` accepts `accountId=all`; `/reports/transactions` accepts it too and
   keeps each row's currency.
   `/reports/balance-series` returns a dense per-account series (opening plus
@@ -168,17 +174,28 @@ Read this before changing code. Detailed sources:
   ≤~30 months, month after; an explicit choice over ~400 points falls back.
   `/reports/investments` values each product at the last manual price, uses the
   weighted average BUY/SELL cost and hides the result when `costKnown` is
-  false. The pure folding lives in `BalanceMath.kt` (`BalanceMathTest`); the
-  last point reconciles with `currentBalanceMinor`.
+  false (including units without a BUY). The portfolio value includes cash, but
+  the result is assets value minus cost, so cash is never presented as profit.
+  The pure folding lives in `BalanceMath.kt` (`BalanceMathTest`); the last point
+  reconciles with `currentBalanceMinor`, and the test fixture covers opening,
+  both transfer legs, a split parent and a retroactive movement.
   Category breakdown uses split parts; the rest count whole transactions. Month
   indexes are 0-based (`second`: November = 10) from the provider to the API;
   the SPA keeps `YYYY-MM` and converts at the call boundary.
 - Reports UI: `ReportsSection` + `components/reports/*`, `LineChart` (own SVG,
   no chart dependency, hover/touch tooltip, toggleable legend, textual table,
   `prefers-reduced-motion`) and the extended `Chart` bars (day/week/month/year
-  labels and a ghost previous-period bar). Filters are per view; the period and
-  comparison are shared by Resumen/Gastos/Ingresos and never forced on
-  Cuentas/Inversiones/Presupuestos.
+  labels and a ghost previous-period bar). Filters are per view (Gastos and
+  Ingresos keep their own categories; Flows has an explicit account filter);
+  the period and comparison are shared by Resumen/Gastos/Ingresos and are not
+  rendered on Cuentas/Inversiones/Presupuestos. `?tab=cuentas&accountId=X` opens
+  the chart in per-account mode with X selected. Custom `from`/`to` and
+  `balanceFrom`/`balanceTo` are read from the URL; an empty date while editing
+  keeps the last complete range instead of sending blank dates. A parent row
+  drills to its branch (so its subcategories are shown) and the button is hidden
+  for leaves and for the already selected branch. The budget filters keep 140px
+  fields under the mobile breakpoint; the rail and bottom navigation are
+  unchanged.
 
 ## Build and verify
 
@@ -336,14 +353,21 @@ Update the docs while the change is fresh; do not defer them to a later commit.
 - Device QA remains for the new slices (cookie, PWA, allocations/rollover,
   reports drill-down and all-account aggregation). The mock can be checked at
   390×844 to catch responsive regressions.
-- Informes: reconcile `balance-series` with `currentBalanceMinor` on a phone
-  with real transfers (both legs), a split, a VOID and an opening balance; an
-  operation dated in the past must only move the points after its date. Check
+- Informes: the JVM reconciliation fixture now covers opening, transfer legs,
+  a split parent and a retroactive movement; the phone must still confirm the
+  real provider with a split, VOID and archived rows. Check
   `grouped?accountId=all` against the Android report, the weighted cost of a
-  portfolio with a transfer-in (`costKnown:false`) and a big history for
-  performance. The tab/period/compare/balance preferences must travel between
-  origins and survive the server ignoring the retired `reportMonth`/`reportRange`
-  keys.
+  portfolio with a transfer-in (`costKnown:false`), a manually balanced asset
+  without BUY trades and a big history for performance. The
+  tab/period/compare/balance preferences must travel between origins and survive
+  the server ignoring the retired `reportMonth`/`reportRange` keys.
+- Informes filters still queued: Gastos/Ingresos have an account and category
+  filter; payee/payer, method and reconciliation status need new
+  `/reports/summary` and `/reports/breakdown` criteria (the KPI is not yet
+  narrowed by the category/account selection either). The price history labels
+  a price with the portfolio currency and its fraction-digits when the base
+  matches; a price stored in another base currency falls back to two decimals
+  until the API exposes that currency's digits.
 - Portfolios need device QA the mock cannot fake: create one from the web and
   confirm the phone shows it exactly like one created in Android (type, currency,
   fixed/dynamic rate, colour); confirm the valuation matches `BalanceType.VALUATION`

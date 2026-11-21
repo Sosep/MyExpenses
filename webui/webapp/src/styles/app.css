@@ -1982,6 +1982,20 @@ button:disabled {
     @apply min-w-0 flex-1;
   }
 
+  /* The budget row adds a button to the two compact fields; without a
+     min-width the flex items shrink below their labels and clip the selects. */
+  .budget-filters .compact-field {
+    @apply min-w-[140px] flex-[1_1_140px];
+  }
+
+  .budget-filters .btn {
+    @apply basis-full;
+  }
+
+  .flows-filters .compact-field {
+    @apply basis-full;
+  }
+
   .balance-accounts {
     @apply basis-full;
   }
