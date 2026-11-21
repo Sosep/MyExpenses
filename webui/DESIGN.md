@@ -373,6 +373,8 @@ espacio para no quedar tapado.
   pie sticky con Cancel/Save.
 - Diálogo: solo para confirmaciones destructivas y selectores pequeños; ancho
   máximo 480; nombre del objeto en el título ("Delete split transaction?").
+  Toda acción de borrado en Datos o en una operación pregunta antes y nombra el
+  objeto; cancelar no toca los datos.
 - `Esc` cierra; foco atrapado; al cerrar, el foco vuelve al disparador. Cada
   panel es una entrada de historial: atrás lo cierra. Si dos se apilan (detalle
   y editor), `Esc` y atrás cierran solo el superior.
@@ -445,7 +447,9 @@ Overview · Investments                     Transactions   Refresh
   transacción: segmentado con los seis tipos (Compra, Venta, Depósito,
   Retirada, Traspaso a otra cartera, Entrada por traspaso), activo con
   sugerencias, cantidad y precio decimales, importe calculado en una
-  `summary-strip`, comisión y financiación. En edición precarga los valores y
+  `summary-strip`, comisión y financiación. La financiación desde una cuenta
+  solo ofrece cuentas normales en la divisa de la cartera; un traspaso entre
+  carteras admite cualquier divisa. En edición precarga los valores y
   añade `Delete` a la izquierda del pie; guardar cierra el panel y refresca.
   El detalle de la operación gana `Edit` y `Delete`, y el editor se abre encima
   del detalle para no encadenar entradas de historial. Un cambio de tipo dentro
@@ -656,9 +660,10 @@ November 2026                     All budgets
   Etiquetas · Divisas · Precios`) sobre una tarjeta por entidad; el botón de
   ajustes del rail la abre.
 - Categorías en árbol: sangría por `level`, tipo con texto (Gasto/Ingreso/
-  Neutro), `+ Nueva categoría` en la cabecera. Al borrar una categoría con
-  movimientos, el panel «Borrar categoría» pide el destino con `SearchSelect`
-  antes de mover y borrar; el `409` nunca deja la categoría a medias.
+  Neutro), `+ Nueva categoría` en la cabecera. El borrado pregunta antes. Si la
+  rama tiene movimientos, plantillas o asignaciones de presupuesto, el panel
+  «Borrar categoría» pide un destino del mismo tipo con `SearchSelect` antes de
+  mover y borrar; el `409` nunca deja la categoría a medias.
 - Divisas: tabla código/símbolo/dígitos/tipo; el alta pide el código y la
   edición no (es la clave). Precios: selector de activo (solo no fiat), tabla
   fecha/valor/fuente y panel fecha+precio; guardar reemplaza el precio manual

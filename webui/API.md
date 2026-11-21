@@ -356,8 +356,9 @@ mismo dominio que la app (`TradeIntent` → `RepositoryTrades`). El borrado usa
   exigen `fundingSource` `ACCOUNT` o `EXTERNAL` (`PORTFOLIO` es
   `422 validation_failed`, como el `require` de `TradeIntent`).
 - Compra/Venta: `fundingSource` `PORTFOLIO` (por defecto), `ACCOUNT` (exige
-  `peerAccountId`) o `EXTERNAL`. Traspaso: `peerAccountId` debe ser otra
-  cartera y distinta (`422`).
+  `peerAccountId` de una cuenta normal **en la divisa de la cartera**) o
+  `EXTERNAL`. Traspaso: `peerAccountId` debe ser otra cartera y distinta
+  (`422`); entre carteras se permite cualquier divisa, como en la app.
 - Cantidad y precio > 0, comisión ≥ 0 (`422 validation_failed` con `fields`).
   El guardado actualiza además el histórico de precios con fuente `USER`.
 - `PUT` reemplaza la operación conservando sus piernas; id desconocido o de
@@ -583,10 +584,14 @@ la app; el API las expone tal cual.
 | PUT/DELETE | `/prices/{commodity}/{date}` | Edición y borrado del precio manual |
 
 - **Categorías**: `label` obligatorio; un hijo toma el tipo de su padre; `PUT`
-  no cambia de padre (`422 unsupported_move`). El borrado de una rama con
-  movimientos exige `remapTo` (si no, `409 category_in_use`), mueve el `catid`
-  de la rama (partes de split incluidas) y luego borra; `remapTo` no puede
-  estar dentro de la rama.
+  no cambia de padre (`422 unsupported_move`). Una rama está en uso si la
+  referencian transacciones (partes de split incluidas), plantillas o
+  asignaciones de presupuesto; sin `remapTo` responde `409 category_in_use`.
+  El borrado con `remapTo` reutiliza el merge de la app: mueve las filas de
+  transacciones, plantillas, registro de cambios y asignaciones de presupuesto,
+  borra la rama y actualiza los filtros de cuenta/presupuesto guardados.
+  `remapTo` debe existir, no estar dentro de la rama y tener el mismo tipo
+  (`422 invalid_remapTo`).
 - **Métodos**: `type` -1 (gasto), 0 (neutro) o 1 (ingreso); `accountTypes`
   son ids de `/account-types`.
 - **Divisas**: `commodityType` es `FIAT`, `SECURITY`, `CRYPTO` o `COMMODITY`;

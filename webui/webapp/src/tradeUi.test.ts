@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Account, Trade } from './types'
 import {
+  fundingAccounts,
   fundingAfterTypeChange,
   fundingForTrade,
   peerKind,
@@ -49,7 +50,11 @@ const trade = (over: Partial<Trade>): Trade => ({
 })
 
 // The editor receives the top-level list: portfolio cash/assets are hidden.
-const accounts = [account({ id: 1, label: 'Everyday' })]
+const accounts = [
+  account({ id: 1, label: 'Everyday', currency: 'EUR' }),
+  account({ id: 2, label: 'Dollars', currency: 'USD' }),
+  account({ id: 8, label: 'Trading', currency: 'USD', portfolioRole: 'CONTAINER' }),
+]
 
 describe('operation family', () => {
   it('groups the six types into the three families the app edits', () => {
@@ -113,5 +118,28 @@ describe('incoming transfer peer', () => {
   it('points at the source portfolio when the operation comes in', () => {
     expect(transferPeerPointsAtSource('TRANSFER_IN')).toBe(true)
     expect(transferPeerPointsAtSource('TRANSFER_OUT')).toBe(false)
+  })
+})
+
+
+describe('funding accounts', () => {
+  it('keeps only bank accounts in the portfolio currency', () => {
+    const portfolio = account({
+      id: 7,
+      label: 'Investments',
+      currency: 'EUR',
+      portfolioRole: 'CONTAINER',
+    })
+    expect(fundingAccounts(portfolio, accounts).map((entry) => entry.id)).toEqual([1])
+  })
+
+  it('never offers a portfolio or an account in another currency', () => {
+    const portfolio = account({
+      id: 8,
+      label: 'Trading',
+      currency: 'USD',
+      portfolioRole: 'CONTAINER',
+    })
+    expect(fundingAccounts(portfolio, accounts).map((entry) => entry.id)).toEqual([2])
   })
 })

@@ -792,9 +792,11 @@ class ApiRoutesTest {
 
     @Test
     fun `deleting a category with remap returns 204`() = testApplication {
-        installRoutes(FakeDataSource())
+        val fake = FakeDataSource()
+        installRoutes(fake)
         val response = client.delete("/api/v1/categories/2?remapTo=1")
         assertEquals(HttpStatusCode.NoContent, response.status)
+        assertEquals(2L to 1L, fake.deletedCategory)
     }
 
     @Test
@@ -1366,7 +1368,10 @@ private class FakeDataSource : WebApiDataSource {
     override suspend fun updateCategory(id: Long, body: CategoryWriteDto) =
         CategoryDto(id, null, body.label ?: "Category", 1, body.color, body.type)
 
+    var deletedCategory: Pair<Long, Long?>? = null
+
     override suspend fun deleteCategory(id: Long, remapTo: Long?): Boolean {
+        deletedCategory = id to remapTo
         if (id == 2L && remapTo == null) {
             throw ApiException(
                 HttpStatusCode.Conflict,

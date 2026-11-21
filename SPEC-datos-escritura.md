@@ -19,7 +19,11 @@ Ajustes > Datos, con las reglas del repositorio Android (la web no las duplica).
   `createPaymentMethod`/`updatePaymentMethod`/`deleteMethod`, `TAGS_URI`,
   `insertCurrency`/`updateCurrency`/`deleteCurrency`/`isCurrencyUsed` y
   `savePrice`/`deletePrice` con `ExchangeRateSource.User`; `currencyContext` se
-  invalida al cambiar una divisa.
+  invalida al cambiar una divisa. El borrado con remapeo llama a
+  `Repository.mergeCategories` (transacciones, partes, plantillas, registro de
+  cambios y asignaciones) y a la actualización de filtros de cuenta/presupuesto;
+  no reimplementa el movimiento de filas. `remapTo` debe existir, quedar fuera de
+  la rama y compartir el tipo.
 - El remapeo de categoría actualiza `catid` de la rama (padres e hijos, partes
   de split incluidas) antes del borrado; plantillas y presupuestos quedan para
   V2, como el `move`/`merge`.

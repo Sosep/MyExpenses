@@ -67,6 +67,7 @@ function TradePanel({
   const [deleteError, setDeleteError] = useState<string | null>(null)
 
   async function remove() {
+    if (!window.confirm(t`Delete this operation? This cannot be undone.`)) return
     setDeleting(true)
     setDeleteError(null)
     try {

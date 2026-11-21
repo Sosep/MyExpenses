@@ -694,6 +694,36 @@ msgstr "Borrar categoría"
 msgid "Delete the budget “{0}”?"
 msgstr "¿Eliminar el presupuesto «{0}»?"
 
+#. placeholder {0}: category.label
+#: src/components/AppData.tsx
+msgid "Delete the category “{0}”?"
+msgstr "¿Eliminar la categoría «{0}»?"
+
+#. placeholder {0}: currency.code
+#: src/components/AppData.tsx
+msgid "Delete the currency “{0}”?"
+msgstr "¿Eliminar la divisa «{0}»?"
+
+#. placeholder {0}: method.label
+#: src/components/AppData.tsx
+msgid "Delete the method “{0}”?"
+msgstr "¿Eliminar el método «{0}»?"
+
+#. placeholder {0}: formatDate(price.date)
+#: src/components/AppData.tsx
+msgid "Delete the price from {0}?"
+msgstr "¿Eliminar el precio del {0}?"
+
+#. placeholder {0}: tag.label
+#: src/components/AppData.tsx
+msgid "Delete the tag “{0}”?"
+msgstr "¿Eliminar la etiqueta «{0}»?"
+
+#: src/components/TradeEditor.tsx
+#: src/components/Trades.tsx
+msgid "Delete this operation? This cannot be undone."
+msgstr "¿Eliminar esta operación? No se puede deshacer."
+
 #: src/components/TransactionPanel.tsx
 msgid "Delete this transaction?"
 msgstr "¿Eliminar esta transacción?"
@@ -1786,12 +1816,20 @@ msgid "That currency code is already defined."
 msgstr "Ese código de divisa ya existe."
 
 #: src/api.ts
-msgid "The category has movements; choose where to move them."
-msgstr "La categoría tiene movimientos; elige a dónde moverlos."
+#~ msgid "The category has movements; choose where to move them."
+#~ msgstr "La categoría tiene movimientos; elige a dónde moverlos."
 
 #: src/components/AppData.tsx
-msgid "The category has movements. Choose where to move them before deleting it."
-msgstr "La categoría tiene movimientos. Elige a dónde moverlos antes de borrarla."
+#~ msgid "The category has movements. Choose where to move them before deleting it."
+#~ msgstr "La categoría tiene movimientos. Elige a dónde moverlos antes de borrarla."
+
+#: src/api.ts
+msgid "The category is in use; choose where to move its data."
+msgstr "La categoría está en uso; elige a dónde mover sus datos."
+
+#: src/components/AppData.tsx
+msgid "The category is in use. Choose where to move its data before deleting it."
+msgstr "La categoría está en uso. Elige a dónde mover sus datos antes de borrarla."
 
 #: src/api.ts
 msgid "The currency is used by an account or a transaction and cannot be deleted."

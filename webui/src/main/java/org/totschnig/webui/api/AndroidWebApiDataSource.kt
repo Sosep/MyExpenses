@@ -18,6 +18,7 @@ import org.totschnig.myexpenses.db2.Repository
 import org.totschnig.myexpenses.db2.RepositoryTransaction
 import org.totschnig.myexpenses.db2.budgetAllocation
 import org.totschnig.myexpenses.db2.budgetCriteria
+import org.totschnig.myexpenses.db2.categoryUsage
 import org.totschnig.myexpenses.db2.createAccount
 import org.totschnig.myexpenses.db2.createPaymentMethod
 import org.totschnig.myexpenses.db2.createTransaction
@@ -39,6 +40,7 @@ import org.totschnig.myexpenses.db2.loadBudgetProgress
 import org.totschnig.myexpenses.db2.loadTrade
 import org.totschnig.myexpenses.db2.loadTrades
 import org.totschnig.myexpenses.db2.loadTransaction
+import org.totschnig.myexpenses.db2.mergeCategoriesAndUpdateFilters
 import org.totschnig.myexpenses.db2.saveBudget
 import org.totschnig.myexpenses.db2.saveBudgetCriteria
 import org.totschnig.myexpenses.db2.saveCategory
@@ -2065,8 +2067,20 @@ class AndroidWebApiDataSource(
                 peer
             }
 
-            funding == FundingSource.ACCOUNT -> this.peerAccountId.requirePositive("peerAccountId")
-                .also { validateAccount(it) }
+            funding == FundingSource.ACCOUNT -> {
+                val fundingAccountId = this.peerAccountId.requirePositive("peerAccountId")
+                validateAccount(fundingAccountId)
+                val fundingCurrency = repository.getCurrencyUnitForAccount(fundingAccountId)
+                if (fundingCurrency?.code != portfolioCurrency.code) {
+                    throw ApiException(
+                        HttpStatusCode.UnprocessableEntity,
+                        "validation_failed",
+                        "The funding account must use the portfolio currency",
+                        mapOf("peerAccountId" to "Must use ${portfolioCurrency.code}")
+                    )
+                }
+                fundingAccountId
+            }
 
             else -> null
         }
@@ -2210,39 +2224,47 @@ class AndroidWebApiDataSource(
 
     override suspend fun deleteCategory(id: Long, remapTo: Long?): Boolean {
         val categories = repository.queryCategories()
-        if (categories.none { it.id == id }) return false
+        val category = categories.firstOrNull { it.id == id } ?: return false
         val branch = categoryBranchIds(listOf(id), categories.associate { it.id to it.parentId })
-        val placeholders = branch.joinToString(",") { "?" }
-        val inUse = repository.contentResolver.query(
-            TRANSACTIONS_URI,
-            arrayOf("count(*)"),
-            "$KEY_CATID IN ($placeholders)",
-            branch.map { it.toString() }.toTypedArray(),
-            null
-        )?.use { if (it.moveToFirst()) it.getLong(0) else 0L } ?: 0L
-        if (inUse > 0) {
-            val target = remapTo ?: throw ApiException(
-                HttpStatusCode.Conflict,
-                "category_in_use",
-                "The category has movements; choose a category to move them to"
-            )
-            if (target in branch) {
-                throw ApiException(
-                    HttpStatusCode.UnprocessableEntity,
-                    "invalid_remapTo",
-                    "Movements cannot be moved into the category being deleted",
-                    mapOf("remapTo" to "Must be outside the deleted branch")
-                )
-            }
-            validateOptional("remapTo", "category", target, CATEGORIES_URI)
-            repository.contentResolver.update(
-                TRANSACTIONS_URI,
-                ContentValues().apply { put(KEY_CATID, target) },
-                "$KEY_CATID IN ($placeholders)",
-                branch.map { it.toString() }.toTypedArray()
+        // The provider expands the tree from the selected root, like the app.
+        val usage = repository.categoryUsage(listOf(id))
+        if (!usage.isUsed && remapTo == null) {
+            return repository.deleteCategory(id)
+        }
+        val target = remapTo ?: throw ApiException(
+            HttpStatusCode.Conflict,
+            "category_in_use",
+            "The category is in use; choose a category to move its data to"
+        )
+        if (target in branch) {
+            throw ApiException(
+                HttpStatusCode.UnprocessableEntity,
+                "invalid_remapTo",
+                "Data cannot be moved into the category being deleted",
+                mapOf("remapTo" to "Must be outside the deleted branch")
             )
         }
-        return repository.deleteCategory(id)
+        val targetCategory = categories.firstOrNull { it.id == target }
+            ?: throw ApiException(
+                HttpStatusCode.UnprocessableEntity,
+                "invalid_remapTo",
+                "The target category does not exist",
+                mapOf("remapTo" to "Does not exist")
+            )
+        // The provider's merge requires one type across the branch; the app
+        // never moves expense movements into an income category.
+        if (targetCategory.type != category.type ||
+            categories.any { it.id in branch && it.type != category.type }
+        ) {
+            throw ApiException(
+                HttpStatusCode.UnprocessableEntity,
+                "invalid_remapTo",
+                "Source and target categories must have the same type",
+                mapOf("remapTo" to "Must have the same type")
+            )
+        }
+        repository.mergeCategoriesAndUpdateFilters(branch, target)
+        return true
     }
 
     override suspend fun createMethod(body: MethodWriteDto): MethodDto {

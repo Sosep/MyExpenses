@@ -56,8 +56,10 @@ Cuerpo (`TradeWriteDto`):
   `price` = 1 y `fundingSource` debe ser `ACCOUNT` o `EXTERNAL`; `PORTFOLIO`
   es `422 validation_failed`, como el `require` de `TradeIntent`.
 - `fundingSource` (Compra/Venta): `PORTFOLIO` (efectivo de la cartera, por
-  defecto), `ACCOUNT` (transferencia desde una cuenta, exige
-  `peerAccountId`) o `EXTERNAL` (sin seguimiento).
+  defecto), `ACCOUNT` (transferencia desde una cuenta normal en la misma
+  divisa, exige `peerAccountId`) o `EXTERNAL` (sin seguimiento). El editor no
+  ofrece cuentas de otra divisa y el servidor las rechaza; un traspaso entre
+  carteras sí admite divisas distintas.
 - Traspaso: `peerAccountId` obligatorio, debe ser otra cartera
   (`CONTAINER`) y distinta; la divisa/valoración viaja en `quantity` y
   `price`.

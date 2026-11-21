@@ -44,15 +44,20 @@ Read this before changing code. Detailed sources:
   use too; the web editor mirrors `TradeIntent` and the mock applies the
   operation deltas in memory and creates the cash sub-account on the first
   operation, like the app. Editing an operation keeps its family (buy/sell,
-  deposit/withdraw, transfer) and its funding source, like the Android editor.
-  The mock honours `?portfolioLimit=1` with `409 portfolio_limit_reached`.
+  deposit/withdraw, transfer) and its funding source, like the Android editor;
+  bank funding is limited to accounts in the portfolio currency. The mock
+  honours `?portfolioLimit=1` with `409 portfolio_limit_reached`.
 - App data: `?view=datos` mirrors Android's Settings > Data with tabs for
   categories (tree, delete with remap), payment methods, tags, currencies
   (fiat and custom assets) and the manual price history. The writes go through
   `POST/PUT/DELETE /categories`, `/methods`, `/tags`, `/currencies` and
   `/prices` with the repository rules: `409 category_in_use` without
-  `remapTo`, `409 currency_still_used`, one manual price per commodity and
-  date. The rail's settings button opens it.
+  `remapTo` (templates and budget allocations count too), same-type remap,
+  `409 currency_still_used`, one manual price per commodity and date. The
+  remap delegates to the app's `mergeCategories` (transactions, split parts,
+  templates, change log, budget allocations) and updates the saved
+  account/budget filters. Destructive deletes ask for confirmation. The rail's
+  settings button opens it.
 - Budget filters: `criteria` (categories, payees, methods, tags, states) is read
   and written in the app preference `budgetFilter_<id>`, so a budget created or
   edited from the web is scoped exactly like one from the phone. A filter the web
@@ -297,9 +302,11 @@ Update the docs while the change is fresh; do not defer them to a later commit.
   answers `409` without the Professional licence. A trade of each kind created
   from the web must appear in the phone exactly like one created there
   (quantity, price, fee, funding, transfer between two portfolios) — the
-  `RepositoryTrades` extraction must not change the Android save flow. The data
-  screen also needs device QA: a remapped category and an edited price from the
-  web must show in the app at once.
+  `RepositoryTrades` extraction must not change the Android save flow; bank
+  funding from another currency must be rejected. The data screen also needs
+  device QA: a remapped category must move templates, budget allocations and
+  the saved account/budget filters like the Android merge, and an edited price
+  from the web must show in the app at once.
 - Budget detail and its filter need device checks that the mock cannot fake:
   January and a 12-month history (the two contract fixes), a split inside a
   budget counted once, and a budget created from the web with two categories and

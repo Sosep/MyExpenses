@@ -11,6 +11,7 @@ import {
 import { amountInputValue, formatMoney, parseAmountMinor } from '../format'
 import { useAsync } from '../hooks'
 import {
+  fundingAccounts,
   fundingAfterTypeChange,
   fundingForTrade,
   isCash,
@@ -143,7 +144,7 @@ export function TradeEditor({
   const portfolioAccounts = accounts.filter(
     (candidate) => candidate.portfolioRole === 'CONTAINER' && candidate.id !== account.id,
   )
-  const peerAccounts = accounts.filter((candidate) => candidate.portfolioRole === 'NONE')
+  const peerAccounts = fundingAccounts(account, accounts)
   const assetOptions = ['AAPL', 'BTC', 'ETH', 'MSFT', 'VWCE', 'GOLD']
   const quantityValue = Number(quantity.replace(',', '.'))
   const priceValue = Number(price.replace(',', '.'))
@@ -222,6 +223,7 @@ export function TradeEditor({
 
   async function remove() {
     if (!id) return
+    if (!window.confirm(t`Delete this operation? This cannot be undone.`)) return
     setDeleting(true)
     setSubmitError(null)
     try {

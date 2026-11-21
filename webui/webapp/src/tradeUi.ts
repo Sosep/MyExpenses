@@ -55,3 +55,14 @@ export function fundingAfterTypeChange(
 export function transferPeerPointsAtSource(type: TradeType): boolean {
   return type === 'TRANSFER_IN'
 }
+
+/**
+ * Bank/cash accounts that can fund a buy or sell. The app only offers accounts
+ * in the portfolio currency: amounts are not converted across currencies.
+ */
+export function fundingAccounts(portfolio: Account, accounts: Account[]): Account[] {
+  return accounts.filter(
+    (account) =>
+      account.portfolioRole === 'NONE' && account.currency === portfolio.currency,
+  )
+}

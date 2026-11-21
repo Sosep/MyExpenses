@@ -180,6 +180,12 @@ function CategoriesTab() {
   const closeRemap = useHistoryPanel(remapping !== null, () => setRemapping(null))
 
   async function remove(category: Category, remapTo?: number) {
+    if (
+      remapTo === undefined &&
+      !window.confirm(t`Delete the category “${category.label}”?`)
+    ) {
+      return
+    }
     setError(null)
     try {
       await deleteCategory(category.id, remapTo)
@@ -439,7 +445,7 @@ function RemapPanel({
       }
     >
       <p>
-        {t`The category has movements. Choose where to move them before deleting it.`}
+        {t`The category is in use. Choose where to move its data before deleting it.`}
       </p>
       <label className="field">
         <span className="field-label">{t`Move to`}</span>
@@ -465,6 +471,7 @@ function MethodsTab() {
   const closeEditor = useHistoryPanel(editing !== null, () => setEditing(null))
 
   async function remove(method: Method) {
+    if (!window.confirm(t`Delete the method “${method.label}”?`)) return
     setError(null)
     try {
       await deleteMethod(method.id)
@@ -667,6 +674,7 @@ function TagsTab() {
   const closeEditor = useHistoryPanel(editing !== null, () => setEditing(null))
 
   async function remove(tag: Tag) {
+    if (!window.confirm(t`Delete the tag “${tag.label}”?`)) return
     setError(null)
     try {
       await deleteTag(tag.id)
@@ -807,6 +815,7 @@ function CurrenciesTab() {
   const closeEditor = useHistoryPanel(editing !== null, () => setEditing(null))
 
   async function remove(currency: CurrencyEntry) {
+    if (!window.confirm(t`Delete the currency “${currency.code}”?`)) return
     setError(null)
     try {
       await deleteCurrency(currency.code)
@@ -1029,6 +1038,7 @@ function PricesTab() {
   const closeEditor = useHistoryPanel(editing !== null, () => setEditing(null))
 
   async function remove(price: Price) {
+    if (!window.confirm(t`Delete the price from ${formatDate(price.date)}?`)) return
     setError(null)
     try {
       await deletePrice(price.commodity, price.date)

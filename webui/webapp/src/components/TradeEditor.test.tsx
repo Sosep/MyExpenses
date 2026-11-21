@@ -51,6 +51,13 @@ const bank: Account = {
   valuationMinor: null,
 }
 
+const dollarBank: Account = {
+  ...bank,
+  id: 3,
+  label: 'Dollar account',
+  currency: 'USD',
+}
+
 const meta: Meta = {
   appVersion: 'test',
   serverTime: '2026-11-21T10:00:00',
@@ -90,7 +97,7 @@ function renderEditor() {
         mode="edit"
         id={701}
         account={portfolio}
-        accounts={[portfolio, bank]}
+        accounts={[portfolio, bank, dollarBank]}
         meta={meta}
         onClose={() => {}}
         onSaved={onSaved}
@@ -147,5 +154,40 @@ describe('operation editor funding', () => {
 
     await waitFor(() => expect(screen.getByLabelText('Funding')).toHaveValue('ACCOUNT'))
     expect(await screen.findByDisplayValue('Everyday')).toBeInTheDocument()
+  })
+})
+
+
+describe('operation funding accounts', () => {
+  it('only offers accounts in the portfolio currency', async () => {
+    getTrade.mockResolvedValue(trade({ peerAccountId: 1, peerAccountLabel: 'Everyday' }))
+    renderEditor()
+
+    await waitFor(() => expect(screen.getByLabelText('Funding')).toHaveValue('ACCOUNT'))
+    fireEvent.focus(screen.getByLabelText('Account'))
+
+    await waitFor(() => {
+      const labels = Array.from(
+        document.querySelectorAll('.search-select-menu .search-select-option'),
+      ).map((option) => option.textContent?.trim())
+      expect(labels).toEqual(['Everyday'])
+    })
+  })
+})
+
+
+describe('operation deletion', () => {
+  it('asks before deleting and only then calls the API', async () => {
+    getTrade.mockResolvedValue(trade({ peerAccountId: null }))
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
+    renderEditor()
+
+    await waitFor(() => expect(screen.getByLabelText('Funding')).toHaveValue('EXTERNAL'))
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
+    expect(deleteTransaction).not.toHaveBeenCalled()
+
+    confirm.mockReturnValue(true)
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
+    await waitFor(() => expect(deleteTransaction).toHaveBeenCalledWith(701))
   })
 })
