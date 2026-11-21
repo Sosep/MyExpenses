@@ -25,6 +25,12 @@ class ApiRoutes(
             get("/meta") {
                 call.respond(dataSource.meta())
             }
+            get("/ui-preferences") {
+                call.respond(dataSource.uiPreferences())
+            }
+            put("/ui-preferences") {
+                call.respond(dataSource.updateUiPreferences(call.receive<UiPreferencesDto>()))
+            }
             get("/accounts") {
                 call.respond(dataSource.accounts())
             }

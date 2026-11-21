@@ -12,6 +12,27 @@ export interface Meta {
   }
 }
 
+/**
+ * The web UI's own selections, stored on the phone. Every field is null until
+ * it has been saved. Not the same as `Meta.preferences`, which belong to the
+ * Android app.
+ */
+export interface UiPreferences {
+  theme: string | null
+  locale: string | null
+  accountId: number | null
+  grouping: string | null
+  hideTotals: boolean | null
+  hideTransactions: boolean | null
+  reportMonth: string | null
+  reportRange: string | null
+  reportBreakdown: string | null
+  reportType: string | null
+  reportAllAccounts: boolean | null
+  budgetMonth: string | null
+  transactionType: string | null
+}
+
 export interface AccountTypeEntry {
   id: number
   name: string

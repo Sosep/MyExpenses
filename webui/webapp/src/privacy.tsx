@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import type { ReactNode } from 'react'
 import { t } from '@lingui/core/macro'
 import { formatMoney, maskedMoney } from './format'
+import { scheduleUpload, STORAGE_KEYS } from './uiPreferences'
 
 /**
  * Two independent switches hide money, because the two kinds are hidden for
@@ -17,9 +18,9 @@ interface AmountsState {
   toggle: (scope: AmountScope) => void
 }
 
-const STORAGE_KEYS: Record<AmountScope, string> = {
-  totals: 'myexpenses.hideTotals',
-  transactions: 'myexpenses.hideTransactions',
+const STORAGE_KEYS_BY_SCOPE: Record<AmountScope, string> = {
+  totals: STORAGE_KEYS.hideTotals,
+  transactions: STORAGE_KEYS.hideTransactions,
 }
 
 /** Visible by default: a tree without a provider (tests, login) never masks. */
@@ -30,7 +31,7 @@ const AmountsContext = createContext<AmountsState>({
 })
 
 function readHidden(scope: AmountScope): boolean {
-  return localStorage.getItem(STORAGE_KEYS[scope]) === '1'
+  return localStorage.getItem(STORAGE_KEYS_BY_SCOPE[scope]) === '1'
 }
 
 export function AmountsProvider({ children }: { children: ReactNode }) {
@@ -48,7 +49,8 @@ export function AmountsProvider({ children }: { children: ReactNode }) {
   const toggle = useCallback((scope: AmountScope) => {
     setHidden((current) => {
       const next = !current[scope]
-      localStorage.setItem(STORAGE_KEYS[scope], next ? '1' : '0')
+      localStorage.setItem(STORAGE_KEYS_BY_SCOPE[scope], next ? '1' : '0')
+      scheduleUpload(scope === 'totals' ? 'hideTotals' : 'hideTransactions', next)
       return { ...current, [scope]: next }
     })
   }, [])

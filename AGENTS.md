@@ -11,7 +11,7 @@ Read this before changing code. Detailed sources:
 
 - `/api/v1`: read endpoints plus create/update/delete for simple transactions,
   transfers and splits.
-- API routes covered on the JVM by 68 tests — 52 `ApiRoutesTest`, 7
+- API routes covered on the JVM by 73 tests — 57 `ApiRoutesTest`, 7
   `CategoryBranchTest`, 5 `LoginThrottleTest` and 4 `SessionStoreTest` — with a
   fake `WebApiDataSource` and Ktor `testApplication`.
 - SPA: dashboard, transactions, detail, reports, files, budgets, and the simple,
@@ -51,16 +51,22 @@ Read this before changing code. Detailed sources:
 - Privacy: two topbar switches mask money as `€ ••••` (no digits in the DOM) —
   `totals` for net worth, KPIs, report and budget aggregates and the chart
   tooltip; `transactions` for row amounts, the detail panel and its parts, period
-  sums, the amount filter chip, report drill-down and budget cards. Each state
-  lives in `localStorage`, never goes to the server, and open editors stay
-  readable. Amounts render through `Money`/`useMoney` in `webui/webapp/src/privacy.tsx`;
-  `formatMoney` and `maskedMoney` are in `format.ts`.
-- Remembered selections: theme, language, account, grouping, the privacy
-  switches and the screen choices (report month/range/breakdown/type/all
-  accounts, budget month, transaction type) live in `localStorage`, so a reload
-  or a PWA restart reopens where the user left it. Every read validates the
-  value; the screen keys are in `webui/webapp/src/preferences.ts`. Mock QA
-  switches only write when their parameter is present.
+  sums, the amount filter chip, report drill-down and budget cards. Only the two
+  booleans are synced through `/ui-preferences`; amounts never leave the local
+  render. Open editors stay readable. Amounts render through
+  `Money`/`useMoney` in `webui/webapp/src/privacy.tsx`; `formatMoney` and
+  `maskedMoney` are in `format.ts`.
+- Serialized selections: `theme`, `locale`, `accountId`, `grouping`, the two
+  privacy switches and the screen choices (report month/range/breakdown/type/all
+  accounts, budget month, transaction type) live in `localStorage` **and** on the
+  phone behind `GET/PUT /api/v1/ui-preferences`, because every server start can
+  expose another URL and localStorage is tied to the origin. `localStorage` is
+  the first-paint cache and the offline fallback; at startup the server wins per
+  key and a key the server never stored keeps the local one. The first contact
+  with an empty server uploads the local choices once. The keys and validators
+  are in `webui/webapp/src/uiPreferences.ts`; every write calls `scheduleUpload`
+  (1 s debounce, flush with `keepalive` on `pagehide`). Mock QA switches only
+  write when their parameter is present.
 - Files: `GET /api/v1/files` lists app-directory backups and `GET /api/v1/files/{name}`
   streams one with `Content-Disposition`; the SPA downloads via fetch + blob with
   the session cookie.
@@ -212,16 +218,20 @@ QA switches: `?login=1` (clears the mock cookie), `?locale=es`,
 `?view=reports&reportDrill=1`, `?view=budgets`, `?view=budgets&budgetMonth=-1`, `?view=budgets&new=1`,
 `?view=budgets&edit=1`, `?view=budgets&edit=1&periodOverride=1`, `?view=budgets&detail=<id>`
 (`3` = *Fuel*, *Joint*, con la app en otra cuenta), `?view=files`,
-`?hidden=1|totals|transactions`,
+`?hidden=1|totals|transactions`, `?prefs=seed` (fixed server preferences),
 `?panel=split`, `?panel=transfer`, `?new=1`, `?new=1&kind=transfer`,
 `?new=1&kind=split`, `?new=1&combo=1`, `?edit=simple`, `?edit=split`,
 `?edit=transfer`, `?new=1&save=1`, `?theme=dark`, `?metrics=1`.
 
 The mock writes simple transactions, budgets (allocations, rollover, period
-override, duplicate), reports and file downloads. Transfers and splits can be
-opened and edited visually, but saving them needs the real phone API. It tests
-the SPA and the HTTP contract, not the Kotlin queries. The full guide lives in
-`webui/webapp/README.md` (section **Probar sin el móvil**).
+override, duplicate), reports, web UI preferences and file downloads. Transfers
+and splits can be opened and edited visually, but saving them needs the real
+phone API. It tests the SPA and the HTTP contract, not the Kotlin queries. The
+full guide lives in `webui/webapp/README.md` (section **Probar sin el móvil**).
+To reproduce the original bug, configure one origin of the same mock
+(`http://localhost:4173/app/`), reload another (`http://127.0.0.1:4173/app/`)
+and check that theme, language, grouping, account, report month and both
+privacy switches arrive.
 
 `MOCK_QA_SEED=1 npm run mock` serves six months of generated transactions
 (categories, payees, methods, tags, states, transfers and splits with their own
@@ -263,3 +273,8 @@ Update the docs while the change is fresh; do not defer them to a later commit.
   `categoryId`.
 - Files are device-level: the route lives in `WebInputService` (`AppDirHelper`),
   so `ApiRoutesTest` does not cover it; verify on the phone.
+- Web UI preferences are device-level too: the real path is DataStore
+  (`RepositoryWebUi.kt`), while `ApiRoutesTest` uses the fake. On the phone,
+  change something in one origin of the same server and reload another; the
+  Android app and the web do not share `theme`/`locale` (different settings), and
+  the last write per field is expected to win between concurrent tabs.

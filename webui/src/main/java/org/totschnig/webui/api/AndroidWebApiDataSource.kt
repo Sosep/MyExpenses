@@ -3,6 +3,7 @@ package org.totschnig.webui.api
 import android.content.ContentUris
 import android.content.ContentValues
 import android.net.Uri
+import com.google.gson.Gson
 import io.ktor.http.HttpStatusCode
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -28,8 +29,10 @@ import org.totschnig.myexpenses.db2.loadBudgetProgress
 import org.totschnig.myexpenses.db2.loadTransaction
 import org.totschnig.myexpenses.db2.saveBudget
 import org.totschnig.myexpenses.db2.saveBudgetCriteria
+import org.totschnig.myexpenses.db2.saveWebUiPreferences
 import org.totschnig.myexpenses.db2.updateAccount
 import org.totschnig.myexpenses.db2.updateTransaction
+import org.totschnig.myexpenses.db2.webUiPreferences
 import org.totschnig.myexpenses.model.CrStatus
 import org.totschnig.myexpenses.model.CurrencyContext
 import org.totschnig.myexpenses.model.Grouping
@@ -83,6 +86,8 @@ class AndroidWebApiDataSource(
     private val tagMap: StateFlow<Map<Long, String>>,
     private val appVersion: String
 ) : WebApiDataSource {
+    private val gson = Gson()
+
     override fun meta() = MetaDto(
         appVersion = appVersion,
         serverTime = LocalDateTime.now().withNano(0).toString(),
@@ -94,6 +99,33 @@ class AndroidWebApiDataSource(
             valueDateEnabled = prefHandler.getBoolean(PrefKey.TRANSACTION_WITH_VALUE_DATE, false)
         )
     )
+
+    override suspend fun uiPreferences(): UiPreferencesDto = readUiPreferences()
+
+    override suspend fun updateUiPreferences(body: UiPreferencesDto): UiPreferencesDto {
+        val fields = body.validationFields()
+        if (fields.isNotEmpty()) {
+            throw ApiException(
+                HttpStatusCode.UnprocessableEntity,
+                "validation_failed",
+                "Invalid preferences",
+                fields
+            )
+        }
+        val merged = readUiPreferences().mergedWith(body)
+        repository.saveWebUiPreferences(gson.toJson(merged))
+        return merged
+    }
+
+    /** A corrupt document degrades to "nothing saved yet" instead of a 500. */
+    private suspend fun readUiPreferences(): UiPreferencesDto {
+        val json = repository.webUiPreferences() ?: return UiPreferencesDto()
+        return try {
+            gson.fromJson(json, UiPreferencesDto::class.java) ?: UiPreferencesDto()
+        } catch (_: Exception) {
+            UiPreferencesDto()
+        }
+    }
 
     override fun accounts() = repository.queryAccounts(currencyContext)
 

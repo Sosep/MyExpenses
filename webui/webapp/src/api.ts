@@ -23,6 +23,7 @@ import type {
   Transaction,
   TransactionWrite,
   TransferWrite,
+  UiPreferences,
 } from './types'
 import type { Grouping } from './filters'
 
@@ -76,6 +77,7 @@ function requestInit(options: RequestOptions, headers: Headers): RequestInit {
     headers,
     body: options.body === undefined ? undefined : JSON.stringify(options.body),
     signal: options.signal,
+    keepalive: options.keepalive,
     cache: 'no-store',
     credentials: 'same-origin',
   }
@@ -85,6 +87,8 @@ interface RequestOptions {
   method?: string
   body?: unknown
   signal?: AbortSignal
+  /** The page is closing; let the request outlive it (pagehide flush). */
+  keepalive?: boolean
 }
 
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
@@ -158,6 +162,13 @@ export function logout(): void {
 }
 
 export const getMeta = (signal?: AbortSignal) => request<Meta>('/meta', { signal })
+
+export const getUiPreferences = (signal?: AbortSignal) =>
+  request<UiPreferences>('/ui-preferences', { signal })
+
+/** Partial update: only the fields present are stored, the rest is kept. */
+export const putUiPreferences = (payload: Partial<UiPreferences>, keepalive = false) =>
+  request<UiPreferences>('/ui-preferences', { method: 'PUT', body: payload, keepalive })
 
 export const getAccountTypes = (signal?: AbortSignal) =>
   request<AccountTypeEntry[]>('/account-types', { signal })

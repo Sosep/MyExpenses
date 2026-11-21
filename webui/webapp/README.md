@@ -186,12 +186,35 @@ El detalle de una transacción abre una entrada de historial: atrás lo cierra.
 | `?hidden=1` | Tapa totales e importes de transacciones (`?hidden=0` los muestra) |
 | `?hidden=totals` | Tapa solo patrimonio, KPIs y agregados |
 | `?hidden=transactions` | Tapa solo los importes de las filas |
+| `?prefs=seed` | Siembra preferencias fijas en el servidor del mock (ganan sobre `localStorage`) |
 | `?metrics=1` | Badge con `scrollHeight`/`clientHeight` y filas |
 
 Los parámetros de tema, idioma y privacidad **solo escriben cuando aparecen**:
 una recarga sin parámetros conserva lo que el usuario eligió. El resto de
 selecciones (informes, mes de presupuestos, filtro ingreso/gasto) también se
-recuerdan en `localStorage`, así que se comprueban recargando sin parámetros.
+recuerdan. Todas viajan además a `/api/v1/ui-preferences`, así que un origen
+nuevo las recupera.
+
+### Preferencias entre orígenes
+
+`localStorage` está atado al origen y el servidor del móvil cambia de URL al
+arrancar. El mock permite reproducir el caso con dos orígenes del mismo
+servidor:
+
+- `http://localhost:4173/app/`
+- `http://127.0.0.1:4173/app/`
+
+Cambia en uno el tema, el idioma, la agrupación, la cuenta, el mes del informe y
+los dos interruptores de privacidad; espera un segundo (el `PUT` va con debounce)
+y recarga el otro: todo debe aparecer aplicado. Al cerrar la pestaña se hace un
+flush con `keepalive`.
+
+- La primera vez que el servidor no tiene nada guardado, la SPA sube sus valores
+  locales una vez: las elecciones anteriores migran solas.
+- `?prefs=seed` fuerza tema `dark`, idioma `es`, agrupación `YEAR`,
+  `hideTotals` y un informe `last3`/`payee`/`both`: sirve para comprobar que el
+  arranque aplica el servidor por encima de `localStorage`. El mock reinicia sus
+  preferencias al reiniciar el proceso.
 
 ### Viewport móvil
 
@@ -208,7 +231,8 @@ Sirve para comprobar:
 ### Qué escribe el mock
 
 - **Sí**: transacciones simples (`POST/PUT/DELETE`), presupuestos, asignaciones,
-  rollover, total por periodo, duplicación, informes y descarga de ficheros.
+  rollover, total por periodo, duplicación, informes, preferencias de la interfaz
+  web (`GET/PUT /ui-preferences`) y descarga de ficheros.
 - **No**: guardar transferencias ni divididas; se abren y editan visualmente,
   pero el guardado se prueba contra el API real del teléfono.
 - Todo vive en memoria: reiniciar el mock vuelve a los datos de ejemplo.

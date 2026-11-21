@@ -20,6 +20,7 @@
  *   ?hidden=1           hide totals and transaction amounts (`totals`, `transactions`)
  *   ?hidden=totals      hide only the headline figures
  *   ?hidden=transactions hide only the amounts of the rows
+ *   ?prefs=seed         serve fixed UI preferences from the API (server wins)
  *   ?metrics=1          show scroll/row metrics in a corner badge
  */
 
@@ -256,6 +257,81 @@ const meta = {
   homeCurrency: 'EUR',
   preferences: { timeEnabled: false, valueDateEnabled: false },
 }
+
+/* ---- Web UI preferences (serialized on the phone, in-memory here) ------- */
+
+const UI_PREFERENCE_FIELDS = [
+  'theme',
+  'locale',
+  'accountId',
+  'grouping',
+  'hideTotals',
+  'hideTransactions',
+  'reportMonth',
+  'reportRange',
+  'reportBreakdown',
+  'reportType',
+  'reportAllAccounts',
+  'budgetMonth',
+  'transactionType',
+]
+
+const EMPTY_UI_PREFERENCES = Object.fromEntries(
+  UI_PREFERENCE_FIELDS.map((field) => [field, null]),
+)
+
+let uiPreferences = { ...EMPTY_UI_PREFERENCES }
+
+const UI_PREFERENCE_ENUMS = {
+  theme: ['light', 'dark'],
+  locale: ['en', 'es'],
+  grouping: ['NONE', 'DAY', 'WEEK', 'MONTH', 'YEAR'],
+  reportRange: ['month', 'last3', 'year'],
+  reportBreakdown: ['category', 'payee', 'tag', 'method'],
+  reportType: ['expense', 'income', 'both'],
+  transactionType: ['all', 'expense', 'income'],
+}
+
+const UI_MONTH_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/
+
+function validateUiPreferences(body) {
+  const fields = {}
+  for (const [name, allowed] of Object.entries(UI_PREFERENCE_ENUMS)) {
+    const value = body[name]
+    if (value !== undefined && value !== null && !allowed.includes(value)) {
+      fields[name] = `Must be one of: ${allowed.join(', ')}`
+    }
+  }
+  if (body.accountId !== undefined && body.accountId !== null) {
+    if (!Number.isInteger(body.accountId) || body.accountId <= 0) {
+      fields.accountId = 'Must be a positive number'
+    }
+  }
+  for (const name of ['reportMonth', 'budgetMonth']) {
+    const value = body[name]
+    if (value !== undefined && value !== null && !UI_MONTH_PATTERN.test(value)) {
+      fields[name] = 'Must be YYYY-MM'
+    }
+  }
+  return fields
+}
+
+/** `?prefs=seed`: fixed values that must override whatever localStorage has. */
+function seedUiPreferencesFromQuery(url) {
+  if (url.searchParams.get('prefs') !== 'seed') return
+  uiPreferences = {
+    ...uiPreferences,
+    theme: 'dark',
+    locale: 'es',
+    grouping: 'YEAR',
+    hideTotals: true,
+    hideTransactions: false,
+    reportRange: 'last3',
+    reportBreakdown: 'payee',
+    reportType: 'both',
+  }
+}
+
 
 const categories = [
   { id: 1, parentId: null, label: 'Food', level: 0, color: null, type: -1 },
@@ -1098,13 +1174,17 @@ createServer(async (request, response) => {
       }
     }
 
-    if (path === '/app' || path === '/app/') return serveAppIndex(response)
+    if (path === '/app' || path === '/app/') {
+      seedUiPreferencesFromQuery(url)
+      return serveAppIndex(response)
+    }
 
     if (path.startsWith('/app/')) {
       const file = join(webapp, path.slice('/app/'.length))
       if (existsSync(file)) {
         return send(response, 200, readFileSync(file), mime[extname(file)] ?? 'application/octet-stream')
       }
+      seedUiPreferencesFromQuery(url)
       return serveAppIndex(response)
     }
 
@@ -1113,6 +1193,27 @@ createServer(async (request, response) => {
     }
 
     if (path === '/api/v1/meta') return send(response, 200, JSON.stringify(meta))
+    if (path === '/api/v1/ui-preferences') {
+      if (request.method === 'GET') return sendJson(response, 200, uiPreferences)
+      if (request.method === 'PUT') {
+        const body = await readJson(request)
+        const fields = validateUiPreferences(body)
+        if (Object.keys(fields).length > 0) {
+          return sendJson(response, 422, {
+            error: 'validation_failed',
+            message: 'Invalid preferences',
+            fields,
+          })
+        }
+        const next = { ...uiPreferences }
+        for (const field of UI_PREFERENCE_FIELDS) {
+          if (body[field] !== undefined && body[field] !== null) next[field] = body[field]
+        }
+        uiPreferences = next
+        return sendJson(response, 200, uiPreferences)
+      }
+      return sendJson(response, 405, { error: 'method_not_allowed', message: 'Method not allowed' })
+    }
     if (path === '/api/v1/account-types') {
       return sendJson(response, 200, [
         { id: 1, name: 'CASH', isAsset: true, supportsReconciliation: false },
@@ -1749,5 +1850,5 @@ createServer(async (request, response) => {
   }
 }).listen(port, '127.0.0.1', () => {
   console.log(`mock web server on http://localhost:${port}/app/`)
-  console.log('QA: ?login=1 ?view=transactions ?view=budgets ?view=files ?panel=split ?new=1 ?edit=split ?theme=dark ?metrics=1')
+  console.log('QA: ?login=1 ?view=transactions ?view=budgets ?view=files ?panel=split ?new=1 ?edit=split ?theme=dark ?prefs=seed ?metrics=1')
 })

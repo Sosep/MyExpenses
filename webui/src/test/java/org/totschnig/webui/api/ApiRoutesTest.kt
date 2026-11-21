@@ -600,6 +600,67 @@ class ApiRoutesTest {
     }
 
     @Test
+    fun `ui preferences are empty until something is saved`() = testApplication {
+        installRoutes(FakeDataSource())
+        val response = client.get("/api/v1/ui-preferences")
+        assertEquals(HttpStatusCode.OK, response.status)
+        assertEquals("{}", response.bodyAsText().trim())
+    }
+
+    @Test
+    fun `partial ui preferences merge and the get returns the merged document`() = testApplication {
+        val fake = FakeDataSource()
+        installRoutes(fake)
+        val first = client.put("/api/v1/ui-preferences") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"theme":"dark","accountId":2}""")
+        }
+        assertEquals(HttpStatusCode.OK, first.status)
+        assertTrue(first.bodyAsText().contains("\"theme\":\"dark\""))
+        val second = client.put("/api/v1/ui-preferences") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"grouping":"WEEK","hideTotals":true}""")
+        }
+        assertEquals(HttpStatusCode.OK, second.status)
+        val fetched = client.get("/api/v1/ui-preferences").bodyAsText()
+        assertTrue(fetched.contains("\"theme\":\"dark\""))
+        assertTrue(fetched.contains("\"accountId\":2"))
+        assertTrue(fetched.contains("\"grouping\":\"WEEK\""))
+        assertTrue(fetched.contains("\"hideTotals\":true"))
+    }
+
+    @Test
+    fun `invalid ui preferences are a 422 with the offending fields`() = testApplication {
+        installRoutes(FakeDataSource())
+        val response = client.put("/api/v1/ui-preferences") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """{"theme":"blue","grouping":"FORTNIGHT","accountId":0,""" +
+                    """"reportMonth":"2026-13","locale":"fr"}"""
+            )
+        }
+        assertEquals(HttpStatusCode.UnprocessableEntity, response.status)
+        val body = response.bodyAsText()
+        assertTrue(body.contains("validation_failed"))
+        assertTrue(body.contains("\"theme\""))
+        assertTrue(body.contains("\"grouping\""))
+        assertTrue(body.contains("\"accountId\""))
+        assertTrue(body.contains("\"reportMonth\""))
+        assertTrue(body.contains("\"locale\""))
+    }
+
+    @Test
+    fun `unknown ui preference fields are ignored`() = testApplication {
+        installRoutes(FakeDataSource())
+        val response = client.put("/api/v1/ui-preferences") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"theme":"light","futureField":"whatever"}""")
+        }
+        assertEquals(HttpStatusCode.OK, response.status)
+        assertTrue(response.bodyAsText().contains("\"theme\":\"light\""))
+    }
+
+    @Test
     fun `budget history is returned`() = testApplication {
         installRoutes(FakeDataSource())
         val response = client.get("/api/v1/budgets/1/history?months=3")
@@ -645,6 +706,7 @@ private class FakeDataSource : WebApiDataSource {
     var lastQueryFilters: TransactionQueryFilters = TransactionQueryFilters()
     var lastGroupType: String? = null
     var lastGroupFilters: TransactionQueryFilters = TransactionQueryFilters()
+    var uiPreferences = UiPreferencesDto()
     private val sample = sampleTransaction()
 
     override fun meta() = MetaDto(
@@ -655,6 +717,22 @@ private class FakeDataSource : WebApiDataSource {
         homeCurrency = "EUR",
         preferences = PreferencesDto(timeEnabled = false, valueDateEnabled = false)
     )
+
+    override suspend fun uiPreferences() = uiPreferences
+
+    override suspend fun updateUiPreferences(body: UiPreferencesDto): UiPreferencesDto {
+        val fields = body.validationFields()
+        if (fields.isNotEmpty()) {
+            throw ApiException(
+                HttpStatusCode.UnprocessableEntity,
+                "validation_failed",
+                "Invalid preferences",
+                fields
+            )
+        }
+        uiPreferences = uiPreferences.mergedWith(body)
+        return uiPreferences
+    }
 
     override suspend fun account(id: Long) = accounts().firstOrNull { it.id == id }
 

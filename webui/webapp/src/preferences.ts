@@ -1,3 +1,5 @@
+import { scheduleUpload, STORAGE_KEYS } from './uiPreferences'
+
 /**
  * Selections that belong to this browser, not to the phone, and that must
  * survive a reload (the PWA reloads too). Screens read them when they mount and
@@ -28,13 +30,13 @@ const REPORT_TYPES: readonly ReportType[] = ['expense', 'income', 'both']
 const TRANSACTION_TYPES: readonly TransactionType[] = ['all', 'expense', 'income']
 
 const KEYS = {
-  reportMonth: 'myexpenses.reportMonth',
-  reportRange: 'myexpenses.reportRange',
-  reportBreakdown: 'myexpenses.reportBreakdown',
-  reportType: 'myexpenses.reportType',
-  reportAllAccounts: 'myexpenses.reportAllAccounts',
-  budgetMonth: 'myexpenses.budgetMonth',
-  transactionType: 'myexpenses.transactionType',
+  reportMonth: STORAGE_KEYS.reportMonth,
+  reportRange: STORAGE_KEYS.reportRange,
+  reportBreakdown: STORAGE_KEYS.reportBreakdown,
+  reportType: STORAGE_KEYS.reportType,
+  reportAllAccounts: STORAGE_KEYS.reportAllAccounts,
+  budgetMonth: STORAGE_KEYS.budgetMonth,
+  transactionType: STORAGE_KEYS.transactionType,
 } as const
 
 const MONTH_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/
@@ -83,6 +85,11 @@ export function rememberReportPreferences(preferences: ReportPreferences): void 
   remember(KEYS.reportBreakdown, preferences.breakdown)
   remember(KEYS.reportType, preferences.type)
   remember(KEYS.reportAllAccounts, preferences.allAccounts ? '1' : '0')
+  scheduleUpload('reportMonth', preferences.month)
+  scheduleUpload('reportRange', preferences.range)
+  scheduleUpload('reportBreakdown', preferences.breakdown)
+  scheduleUpload('reportType', preferences.type)
+  scheduleUpload('reportAllAccounts', preferences.allAccounts)
 }
 
 export function readBudgetMonth(defaultMonth: string): string {
@@ -91,6 +98,7 @@ export function readBudgetMonth(defaultMonth: string): string {
 
 export function rememberBudgetMonth(value: string): void {
   remember(KEYS.budgetMonth, value)
+  scheduleUpload('budgetMonth', value)
 }
 
 export function readTransactionType(): TransactionType {
@@ -99,4 +107,5 @@ export function readTransactionType(): TransactionType {
 
 export function rememberTransactionType(value: TransactionType): void {
   remember(KEYS.transactionType, value)
+  scheduleUpload('transactionType', value)
 }

@@ -25,6 +25,31 @@ data class PreferencesDto(
     val valueDateEnabled: Boolean
 )
 
+/**
+ * Selections the web UI remembers. They live on the phone, not in the browser,
+ * because every start of the server can expose a different URL and localStorage
+ * is tied to the origin. Every field is null until it has been saved.
+ *
+ * Not to be confused with [PreferencesDto] from `/meta`, which are settings of
+ * the Android app itself.
+ */
+@Keep
+data class UiPreferencesDto(
+    val theme: String? = null,
+    val locale: String? = null,
+    val accountId: Long? = null,
+    val grouping: String? = null,
+    val hideTotals: Boolean? = null,
+    val hideTransactions: Boolean? = null,
+    val reportMonth: String? = null,
+    val reportRange: String? = null,
+    val reportBreakdown: String? = null,
+    val reportType: String? = null,
+    val reportAllAccounts: Boolean? = null,
+    val budgetMonth: String? = null,
+    val transactionType: String? = null
+)
+
 @Keep
 data class AccountDto(
     val id: Long,

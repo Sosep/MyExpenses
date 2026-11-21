@@ -126,7 +126,58 @@ absoluto, en transacciones, transferencias, partes de dividida y presupuestos.
 `fractionDigits` es necesario porque la app permite dígitos personalizados por
 divisa; el cliente formatea con eso, no con un valor fijo.
 
-### 4.2 Cuentas
+### 4.2 Preferencias de la interfaz web
+
+La SPA guarda en el teléfono las selecciones que antes vivían solo en
+`localStorage`. Cada arranque del servidor puede exponer otra URL y
+`localStorage` está atado al origen, así que sin esto el tema, el idioma, la
+agrupación o la cuenta se perdían al cambiar de IP o puerto.
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| GET | `/ui-preferences` | Documento completo; cada campo es `null` hasta que se guarda |
+| PUT | `/ui-preferences` | Actualización parcial: solo los campos presentes cambian |
+
+```json
+{
+  "theme": "dark",
+  "locale": "es",
+  "accountId": 2,
+  "grouping": "WEEK",
+  "hideTotals": true,
+  "hideTransactions": false,
+  "reportMonth": "2026-11",
+  "reportRange": "last3",
+  "reportBreakdown": "payee",
+  "reportType": "both",
+  "reportAllAccounts": false,
+  "budgetMonth": "2026-11",
+  "transactionType": "expense"
+}
+```
+
+- `theme`: `light` \| `dark`; `locale`: `en` \| `es`; `grouping`: `NONE` \|
+  `DAY` \| `WEEK` \| `MONTH` \| `YEAR`; `reportRange`: `month` \| `last3` \|
+  `year`; `reportBreakdown`: `category` \| `payee` \| `tag` \| `method`;
+  `reportType`: `expense` \| `income` \| `both`; `transactionType`: `all` \|
+  `expense` \| `income`.
+- `accountId` es un entero positivo. No se comprueba que la cuenta exista: la
+  SPA ya cae a la primera cuenta si el id desapareció.
+- `reportMonth` y `budgetMonth` son `YYYY-MM`.
+- La respuesta del `PUT` es el documento ya fusionado. Un `PUT` vacío conserva
+  todo. Valor de enum o mes inválido: `422 validation_failed` con `fields`; el
+  resto de campos del cuerpo no se guarda.
+- Los campos desconocidos se ignoran, para que un cliente más nuevo no rompa un
+  servidor anterior.
+- El último cambio gana por campo. `localStorage` sigue siendo la caché del
+  primer pintado (tema, idioma) y el respaldo cuando el teléfono no responde.
+- Se guarda el **booleano** de `hideTotals`/`hideTransactions`, nunca importes:
+  los importes se ocultan en el render local.
+- `GET /meta` no cambia: su objeto `preferences` (`timeEnabled`,
+  `valueDateEnabled`, `aggregateNeutral`) son ajustes de la app Android, no de
+  la web.
+
+### 4.3 Cuentas
 
 `GET /accounts` — incluye saldos, que ya calcula el provider:
 
@@ -203,7 +254,7 @@ elemento con `id: "all"` (en la app son IDs negativos) y saldos convertidos a la
 divisa base. Alternativa más simple para v1: el cliente suma solo cuentas de la
 misma divisa y el dashboard avisa si hay divisas mixtas.
 
-### 4.3 Transacciones
+### 4.4 Transacciones
 
 Modelo de lectura (`kind` explícito):
 
@@ -388,7 +439,7 @@ actualiza la existente; las existentes que no se envían se borran; una parte si
 
 Los filtros `categoryId`, `payeeId`, `tagId` y `methodId` son opcionales y se combinan con AND. `categoryId` significa la categoría **y toda su rama** (`parent_id` a cualquier profundidad, sin ascendientes); una dividida entra si alguna parte cae en la rama y el `total` ya cuenta el subárbol. `tagId` coincide con cualquiera de las etiquetas. Solo se listan transacciones completas (padre), no partes sueltas.
 
-### 4.4 Categorías, beneficiarios, etiquetas, métodos
+### 4.5 Categorías, beneficiarios, etiquetas, métodos
 
 | Recurso | Endpoints | Notas |
 |---|---|---|
@@ -401,7 +452,7 @@ Los filtros `categoryId`, `payeeId`, `tagId` y `methodId` son opcionales y se co
 y **transfer peer** (la otra cara de una transferencia). El API las expone por
 separado; el editor de transferencias no usa `payee` para elegir la cuenta.
 
-### 4.5 Presupuestos
+### 4.6 Presupuestos
 
 | Método | Ruta | Descripción |
 |---|---|---|
@@ -636,7 +687,7 @@ las rutas de arriba; lo que sigue solo en la app Android es la preferencia
 "agregar neutrales" por presupuesto y los criterios compuestos (`Or`/`Not`),
 que la web detecta pero no reescribe.
 
-### 4.6 Informes y agrupaciones
+### 4.7 Informes y agrupaciones
 
 | Método | Ruta | Descripción |
 |---|---|---|
@@ -718,7 +769,7 @@ los criterios no aparece.
 - `/reports/transactions` lista las transacciones de un grupo (`by` + `id`); no
   admite `accountId=all` (`422 unsupported_all_accounts`).
 
-### 4.7 Ficheros
+### 4.8 Ficheros
 
 | Método | Ruta | Descripción |
 |---|---|---|
@@ -747,7 +798,7 @@ Modelo de lectura:
 - Implementación: rutas en `WebInputService` porque dependen de `AppDirHelper` y
   del `ContentResolver`; no pasan por `WebApiDataSource`.
 
-### 4.8 Plantillas y planes (v2)
+### 4.9 Plantillas y planes (v2)
 
 `GET /templates`, `POST /templates/{id}/instantiate`. Fuera de v1.
 
@@ -768,6 +819,7 @@ Modelo de lectura:
 | tags | `TAGS_URI`, `saveTagsForTransaction` | **CRUD nuevo** en `db2` |
 | methods | `METHODS_URI`, `loadPaymentMethod`, `createPaymentMethod`, `updatePaymentMethod`, `deleteMethod` | mapeador |
 | budgets | `loadBudget`, `loadBudgetProgress`, `saveBudget`, `deleteBudget` | mapeador |
+| ui-preferences | `Repository.webUiPreferences()` / `saveWebUiPreferences()` (DataStore, una clave `webuiPreferences` con el JSON) | DTO, validación y fusión por campo |
 | reports/grouped | `IAccount.groupingQuery` / `TransactionsUri/groups/{Grouping}` | mapeador de cursor |
 | reports/breakdown | `TRANSACTIONS_SUM_URI` + `groupBy` | **función tipada nueva** en `db2` |
 | files | `AppDirHelper` | mapeador + validación de nombre |
@@ -805,11 +857,12 @@ Tras revisar de nuevo el código:
 ## 8. Pruebas
 
 - **Rutas en JVM**: `webui/src/test/java/org/totschnig/webui/api/ApiRoutesTest.kt`
-  con un `WebApiDataSource` fake y Ktor `testApplication`. 32 tests cubren
+  con un `WebApiDataSource` fake y Ktor `testApplication`. 57 tests cubren
   routing, validación, `201/204/404/409/422`, JSON, body malformado, los
   endpoints de transferencias/divididas, el CRUD y las asignaciones de
-  presupuestos, y los informes con drill-down. Comando:
-  `docker compose run --rm android-build :webui:testDebugUnitTest`.
+  presupuestos, los informes con drill-down y las preferencias de la web
+  (documento vacío, fusión parcial, `422` con `fields` y campos desconocidos).
+  Comando: `docker compose run --rm android-build :webui:testDebugUnitTest`.
 - **Capa Android**: `AndroidWebApiDataSource` y el `ContentProvider` se validan
   en el móvil o con tests instrumentados; los mapeadores puros pueden probarse
   sin Android.

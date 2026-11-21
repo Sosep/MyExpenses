@@ -1,3 +1,5 @@
+import { scheduleUpload, STORAGE_KEYS } from './uiPreferences'
+
 export interface Filters {
   categoryIds: number[]
   payeeIds: number[]
@@ -122,7 +124,7 @@ export function activeFilterCount(filters: Filters): number {
   )
 }
 
-const GROUPING_STORAGE_KEY = 'myexpenses.grouping'
+const GROUPING_STORAGE_KEY = STORAGE_KEYS.grouping
 
 export function isGrouping(value: string | null): value is Grouping {
   return value !== null && (GROUPINGS as string[]).includes(value)
@@ -141,6 +143,7 @@ export function groupingFromUrl(search: string): Grouping {
 
 export function rememberGrouping(grouping: Grouping) {
   window.localStorage.setItem(GROUPING_STORAGE_KEY, grouping)
+  scheduleUpload('grouping', grouping)
 }
 
 export type RangePreset = 'all' | 'month' | 'last3' | 'year' | 'custom'

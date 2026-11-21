@@ -3,8 +3,9 @@ import { i18n } from '@lingui/core'
 export { i18n }
 import { messages as en } from './locales/en/messages.po'
 import { messages as es } from './locales/es/messages.po'
+import { scheduleUpload, STORAGE_KEYS } from './uiPreferences'
 
-const LOCALE_KEY = 'myexpenses.locale'
+const LOCALE_KEY = STORAGE_KEYS.locale
 
 export const LOCALES = [
   { value: 'en', label: 'English' },
@@ -28,5 +29,6 @@ export function initialLocale(): Locale {
 export function activateLocale(locale: Locale): void {
   i18n.activate(locale)
   localStorage.setItem(LOCALE_KEY, locale)
+  scheduleUpload('locale', locale)
   document.documentElement.lang = locale
 }

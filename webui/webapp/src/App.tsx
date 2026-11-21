@@ -11,8 +11,24 @@ import {
 } from './navigation'
 import type { Locale } from './i18n'
 import { activateLocale, initialLocale, LOCALES } from './i18n'
-import type { Account, Meta } from './types'
-import { ApiError, describeError, getAccounts, getMeta, login, logout, UNAUTHORIZED_EVENT } from './api'
+import type { Account, Meta, UiPreferences } from './types'
+import {
+  ApiError,
+  describeError,
+  getAccounts,
+  getMeta,
+  getUiPreferences,
+  login,
+  logout,
+  UNAUTHORIZED_EVENT,
+} from './api'
+import {
+  applyServerPreferences,
+  scheduleUpload,
+  startUiPreferencesSync,
+  STORAGE_KEYS,
+  uploadLocalPreferences,
+} from './uiPreferences'
 import { AccountEditor } from './components/AccountEditor'
 import { Budgets } from './components/Budgets'
 import { Dashboard } from './components/Dashboard'
@@ -29,8 +45,8 @@ import { Transactions } from './components/Transactions'
 type Status = 'checking' | 'login' | 'ready'
 type EditorState = { mode: 'create' } | { mode: 'edit'; id: number }
 
-const THEME_KEY = 'myexpenses.theme'
-const ACCOUNT_KEY = 'myexpenses.accountId'
+const THEME_KEY = STORAGE_KEYS.theme
+const ACCOUNT_KEY = STORAGE_KEYS.accountId
 
 function initialTheme(): 'light' | 'dark' {
   return document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light'
@@ -91,6 +107,30 @@ export default function App({ initialLocale: initial }: { initialLocale: Locale 
   }
   const queryClient = useQueryClient()
 
+  /**
+   * Merges the phone's copy before the shell renders: the server wins per key,
+   * an absent key keeps the local one. `?accountId=` still beats the remembered
+   * account, because a link must open the account it names.
+   */
+  function adoptUiPreferences(server: UiPreferences | null) {
+    const needsSeed = applyServerPreferences(server)
+    const storedTheme = localStorage.getItem(THEME_KEY)
+    if (storedTheme === 'light' || storedTheme === 'dark') setTheme(storedTheme)
+    const storedLocale = localStorage.getItem(STORAGE_KEYS.locale)
+    if (storedLocale === 'en' || storedLocale === 'es') setLocale(storedLocale)
+    const storedAccount = Number(localStorage.getItem(ACCOUNT_KEY))
+    if (
+      accountFromUrl(window.location.search) === null &&
+      Number.isInteger(storedAccount) &&
+      storedAccount > 0
+    ) {
+      setAccountId(storedAccount)
+    }
+    // Choices made before this feature shipped migrate on the first contact.
+    if (needsSeed) uploadLocalPreferences()
+    startUiPreferencesSync()
+  }
+
   useEffect(() => {
     activateLocale(locale)
   }, [locale])
@@ -116,9 +156,12 @@ export default function App({ initialLocale: initial }: { initialLocale: Locale 
   useEffect(() => {
     if (status !== 'checking') return
     let cancelled = false
-    Promise.all([getMeta(), getAccounts()])
-      .then(([nextMeta, nextAccounts]) => {
+    // A missing UI-preferences resource (older server, no session yet, network
+    // hiccup) must not keep the app from opening with its local cache.
+    Promise.all([getMeta(), getAccounts(), getUiPreferences().catch(() => null)])
+      .then(([nextMeta, nextAccounts, serverPreferences]) => {
         if (cancelled) return
+        adoptUiPreferences(serverPreferences)
         setMeta(nextMeta)
         setAccounts(nextAccounts)
         setStatus('ready')
@@ -138,6 +181,7 @@ export default function App({ initialLocale: initial }: { initialLocale: Locale 
   useEffect(() => {
     document.documentElement.dataset.theme = theme
     localStorage.setItem(THEME_KEY, theme)
+    scheduleUpload('theme', theme)
     document
       .querySelector('meta[name="theme-color"]')
       ?.setAttribute('content', theme === 'dark' ? '#0B0D12' : '#FFFFFF')
@@ -153,6 +197,7 @@ export default function App({ initialLocale: initial }: { initialLocale: Locale 
   useEffect(() => {
     if (accountId !== null) {
       localStorage.setItem(ACCOUNT_KEY, String(accountId))
+      scheduleUpload('accountId', accountId)
     }
   }, [accountId])
 
@@ -175,7 +220,11 @@ export default function App({ initialLocale: initial }: { initialLocale: Locale 
 
   async function handleLogin(password: string) {
     const nextMeta = await login(password)
-    const nextAccounts = await getAccounts()
+    const [nextAccounts, serverPreferences] = await Promise.all([
+      getAccounts(),
+      getUiPreferences().catch(() => null),
+    ])
+    adoptUiPreferences(serverPreferences)
     setMeta(nextMeta)
     setAccounts(nextAccounts)
     setAuthError(null)

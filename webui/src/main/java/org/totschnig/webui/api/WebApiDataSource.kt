@@ -9,6 +9,8 @@ import java.time.LocalDate
  */
 interface WebApiDataSource {
     fun meta(): MetaDto
+    suspend fun uiPreferences(): UiPreferencesDto
+    suspend fun updateUiPreferences(body: UiPreferencesDto): UiPreferencesDto
     fun accounts(): List<AccountDto>
     suspend fun account(id: Long): AccountDto?
     fun accountTypes(): List<AccountTypeDto>
