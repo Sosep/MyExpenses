@@ -483,10 +483,11 @@ msgid "Budgets close to or over their limit, marked with text and an icon."
 msgstr "Presupuestos cerca del límite o superados, marcados con texto e icono."
 
 #: src/components/reports/BudgetsTab.tsx
-msgid "Budgets in different currencies are shown separately; the totals above use {primaryCurrency}."
-msgstr "Los presupuestos en monedas distintas se muestran por separado; los totales de arriba usan {primaryCurrency}."
+#~ msgid "Budgets in different currencies are shown separately; the totals above use {primaryCurrency}."
+#~ msgstr "Los presupuestos en monedas distintas se muestran por separado; los totales de arriba usan {primaryCurrency}."
 
 #: src/components/Budgets.tsx
+#: src/components/reports/BudgetsTab.tsx
 msgid "Budgets with different currencies or periods are shown separately."
 msgstr "Los presupuestos con divisas o periodos distintos se muestran por separado."
 
@@ -2570,7 +2571,7 @@ msgstr "Total (con signo)"
 msgid "Total amount"
 msgstr "Importe total"
 
-#. placeholder {0}: selectedIds.length
+#. placeholder {0}: visibleAccounts.length
 #: src/components/reports/BalanceCard.tsx
 msgid "Total of {0} accounts"
 msgstr "Total de {0} cuentas"

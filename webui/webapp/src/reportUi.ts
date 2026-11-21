@@ -115,3 +115,13 @@ export function percentChange(current: number, previous: number): number | null 
   if (previous === 0) return current === 0 ? 0 : null
   return ((current - previous) / Math.abs(previous)) * 100
 }
+
+/** Closing balance of the same accounts the series draws. */
+export function sumLastBalances(
+  entries: { series: { balanceMinor: number }[] }[],
+): number {
+  return entries.reduce(
+    (total, entry) => total + (entry.series.at(-1)?.balanceMinor ?? 0),
+    0,
+  )
+}

@@ -6,6 +6,7 @@ import { formatDate, formatPercent } from '../../format'
 import { useAsync } from '../../hooks'
 import { Money } from '../../privacy'
 import type { ReportBalanceRange } from '../../preferences'
+import { sumLastBalances } from '../../reportUi'
 import { MultiPicker } from '../MultiPicker'
 import { LineChart } from '../LineChart'
 import type { LineSeries } from '../LineChart'
@@ -96,6 +97,8 @@ export function BalanceCard({
   const total = data.data?.totals.find((entry) => entry.currency === activeCurrency)
   const visibleAccounts =
     data.data?.accounts.filter((entry) => entry.currency === activeCurrency) ?? []
+  // The summary describes exactly the max six series the chart draws.
+  const chartedAccounts = visibleAccounts.slice(0, 6)
   const series: LineSeries[] =
     mode === 'total'
       ? total
@@ -111,7 +114,7 @@ export function BalanceCard({
             },
           ]
         : []
-      : visibleAccounts.slice(0, 6).map((entry, index) => ({
+      : chartedAccounts.map((entry, index) => ({
           key: String(entry.id),
           label: `${entry.label} (${entry.currency})`,
           color: COLORS[index % COLORS.length],
@@ -122,9 +125,16 @@ export function BalanceCard({
         }))
 
   const startBalance =
-    mode === 'total' ? (total?.startBalanceMinor ?? 0) : visibleAccounts.reduce((sum, entry) => sum + entry.startBalanceMinor, 0)
+    mode === 'total'
+      ? (total?.startBalanceMinor ?? 0)
+      : chartedAccounts.reduce((sum, entry) => sum + entry.startBalanceMinor, 0)
   const lastPoint = series[0]?.points[series[0].points.length - 1]
-  const endBalance = lastPoint?.valueMinor ?? startBalance
+  // In By-account mode the closing figure is the sum of the same accounts the
+  // chart draws, not only the first series.
+  const endBalance =
+    mode === 'total'
+      ? (lastPoint?.valueMinor ?? startBalance)
+      : sumLastBalances(chartedAccounts)
   const change = endBalance - startBalance
   const changePercent = startBalance !== 0 ? (change / Math.abs(startBalance)) * 100 : null
   const firstDate = visibleAccounts

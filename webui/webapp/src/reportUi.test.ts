@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { balanceRange, evolutionGrouping, previousRange, reportRange } from './reportUi'
+import {
+  balanceRange,
+  evolutionGrouping,
+  previousRange,
+  reportRange,
+  sumLastBalances,
+} from './reportUi'
 
 describe('report ranges', () => {
   const now = new Date(2026, 10, 21) // 21 November 2026
@@ -56,5 +62,30 @@ describe('report ranges', () => {
     expect(evolutionGrouping('2026-07-01', '2026-11-30')).toBe('WEEK')
     expect(evolutionGrouping('2026-01-01', '2026-11-30')).toBe('MONTH')
     expect(evolutionGrouping('2020-01-01', '2026-11-30')).toBe('YEAR')
+  })
+})
+
+describe('balance summary', () => {
+  it('sums the closing balance of every account the chart draws', () => {
+    expect(
+      sumLastBalances([
+        {
+          series: [
+            { balanceMinor: 100 },
+            { balanceMinor: 1000 },
+          ],
+        },
+        {
+          series: [
+            { balanceMinor: 200 },
+            { balanceMinor: 2500 },
+          ],
+        },
+      ]),
+    ).toBe(3500)
+  })
+
+  it('keeps a single account unchanged', () => {
+    expect(sumLastBalances([{ series: [{ balanceMinor: 4200 }] }])).toBe(4200)
   })
 })

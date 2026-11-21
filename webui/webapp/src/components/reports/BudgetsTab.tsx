@@ -1,33 +1,20 @@
 import { useState } from 'react'
 import { t } from '@lingui/core/macro'
-import type { Account, BudgetCriteria } from '../../types'
+import type { Account } from '../../types'
 import { describeError } from '../../api'
 import { formatPercent } from '../../format'
 import { useAsync } from '../../hooks'
 import { Money } from '../../privacy'
 import { groupingLabel } from '../../budgetUi'
 import { SearchSelect } from '../SearchSelect'
-import { budgetPercent, budgetStateLabel, loadBudgetProgresses } from './budgetProgress'
-import type { BudgetWithProgress } from './budgetProgress'
+import {
+  budgetPercent,
+  budgetStateLabel,
+  budgetSummary,
+  budgetTransactionsSearch,
+  loadBudgetProgresses,
+} from './budgetProgress'
 import { Card, Kpi } from './shared'
-
-function transactionsSearch(entry: BudgetWithProgress): string {
-  const params = new URLSearchParams({
-    view: 'transactions',
-    preset: 'custom',
-    from: entry.progress.periodStart,
-    to: entry.progress.periodEnd,
-    accountId: String(entry.progress.accountId),
-  })
-  const criteria: BudgetCriteria | null = entry.budget.criteria
-  if (criteria) {
-    for (const id of criteria.payeeIds) params.append('payeeId', String(id))
-    for (const id of criteria.methodIds) params.append('methodId', String(id))
-    for (const id of criteria.tagIds) params.append('tagId', String(id))
-    for (const status of criteria.statuses) params.append('status', status)
-  }
-  return `?${params.toString()}`
-}
 
 export function BudgetsTab({
   accounts,
@@ -48,15 +35,9 @@ export function BudgetsTab({
       (grouping === 'all' || entry.budget.grouping === grouping) &&
       (accountId === 'all' || entry.progress.accountId === Number(accountId)),
   )
-  const currencies = [...new Set(entries.map((entry) => entry.progress.currency))]
-  const primaryCurrency = currencies[0]
-  const primary = entries.filter((entry) => entry.progress.currency === primaryCurrency)
-  const allocated = primary.reduce((sum, entry) => sum + entry.progress.allocatedMinor, 0)
-  const spent = primary.reduce((sum, entry) => sum + entry.progress.spentMinor, 0)
-  const remaining = allocated - spent
+  const summary = budgetSummary(entries)
   const over = entries.filter((entry) => budgetStateLabel(entry.progress) === 'over')
   const warn = entries.filter((entry) => budgetStateLabel(entry.progress) === 'warn')
-  const fractionDigits = primary[0]?.progress.fractionDigits ?? 2
 
   return (
     <>
@@ -106,29 +87,29 @@ export function BudgetsTab({
           label={t`Limit for the period`}
           tone="sky"
           value={
-            primaryCurrency ? (
+            summary ? (
               <Money
                 scope="totals"
-                amountMinor={allocated}
-                currency={primaryCurrency}
-                fractionDigits={fractionDigits}
+                amountMinor={summary.allocated}
+                currency={summary.currency}
+                fractionDigits={summary.fractionDigits}
               />
             ) : (
               '—'
             )
           }
-          foot={primaryCurrency ?? t`No budgets`}
+          foot={summary ? `${summary.currency} · ${summary.periodDescription}` : t`No budgets`}
         />
         <Kpi
           label={t`Already spent`}
           tone="rose"
           value={
-            primaryCurrency ? (
+            summary ? (
               <Money
                 scope="totals"
-                amountMinor={spent}
-                currency={primaryCurrency}
-                fractionDigits={fractionDigits}
+                amountMinor={summary.spent}
+                currency={summary.currency}
+                fractionDigits={summary.fractionDigits}
               />
             ) : (
               '—'
@@ -139,12 +120,12 @@ export function BudgetsTab({
           label={t`Still available`}
           tone="mint"
           value={
-            primaryCurrency ? (
+            summary ? (
               <Money
                 scope="totals"
-                amountMinor={remaining}
-                currency={primaryCurrency}
-                fractionDigits={fractionDigits}
+                amountMinor={summary.remaining}
+                currency={summary.currency}
+                fractionDigits={summary.fractionDigits}
                 showSign
               />
             ) : (
@@ -156,7 +137,9 @@ export function BudgetsTab({
           label={t`Consumed`}
           tone="lav"
           value={
-            allocated > 0 ? formatPercent((spent / allocated) * 100) : '—'
+            summary && summary.allocated > 0
+              ? formatPercent((summary.spent / summary.allocated) * 100)
+              : '—'
           }
           foot={
             over.length > 0
@@ -166,9 +149,9 @@ export function BudgetsTab({
         />
       </div>
 
-      {currencies.length > 1 ? (
+      {entries.length > 0 && !summary ? (
         <p className="banner info">
-          {t`Budgets in different currencies are shown separately; the totals above use ${primaryCurrency}.`}
+          {t`Budgets with different currencies or periods are shown separately.`}
         </p>
       ) : null}
 
@@ -207,7 +190,7 @@ export function BudgetsTab({
                   <button
                     type="button"
                     className="link"
-                    onClick={() => onNavigate(transactionsSearch(entry))}
+                    onClick={() => onNavigate(budgetTransactionsSearch(entry))}
                   >
                     {t`See operations`}
                   </button>
@@ -285,7 +268,7 @@ export function BudgetsTab({
                   <button
                     type="button"
                     className="link"
-                    onClick={() => onNavigate(transactionsSearch(entry))}
+                    onClick={() => onNavigate(budgetTransactionsSearch(entry))}
                   >
                     {t`See operations`}
                   </button>
