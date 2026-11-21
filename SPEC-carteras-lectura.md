@@ -146,14 +146,16 @@ descendente (la de la app). Cada elemento (`TradeDto`) mapea
 ## Mock y QA
 
 `dev/mock-server.mjs` añade fixtures: cartera «Cartera Conjunta» (EUR) con
-efectivo, activos AAPL/ETH y operaciones de los tipos Compra, Venta, Depósito,
+efectivo, activos AAPL/BTC y operaciones de los tipos Compra, Venta, Depósito,
 Retirada y Traspaso (la contraparte es otra cartera del mock), más precios
 recientes por activo. QA switches:
 
 - `?view=transactions&accountId=7` — selecciona la cartera como cuenta activa.
 - `?new=1&kind=portfolio` — abre el editor en modo cartera.
 - `?portfolioLimit=1` — el mock responde `409 portfolio_limit_reached` al
-  crear la segunda cartera.
+  crear la segunda cartera (`?portfolioLimit=0` desactiva la cookie).
+- La subcuenta de efectivo se crea de forma perezosa con la primera operación
+  que la necesita, como `findOrCreateCashAccount` en la app.
 
 ## Fuera de alcance aquí
 

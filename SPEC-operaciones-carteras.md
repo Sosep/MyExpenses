@@ -66,7 +66,9 @@ Cuerpo (`TradeWriteDto`):
 - `PUT` reemplaza la operación (misma lógica que la app: conserva uuids y
   piernas); id desconocido o de otra cartera → `404 trade_not_found`. La
   familia no cambia (`422 unsupported_trade_change`), igual que el segmentado
-  del editor Android: Compra/Venta, Depósito/Retirada o Traspaso.
+  del editor Android: Compra/Venta, Depósito/Retirada o Traspaso. Un cambio
+  dentro de la familia conserva la financiación (EXTERNAL sigue EXTERNAL); en
+  una Entrada por traspaso el selector nombra la cartera **origen**.
 
 ## SPA
 
@@ -78,7 +80,8 @@ Cuerpo (`TradeWriteDto`):
 - `Trades.tsx`: botón `New operation` en la cabecera y FAB contextual en la
   vista de cartera; el detalle gana `Edit` y `Delete`.
 - El editor se apila sobre el detalle para no encadenar entradas de historial
-  (la carrera `back()` + `pushState` cerraba el editor recién abierto).
+  (la carrera `back()` + `pushState` cerraba el editor recién abierto). Cada
+  panel tiene su propia entrada e id: atrás o `Esc` cierran solo el superior.
 - Importes con la privacidad `transactions`; la comisión y el importe usan
   `Money`; el importe es una magnitud sin signo (el tipo ya dice la dirección).
 
@@ -86,7 +89,8 @@ Cuerpo (`TradeWriteDto`):
 
 `POST/PUT/DELETE /portfolios/{id}/trades` en `dev/mock-server.mjs` con estado
 en memoria: aplica (o revierte) el efecto de cada operación sobre efectivo y
-cantidades, actualiza el último precio y recalcula la valoración. Las
+cantidades, actualiza el último precio, recalcula la valoración y crea la
+subcuenta de efectivo cuando la operación la necesita. Las
 eliminaciones desde el editor van por `DELETE /transactions/{id}`, que el mock
 redirige a la operación si no es una transacción simple.
 

@@ -8,9 +8,18 @@ import {
   getTrade,
   updateTrade,
 } from '../api'
-import { formatMoney, parseAmountMinor } from '../format'
+import { amountInputValue, formatMoney, parseAmountMinor } from '../format'
 import { useAsync } from '../hooks'
-import { useFocusTrap } from '../useFocusTrap'
+import {
+  fundingAfterTypeChange,
+  fundingForTrade,
+  isCash,
+  isTransfer,
+  peerKind,
+  transferPeerPointsAtSource,
+} from '../tradeUi'
+import type { Funding } from '../tradeUi'
+import { isTopPanel, useFocusTrap } from '../useFocusTrap'
 import { SearchSelect } from './SearchSelect'
 import { IconX } from './Icons'
 
@@ -24,8 +33,6 @@ interface TradeEditorProps {
   onSaved: () => void
 }
 
-type Funding = 'PORTFOLIO' | 'ACCOUNT' | 'EXTERNAL'
-
 const TYPES: { type: TradeType; label: () => string }[] = [
   { type: 'BUY', label: () => t`Buy` },
   { type: 'SELL', label: () => t`Sell` },
@@ -34,21 +41,6 @@ const TYPES: { type: TradeType; label: () => string }[] = [
   { type: 'TRANSFER_OUT', label: () => t`Transfer out` },
   { type: 'TRANSFER_IN', label: () => t`Transfer in` },
 ]
-
-function isCash(type: TradeType): boolean {
-  return type === 'DEPOSIT' || type === 'WITHDRAW'
-}
-
-function isTransfer(type: TradeType): boolean {
-  return type === 'TRANSFER_IN' || type === 'TRANSFER_OUT'
-}
-
-/** Peer account kind: each operation kind points at a different picker. */
-function peerKind(type: TradeType): 'asset' | 'cash' | 'transfer' {
-  if (isCash(type)) return 'cash'
-  if (isTransfer(type)) return 'transfer'
-  return 'asset'
-}
 
 /** Today in the phone's time zone, as the API expects `YYYY-MM-DD`. */
 function today(): string {
@@ -99,9 +91,13 @@ export function TradeEditor({
     const trade = existing.data
     setType(trade.type)
     setAssetSymbol(trade.assetSymbol)
-    setQuantity(String(trade.quantityMinor / Math.pow(10, trade.fractionDigits)))
+    setQuantity(amountInputValue(trade.quantityMinor, trade.fractionDigits))
     setPrice(trade.price ?? '')
-    setFee(trade.feeMinor === null ? '' : String(trade.feeMinor / Math.pow(10, account.fractionDigits)))
+    setFee(
+      trade.feeMinor === null
+        ? ''
+        : amountInputValue(trade.feeMinor, account.fractionDigits),
+    )
     setDate(trade.date)
     setTime(trade.time ?? '')
     setComment(trade.comment)
@@ -116,23 +112,12 @@ export function TradeEditor({
     // means external funding; a sub-account (not in the top-level list) means
     // the cash sub-account; a top-level account means it was funded from an
     // account.
-    const peerIsTopLevel = accounts.some((candidate) => candidate.id === trade.peerAccountId)
-    if (trade.type === 'DEPOSIT' || trade.type === 'WITHDRAW') {
-      setFunding(trade.peerAccountId === null ? 'EXTERNAL' : 'ACCOUNT')
-    } else if (trade.type === 'BUY' || trade.type === 'SELL') {
-      setFunding(
-        trade.peerAccountId === null
-          ? 'EXTERNAL'
-          : peerIsTopLevel
-            ? 'ACCOUNT'
-            : 'PORTFOLIO',
-      )
-    }
+    setFunding(fundingForTrade(trade, accounts))
   }, [existing.data, accounts, mode])
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose()
+      if (event.key === 'Escape' && isTopPanel(panelRef.current)) onClose()
     }
     const previous = document.body.style.overflow
     document.body.style.overflow = 'hidden'
@@ -145,6 +130,9 @@ export function TradeEditor({
 
   const cash = isCash(type)
   const transfer = isTransfer(type)
+  const transferPeerLabel = transferPeerPointsAtSource(type)
+    ? t`Source portfolio`
+    : t`Target portfolio`
   // Like the app's editor, an existing operation keeps its kind: a transfer
   // stays a transfer and a buy/sell stays an asset trade.
   const typeKind = peerKind(existing.data?.type ?? type)
@@ -172,14 +160,10 @@ export function TradeEditor({
     // picker is the same one.
     if (peerKind(next) !== peerKind(type)) setPeerAccountId('')
     setType(next)
-    if (isCash(next)) {
-      setFunding((current) => (current === 'PORTFOLIO' ? 'ACCOUNT' : current))
-      setAssetSymbol(account.currency)
-    } else if (isTransfer(next)) {
-      setFunding('EXTERNAL')
-    } else if (funding === 'EXTERNAL') {
-      setFunding('PORTFOLIO')
-    }
+    // A type switch while editing only stays inside the family; the stored
+    // funding source must not change behind the user's back.
+    setFunding((current) => fundingAfterTypeChange(mode, current, next))
+    if (isCash(next)) setAssetSymbol(account.currency)
   }
 
   async function save() {
@@ -360,9 +344,9 @@ export function TradeEditor({
           ) : null}
           {transfer ? (
             <label className="field">
-              <span className="field-label">{t`Target portfolio`}</span>
+              <span className="field-label">{transferPeerLabel}</span>
               <SearchSelect
-                ariaLabel={t`Target portfolio`}
+                ariaLabel={transferPeerLabel}
                 value={peerAccountId}
                 options={portfolioAccounts.map((candidate) => ({
                   value: String(candidate.id),

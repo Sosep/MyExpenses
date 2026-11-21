@@ -209,17 +209,20 @@ icono y etiqueta. Es el mismo mock y los mismos assets, solo cambia el viewport.
 Sirve para comprobar:
 
 - navegación inferior y espacio reservado al final de la página;
-- tablas que ocultan columnas (`hide-sm`) y botones compactos;
+- tablas que ocultan columnas (`hide-sm`) y botones compactos; en Datos,
+  Divisas esconde símbolo y dígitos para que Editar/Eliminar sigan visibles;
 - editores a ancho completo y dividida apilada;
 - controles de informes y presupuestos que deben hacer wrap.
 
 ### Qué escribe el mock
 
 - **Sí**: transacciones simples (`POST/PUT/DELETE`), presupuestos, asignaciones,
-  rollover, total por periodo, duplicación, informes y descarga de ficheros.
+  rollover, total por periodo, duplicación, informes y descarga de ficheros; el
+  borrado de categorías respeta también las partes de dividida (`409`).
 - **Sí**: alta/edición de carteras (`POST/PUT /portfolios`) y sus operaciones
-  (`POST/PUT/DELETE /portfolios/{id}/trades`); el límite de licencia se simula
-  con `?portfolioLimit=1`.
+  (`POST/PUT/DELETE /portfolios/{id}/trades`), incluida la subcuenta de efectivo
+  que la app crea con la primera operación; el límite de licencia se simula con
+  `?portfolioLimit=1` (y se desactiva con `?portfolioLimit=0`).
 - **No**: guardar transferencias ni divididas; se abren y editan visualmente,
   pero el guardado se prueba contra el API real del teléfono.
 - Todo vive en memoria: reiniciar el mock vuelve a los datos de ejemplo.

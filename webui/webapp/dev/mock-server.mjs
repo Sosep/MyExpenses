@@ -918,6 +918,16 @@ const defaultSplitParts = [
 
 const splitParts = qaSeed ? qaSeed.splitParts : defaultSplitParts
 
+/**
+ * The default fixtures keep the split's parts in the shared `splitParts`
+ * constant, while QA-seeded splits carry their own. Reads and writes must see
+ * the same parts either way.
+ */
+function transactionSplitParts(item) {
+  if (item.splitParts) return item.splitParts
+  return item.kind === 'SPLIT' ? splitParts : []
+}
+
 // Same set the summary uses: a transfer's leg is not income or expense, it is
 // `transfersMinor`. Counting it here made the chart's current month disagree
 // with /reports/summary by the transfer amount.
@@ -959,6 +969,11 @@ function serveAppIndex(response) {
           document.cookie = 'myexpenses_session=; path=/; max-age=0'
         } else {
           document.cookie = 'myexpenses_session=mock; path=/'
+        }
+        if (q.has('portfolioLimit')) {
+          document.cookie = q.get('portfolioLimit') === '1'
+            ? 'mock_portfolio_limit=1; path=/'
+            : 'mock_portfolio_limit=; path=/; max-age=0'
         }
         // A QA switch only touches what it names. Without the parameter the
         // browser keeps the theme, language and privacy switches the user
@@ -1211,6 +1226,37 @@ function tagRefs(ids) {
 
 function accountFor(id) {
   return accounts.find((item) => item.id === id) ?? accounts[0]
+}
+
+/** Android creates the cash sub-account on the first operation that needs it. */
+function ensureCashAccount(portfolioId) {
+  const assets = portfolioAssets[portfolioId]
+  if (!assets) return null
+  if (assets.cashAccountId !== null) return assets.cashAccountId
+  const portfolio = accounts.find((item) => item.id === portfolioId)
+  const cash = {
+    id: nextAccountId++,
+    label: 'Cash',
+    type: '1',
+    typeName: 'CASH',
+    currency: assets.currency,
+    fractionDigits: currencyFractionDigits(assets.currency),
+    openingBalanceMinor: 0,
+    currentBalanceMinor: assets.cashMinor,
+    totalMinor: assets.cashMinor,
+    incomeMinor: 0,
+    expensesMinor: 0,
+    excludeFromTotals: false,
+    sealed: false,
+    color: portfolio?.color ?? 0,
+    parentId: portfolioId,
+    portfolioRole: 'CASH',
+    dynamicExchangeRates: false,
+    valuationMinor: null,
+  }
+  accounts.push(cash)
+  assets.cashAccountId = cash.id
+  return cash.id
 }
 
 function adjustBalance(accountId, delta) {
@@ -1507,7 +1553,7 @@ createServer(async (request, response) => {
         type: String(body.type),
         typeName,
         currency: body.currency,
-        fractionDigits: 2,
+        fractionDigits: currencyFractionDigits(body.currency),
         openingBalanceMinor: 0,
         currentBalanceMinor: 0,
         totalMinor: 0,
@@ -1608,6 +1654,11 @@ createServer(async (request, response) => {
           ? tradeAssets.currency
           : String(body.assetSymbol).toUpperCase()
       const assetFd = currencyFractionDigits(assetSymbol)
+      const isCashMovement = body.type === 'DEPOSIT' || body.type === 'WITHDRAW'
+      const isBuySell = body.type === 'BUY' || body.type === 'SELL'
+      if (isCashMovement || (isBuySell && body.fundingSource === 'PORTFOLIO')) {
+        ensureCashAccount(portfolioId)
+      }
       if (
         tradeAssets.assets.every((asset) => asset.symbol !== assetSymbol) &&
         assetSymbol !== tradeAssets.currency
@@ -1637,17 +1688,16 @@ createServer(async (request, response) => {
         principalMinor: Math.round(quantity * price * Math.pow(10, tradeAssets.fractionDigits)),
         feeMinor: body.feeMinor ? Number(body.feeMinor) : null,
         peerAccountId:
-          body.fundingSource === 'PORTFOLIO' &&
-          (body.type === 'BUY' || body.type === 'SELL')
+          body.fundingSource === 'PORTFOLIO' && isBuySell
             ? tradeAssets.cashAccountId
             : body.peerAccountId ?? null,
-        peerAccountLabel:
-          body.fundingSource === 'PORTFOLIO' &&
-          (body.type === 'BUY' || body.type === 'SELL')
-            ? accountFor(tradeAssets.cashAccountId).label
-            : body.peerAccountId === null || body.peerAccountId === undefined
-              ? null
-              : accountFor(Number(body.peerAccountId)).label,
+        peerAccountLabel: (() => {
+          const peer =
+            body.fundingSource === 'PORTFOLIO' && isBuySell
+              ? tradeAssets.cashAccountId
+              : body.peerAccountId ?? null
+          return peer === null ? null : accountFor(Number(peer)).label
+        })(),
       }
       portfolioTradesByPortfolio[portfolioId].push(trade)
       portfolioTradesByPortfolio[portfolioId].sort((left, right) =>
@@ -1718,6 +1768,10 @@ createServer(async (request, response) => {
         const assetFd = currencyFractionDigits(nextAssetSymbol)
         const funding = body.fundingSource
         const isBuySell = nextType === 'BUY' || nextType === 'SELL'
+        const isCashMovement = nextType === 'DEPOSIT' || nextType === 'WITHDRAW'
+        if (isCashMovement || (isBuySell && funding === 'PORTFOLIO')) {
+          ensureCashAccount(portfolioId)
+        }
         // The counterpart depends on the funding, not on what the form kept:
         // portfolio cash for a cash-funded buy, the account for bank funding,
         // the target portfolio for a transfer, nothing for external funding.
@@ -1996,7 +2050,9 @@ createServer(async (request, response) => {
         const inUse = transactions.some(
           (item) =>
             branch.includes(item.category?.id) ||
-            (item.splitParts ?? []).some((part) => branch.includes(part.category?.id)),
+            transactionSplitParts(item).some((part) =>
+              branch.includes(part.category?.id),
+            ),
         )
         if (inUse && !remapTo) {
           return sendJson(response, 409, {
@@ -2004,12 +2060,18 @@ createServer(async (request, response) => {
             message: 'The category has movements; choose a category to move them to',
           })
         }
+        if (inUse && branch.includes(Number(remapTo))) {
+          return sendJson(response, 422, {
+            error: 'invalid_remapTo',
+            message: 'Movements cannot be moved into the category being deleted',
+          })
+        }
         if (inUse) {
           for (const item of transactions) {
             if (branch.includes(item.category?.id)) {
               item.category = categoryRef(Number(remapTo))
             }
-            for (const part of item.splitParts ?? []) {
+            for (const part of transactionSplitParts(item)) {
               if (branch.includes(part.category?.id)) {
                 part.category = categoryRef(Number(remapTo))
               }

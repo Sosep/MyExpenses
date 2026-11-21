@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { i18n } from './i18n'
 import {
   addMonths,
+  amountInputValue,
+  decimalInputValue,
   formatDate,
   formatMoney,
   formatMonth,
@@ -108,5 +110,20 @@ describe('month index', () => {
     i18n.activate('es')
     expect(formatMonthKey('2026-11')).toBe(formatMonth(2026, 10))
     expect(formatMonthKey('2026-01')).toBe(formatMonth(2026, 0))
+  })
+})
+
+describe('decimal inputs', () => {
+  it('renders a quantity in minor units without scientific notation', () => {
+    expect(amountInputValue(1, 8)).toBe('0.00000001')
+    expect(amountInputValue(1234, 2)).toBe('12.34')
+    expect(amountInputValue(0, 2)).toBe('')
+  })
+
+  it('renders a major value with the digits the API returned', () => {
+    expect(decimalInputValue(4300)).toBe('4300')
+    expect(decimalInputValue(0.00000001)).toBe('0.00000001')
+    expect(decimalInputValue(1.08)).toBe('1.08')
+    expect(decimalInputValue(0)).toBe('')
   })
 })

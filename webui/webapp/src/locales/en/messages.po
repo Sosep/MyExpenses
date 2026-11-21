@@ -1709,6 +1709,10 @@ msgstr "Something did not work. Try again."
 msgid "Source"
 msgstr "Source"
 
+#: src/components/TradeEditor.tsx
+msgid "Source portfolio"
+msgstr "Source portfolio"
+
 #: src/components/Reports.tsx
 msgid "Spending by {noun}"
 msgstr "Spending by {noun}"

@@ -34,8 +34,17 @@ import {
   updatePrice,
   updateTag,
 } from '../api'
-import { formatDate } from '../format'
+import {
+  accountTypeNames,
+  branchIds,
+  FLAG_EXPENSE,
+  FLAG_INCOME,
+  nonFiatCurrencies,
+  remapCandidates,
+} from '../appDataUi'
+import { decimalInputValue, formatDate } from '../format'
 import { useAsync } from '../hooks'
+import { useHistoryPanel } from '../navigation'
 import { useFocusTrap } from '../useFocusTrap'
 import { SearchSelect } from './SearchSelect'
 import { IconX } from './Icons'
@@ -162,20 +171,19 @@ function ErrorText({ message }: { message: string | null }) {
 
 // ---- categories ----------------------------------------------------------
 
-const FLAG_EXPENSE = 1
-const FLAG_INCOME = 2
-
 function CategoriesTab() {
   const categories = useAsync(() => getCategories(), ['categories'])
   const [editing, setEditing] = useState<Category | 'new' | null>(null)
   const [remapping, setRemapping] = useState<Category | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const closeEditor = useHistoryPanel(editing !== null, () => setEditing(null))
+  const closeRemap = useHistoryPanel(remapping !== null, () => setRemapping(null))
 
   async function remove(category: Category, remapTo?: number) {
     setError(null)
     try {
       await deleteCategory(category.id, remapTo)
-      setRemapping(null)
+      closeRemap()
       categories.reload()
     } catch (cause) {
       if (cause instanceof ApiError && cause.code === 'category_in_use') {
@@ -256,9 +264,9 @@ function CategoriesTab() {
         <CategoryEditor
           category={editing === 'new' ? null : editing}
           categories={categories.data ?? []}
-          onClose={() => setEditing(null)}
+          onClose={closeEditor}
           onSaved={() => {
-            setEditing(null)
+            closeEditor()
             categories.reload()
           }}
         />
@@ -269,7 +277,7 @@ function CategoriesTab() {
           categories={categories.data ?? []}
           error={error}
           onClose={() => {
-            setRemapping(null)
+            closeRemap()
             setError(null)
           }}
           onConfirm={(target) => {
@@ -405,9 +413,10 @@ function RemapPanel({
   onConfirm: (target: number) => void
 }) {
   const [target, setTarget] = useState('')
-  const options = categories
-    .filter((candidate) => candidate.id !== category.id && !branchIds(categories, category.id).includes(candidate.id))
-    .map((candidate) => ({ value: String(candidate.id), label: candidate.label }))
+  const options = remapCandidates(categories, category.id).map((candidate) => ({
+    value: String(candidate.id),
+    label: candidate.label,
+  }))
   return (
     <Panel
       title={t`Delete category`}
@@ -446,19 +455,6 @@ function RemapPanel({
   )
 }
 
-function branchIds(categories: Category[], root: number): number[] {
-  const result = [root]
-  for (let index = 0; index < result.length; index += 1) {
-    const parent = result[index]
-    categories
-      .filter((category) => category.parentId === parent)
-      .forEach((child) => {
-        if (!result.includes(child.id)) result.push(child.id)
-      })
-  }
-  return result
-}
-
 // ---- methods -------------------------------------------------------------
 
 function MethodsTab() {
@@ -466,6 +462,7 @@ function MethodsTab() {
   const accountTypes = useAsync(() => getAccountTypes(), ['account-types'])
   const [editing, setEditing] = useState<Method | 'new' | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const closeEditor = useHistoryPanel(editing !== null, () => setEditing(null))
 
   async function remove(method: Method) {
     setError(null)
@@ -507,7 +504,9 @@ function MethodsTab() {
                 <td>
                   {method.type < 0 ? t`Expense` : method.type > 0 ? t`Income` : t`Neutral`}
                 </td>
-                <td>{method.accountTypes.join(', ') || t`All`}</td>
+                <td>
+                  {accountTypeNames(method, accountTypes.data ?? []) || t`All`}
+                </td>
                 <td className="num">
                   <button type="button" className="btn ghost" onClick={() => setEditing(method)}>
                     {t`Edit`}
@@ -529,9 +528,9 @@ function MethodsTab() {
         <MethodEditor
           method={editing === 'new' ? null : editing}
           accountTypes={accountTypes.data ?? []}
-          onClose={() => setEditing(null)}
+          onClose={closeEditor}
           onSaved={() => {
-            setEditing(null)
+            closeEditor()
             methods.reload()
           }}
         />
@@ -665,6 +664,7 @@ function TagsTab() {
   const tags = useAsync(() => getTags(), ['tags'])
   const [editing, setEditing] = useState<Tag | 'new' | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const closeEditor = useHistoryPanel(editing !== null, () => setEditing(null))
 
   async function remove(tag: Tag) {
     setError(null)
@@ -721,9 +721,9 @@ function TagsTab() {
       {editing ? (
         <TagEditor
           tag={editing === 'new' ? null : editing}
-          onClose={() => setEditing(null)}
+          onClose={closeEditor}
           onSaved={() => {
-            setEditing(null)
+            closeEditor()
             tags.reload()
           }}
         />
@@ -804,6 +804,7 @@ function CurrenciesTab() {
   const currencies = useAsync(() => getCurrencies(), ['currencies'])
   const [editing, setEditing] = useState<CurrencyEntry | 'new' | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const closeEditor = useHistoryPanel(editing !== null, () => setEditing(null))
 
   async function remove(currency: CurrencyEntry) {
     setError(null)
@@ -835,8 +836,8 @@ function CurrenciesTab() {
           <thead>
             <tr>
               <th>{t`Code`}</th>
-              <th>{t`Symbol`}</th>
-              <th className="num">{t`Digits`}</th>
+              <th className="hide-sm">{t`Symbol`}</th>
+              <th className="num hide-sm">{t`Digits`}</th>
               <th>{t`Type`}</th>
               <th className="num">{t`Actions`}</th>
             </tr>
@@ -845,8 +846,8 @@ function CurrenciesTab() {
             {(currencies.data ?? []).map((currency) => (
               <tr key={currency.code} data-currency-code={currency.code}>
                 <td>{currency.code}</td>
-                <td>{currency.symbol}</td>
-                <td className="num">{currency.fractionDigits}</td>
+                <td className="hide-sm">{currency.symbol}</td>
+                <td className="num hide-sm">{currency.fractionDigits}</td>
                 <td>{currency.commodityType}</td>
                 <td className="num">
                   <button
@@ -872,9 +873,9 @@ function CurrenciesTab() {
       {editing ? (
         <CurrencyEditor
           currency={editing === 'new' ? null : editing}
-          onClose={() => setEditing(null)}
+          onClose={closeEditor}
           onSaved={() => {
-            setEditing(null)
+            closeEditor()
             currencies.reload()
           }}
         />
@@ -1014,9 +1015,7 @@ function CurrencyEditor({
 
 function PricesTab() {
   const currencies = useAsync(() => getCurrencies(), ['currencies'])
-  const commodities = (currencies.data ?? []).filter(
-    (currency) => currency.commodityType !== 'FIAT',
-  )
+  const commodities = nonFiatCurrencies(currencies.data ?? [])
   const [commodity, setCommodity] = useState('')
   useEffect(() => {
     if (!commodity && commodities.length > 0) setCommodity(commodities[0].code)
@@ -1027,6 +1026,7 @@ function PricesTab() {
   )
   const [editing, setEditing] = useState<Price | 'new' | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const closeEditor = useHistoryPanel(editing !== null, () => setEditing(null))
 
   async function remove(price: Price) {
     setError(null)
@@ -1138,9 +1138,9 @@ function PricesTab() {
         <PriceEditor
           price={editing === 'new' ? null : editing}
           commodity={commodity}
-          onClose={() => setEditing(null)}
+          onClose={closeEditor}
           onSaved={() => {
-            setEditing(null)
+            closeEditor()
             prices.reload()
           }}
         />
@@ -1166,7 +1166,7 @@ function PriceEditor({
     price?.date ??
       `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`,
   )
-  const [value, setValue] = useState(price ? String(price.value) : '')
+  const [value, setValue] = useState(price ? decimalInputValue(price.value) : '')
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 

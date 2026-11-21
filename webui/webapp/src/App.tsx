@@ -12,6 +12,7 @@ import {
 import type { Locale } from './i18n'
 import { activateLocale, initialLocale, LOCALES } from './i18n'
 import type { Account, Meta } from './types'
+import { topLevelAccounts } from './accountUi'
 import { ApiError, describeError, getAccounts, getMeta, login, logout, UNAUTHORIZED_EVENT } from './api'
 import { AccountEditor } from './components/AccountEditor'
 import { AppData } from './components/AppData'
@@ -49,13 +50,6 @@ function initialAccountId(): number | null {
   if (!stored) return null
   const parsed = Number(stored)
   return Number.isFinite(parsed) ? parsed : null
-}
-
-/** Top-level accounts only: portfolio sub-accounts (cash, assets) are hidden. */
-export function topLevelAccounts(accounts: Account[]): Account[] {
-  return accounts.filter(
-    (account) => account.portfolioRole === 'NONE' || account.portfolioRole === 'CONTAINER',
-  )
 }
 
 export default function App({ initialLocale: initial }: { initialLocale: Locale }) {

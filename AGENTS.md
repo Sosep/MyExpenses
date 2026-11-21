@@ -11,7 +11,7 @@ Read this before changing code. Detailed sources:
 
 - `/api/v1`: read endpoints plus create/update/delete for simple transactions,
   transfers and splits.
-- API routes covered on the JVM by 91 tests — 75 `ApiRoutesTest`, 7
+- API routes covered on the JVM by 95 tests — 79 `ApiRoutesTest`, 7
   `CategoryBranchTest`, 5 `LoginThrottleTest` and 4 `SessionStoreTest` — with a
   fake `WebApiDataSource` and Ktor `testApplication`.
 - SPA: dashboard, transactions, detail, reports, files, budgets, and the simple,
@@ -42,8 +42,10 @@ Read this before changing code. Detailed sources:
   `POST/PUT /portfolios/{id}/trades` and the domain extracted from the
   ViewModel into `db2/RepositoryTrades.kt`, which the Android trade screens
   use too; the web editor mirrors `TradeIntent` and the mock applies the
-  operation deltas in memory. Editing an operation keeps its family (buy/sell,
-  deposit/withdraw, transfer), like the Android editor.
+  operation deltas in memory and creates the cash sub-account on the first
+  operation, like the app. Editing an operation keeps its family (buy/sell,
+  deposit/withdraw, transfer) and its funding source, like the Android editor.
+  The mock honours `?portfolioLimit=1` with `409 portfolio_limit_reached`.
 - App data: `?view=datos` mirrors Android's Settings > Data with tabs for
   categories (tree, delete with remap), payment methods, tags, currencies
   (fiat and custom assets) and the manual price history. The writes go through
@@ -64,8 +66,11 @@ Read this before changing code. Detailed sources:
   removes its transactions like the app does, with `409` when it has a sealed
   debt.
 - Navigation: the view lives in the URL (`?view=`), so back/forward walk the app
-  and deep links open a filtered list; the transaction detail is a history entry
-  that back closes. Other panels still open from state. The account travels as
+  and deep links open a filtered list. Every side panel is a history entry
+  (`useHistoryPanel`): transaction detail and editor, report drill-down, the
+  budget panel, the trade detail and editor, and the app-data editors. Back
+  closes them; when two stack (detail + editor) only the top one closes. The
+  account travels as
   `?accountId=` when a screen sends the user somewhere (the budget drill-down
   opens the budget's own account); without it the remembered account wins, and
   the topbar rewrites it with `replaceState` so the two never disagree.
@@ -120,6 +125,9 @@ Read this before changing code. Detailed sources:
   (`firstDate` anchors rows to periods), and the range is just another filter
   (`Historial` by default, plus `Este mes`, `Últimos 3 meses`, `Este año` and a
   custom one).
+- On phones the Datos tables hide the currency symbol and digits so the row
+  actions stay inside the card; the bottom rail keeps all six sections,
+  including Datos.
 - Budgets have month navigation; monthly budgets load that month's progress,
   allocations and period total. Each budget has a 12-month history panel and
   per-category spent/allocated bars. A budget's saved category filter is the
@@ -292,10 +300,6 @@ Update the docs while the change is fresh; do not defer them to a later commit.
   `RepositoryTrades` extraction must not change the Android save flow. The data
   screen also needs device QA: a remapped category and an edited price from the
   web must show in the app at once.
-- Every side panel is a history entry (`useHistoryPanel`): transaction detail and
-  editor, report drill-down, the budget panel (detail and editor share one
-  entry), the trade detail and editor, and the app-data editors. Back closes
-  them; closing from the UI pops the entry.
 - Budget detail and its filter need device checks that the mock cannot fake:
   January and a 12-month history (the two contract fixes), a split inside a
   budget counted once, and a budget created from the web with two categories and

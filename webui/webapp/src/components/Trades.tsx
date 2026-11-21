@@ -8,7 +8,7 @@ import { useHistoryPanel } from '../navigation'
 import { Money, useAmounts, useMoney } from '../privacy'
 import { maskedMoney } from '../format'
 import { useAsync } from '../hooks'
-import { useFocusTrap } from '../useFocusTrap'
+import { isTopPanel, useFocusTrap } from '../useFocusTrap'
 import { IconX } from './Icons'
 
 interface TradesProps {
@@ -80,7 +80,7 @@ function TradePanel({
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose()
+      if (event.key === 'Escape' && isTopPanel(panelRef.current)) onClose()
     }
     const previous = document.body.style.overflow
     document.body.style.overflow = 'hidden'

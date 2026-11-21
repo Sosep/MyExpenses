@@ -373,7 +373,9 @@ espacio para no quedar tapado.
   pie sticky con Cancel/Save.
 - Diálogo: solo para confirmaciones destructivas y selectores pequeños; ancho
   máximo 480; nombre del objeto en el título ("Delete split transaction?").
-- `Esc` cierra; foco atrapado; al cerrar, el foco vuelve al disparador.
+- `Esc` cierra; foco atrapado; al cerrar, el foco vuelve al disparador. Cada
+  panel es una entrada de historial: atrás lo cierra. Si dos se apilan (detalle
+  y editor), `Esc` y atrás cierran solo el superior.
 - En móvil, el panel pasa a página completa.
 
 ### Toasts y banners
@@ -446,7 +448,10 @@ Overview · Investments                     Transactions   Refresh
   `summary-strip`, comisión y financiación. En edición precarga los valores y
   añade `Delete` a la izquierda del pie; guardar cierra el panel y refresca.
   El detalle de la operación gana `Edit` y `Delete`, y el editor se abre encima
-  del detalle para no encadenar entradas de historial.
+  del detalle para no encadenar entradas de historial. Un cambio de tipo dentro
+  de la familia (compra/venta, depósito/retirada, traspaso) conserva la
+  financiación; no se ofrece cruzar de familia. En una entrada por traspaso el
+  selector nombra la **cartera origen**.
 
 ### Transacciones agrupadas por mes
 
@@ -658,8 +663,10 @@ November 2026                     All budgets
   edición no (es la clave). Precios: selector de activo (solo no fiat), tabla
   fecha/valor/fuente y panel fecha+precio; guardar reemplaza el precio manual
   de esa fecha.
-- En móvil las pestañas hacen wrap y la tabla conserva sus columnas (sin
-  scroll horizontal); los paneles son de ancho completo como el resto.
+- En móvil las pestañas hacen wrap y ninguna tabla provoca scroll horizontal:
+  en Divisas se ocultan símbolo y dígitos para que las acciones queden dentro
+  de la tarjeta; en el resto se conservan las columnas con padding compacto. Los
+  paneles son de ancho completo como el resto.
 
 ### Maestros
 

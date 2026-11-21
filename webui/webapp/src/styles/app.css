@@ -245,7 +245,7 @@ button:disabled {
 }
 
 .kpi-label {
-  @apply text-[11px] font-medium uppercase tracking-[0.04em] text-muted;
+  @apply text-[11px] font-medium uppercase tracking-[0.04em] text-secondary;
 }
 
 .hero-value {
@@ -281,7 +281,7 @@ button:disabled {
 }
 
 .kpi-foot {
-  @apply flex items-baseline gap-1 text-[11px] text-muted;
+  @apply flex items-baseline gap-1 text-[11px] text-secondary;
 }
 
 .card {
@@ -490,7 +490,7 @@ button:disabled {
 }
 
 .segmented button {
-  @apply h-7 rounded-lg border-0 bg-transparent px-2.5 py-0 text-[12px] font-medium text-muted;
+  @apply h-7 rounded-lg border-0 bg-transparent px-2.5 py-0 text-[12px] font-medium text-secondary;
 }
 
 .segmented button.active {
@@ -749,11 +749,10 @@ button:disabled {
   }
 
   .rail-label {
-    @apply block whitespace-nowrap text-[11px] leading-[1.1];
+    @apply block whitespace-nowrap text-[11px] leading-[1.1] text-secondary;
   }
 
-  .rail-spacer,
-  .rail > .rail-item:last-child {
+  .rail-spacer {
     @apply hidden;
   }
 
@@ -777,6 +776,13 @@ button:disabled {
 
   .hide-sm {
     @apply hidden;
+  }
+
+  /* Seven columns no longer fit at 390 px: the compact padding keeps every
+     remaining column and the row actions inside the card. */
+  .table th,
+  .table td {
+    @apply px-2;
   }
 
   .filter-bar {

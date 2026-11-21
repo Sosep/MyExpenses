@@ -56,3 +56,9 @@ export function useFocusTrap(ref: RefObject<HTMLElement | null>): void {
     }
   }, [ref])
 }
+
+/** True for the panel on top of the stack; a covered panel must ignore Escape. */
+export function isTopPanel(node: HTMLElement | null): boolean {
+  const panels = document.querySelectorAll('.panel[role="dialog"]')
+  return panels.length === 0 || panels[panels.length - 1] === node
+}

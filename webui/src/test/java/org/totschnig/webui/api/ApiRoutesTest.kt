@@ -749,12 +749,26 @@ class ApiRoutesTest {
         val response = client.put("/api/v1/portfolios/7/trades/71") {
             contentType(ContentType.Application.Json)
             setBody(
-                """{"type":"SELL","assetSymbol":"AAPL","quantity":"1","price":"5.2",
+                """{"type":"BUY","assetSymbol":"AAPL","quantity":"1","price":"5.2",
                    "fundingSource":"ACCOUNT","peerAccountId":1,"date":"2026-11-09"}"""
             )
         }
         assertEquals(HttpStatusCode.OK, response.status)
         assertTrue(response.bodyAsText().contains("\"type\":\"BUY\""))
+    }
+
+    @Test
+    fun `update trade cannot change the operation family`() = testApplication {
+        installRoutes(FakeDataSource())
+        val response = client.put("/api/v1/portfolios/7/trades/71") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """{"type":"DEPOSIT","quantity":"100",
+                   "fundingSource":"ACCOUNT","peerAccountId":1,"date":"2026-11-09"}"""
+            )
+        }
+        assertEquals(HttpStatusCode.UnprocessableEntity, response.status)
+        assertTrue(response.bodyAsText().contains("unsupported_trade_change"))
     }
 
     @Test
@@ -851,6 +865,73 @@ class ApiRoutesTest {
         assertEquals(HttpStatusCode.NotFound, response.status)
         assertTrue(response.bodyAsText().contains("trade_not_found"))
     }
+
+    @Test
+    fun `unknown portfolio update is a 404`() = testApplication {
+        installRoutes(FakeDataSource())
+        val response = client.put("/api/v1/portfolios/99") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"label":"Joint II","type":"6","currency":"EUR"}""")
+        }
+        assertEquals(HttpStatusCode.NotFound, response.status)
+        assertTrue(response.bodyAsText().contains("portfolio_not_found"))
+    }
+
+    @Test
+    fun `manual price update and delete require an existing row`() = testApplication {
+        installRoutes(FakeDataSource())
+        val updated = client.put("/api/v1/prices/AAPL/2026-11-19") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"commodity":"AAPL","date":"2026-11-19","value":6.0}""")
+        }
+        assertEquals(HttpStatusCode.OK, updated.status)
+
+        val missing = client.put("/api/v1/prices/AAPL/2026-11-20") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"commodity":"AAPL","date":"2026-11-20","value":6.0}""")
+        }
+        assertEquals(HttpStatusCode.NotFound, missing.status)
+        assertTrue(missing.bodyAsText().contains("price_not_found"))
+
+        val deleted = client.delete("/api/v1/prices/AAPL/2026-11-19")
+        assertEquals(HttpStatusCode.NoContent, deleted.status)
+        val unknown = client.delete("/api/v1/prices/AAPL/2026-11-20")
+        assertEquals(HttpStatusCode.NotFound, unknown.status)
+    }
+
+    @Test
+    fun `updating or deleting an unknown method, tag or currency is a 404`() =
+        testApplication {
+            installRoutes(FakeDataSource())
+            val method = client.put("/api/v1/methods/99") {
+                contentType(ContentType.Application.Json)
+                setBody("""{"label":"X","type":0}""")
+            }
+            assertEquals(HttpStatusCode.NotFound, method.status)
+            assertTrue(method.bodyAsText().contains("method_not_found"))
+
+            val tag = client.put("/api/v1/tags/99") {
+                contentType(ContentType.Application.Json)
+                setBody("""{"label":"x"}""")
+            }
+            assertEquals(HttpStatusCode.NotFound, tag.status)
+
+            val currency = client.put("/api/v1/currencies/XXX") {
+                contentType(ContentType.Application.Json)
+                setBody("""{"symbol":"X"}""")
+            }
+            assertEquals(HttpStatusCode.NotFound, currency.status)
+
+            assertEquals(
+                HttpStatusCode.NotFound,
+                client.delete("/api/v1/methods/99").status
+            )
+            assertEquals(HttpStatusCode.NotFound, client.delete("/api/v1/tags/99").status)
+            assertEquals(
+                HttpStatusCode.NotFound,
+                client.delete("/api/v1/currencies/XXX").status
+            )
+        }
 }
 
 private fun ApplicationTestBuilder.installRoutes(dataSource: WebApiDataSource) {
@@ -1268,6 +1349,14 @@ private class FakeDataSource : WebApiDataSource {
             )
         }
         createdTrade = body
+        if (tradeKind(body.type) != tradeKind(sampleTrade().type)) {
+            throw ApiException(
+                HttpStatusCode.UnprocessableEntity,
+                "unsupported_trade_change",
+                "Changing the kind of an operation is not supported",
+                mapOf("type" to "Must keep the current kind")
+            )
+        }
         return sampleTrade()
     }
 
@@ -1291,16 +1380,24 @@ private class FakeDataSource : WebApiDataSource {
     override suspend fun createMethod(body: MethodWriteDto) =
         MethodDto(4, body.label ?: "Method", body.isNumbered ?: false, body.type ?: 0, emptyList())
 
-    override suspend fun updateMethod(id: Long, body: MethodWriteDto) =
-        MethodDto(id, body.label ?: "Method", false, body.type ?: 0, emptyList())
+    override suspend fun updateMethod(id: Long, body: MethodWriteDto): MethodDto {
+        if (id != 4L) {
+            throw ApiException(HttpStatusCode.NotFound, "method_not_found", "Method not found")
+        }
+        return MethodDto(id, body.label ?: "Method", false, body.type ?: 0, emptyList())
+    }
 
     override suspend fun deleteMethod(id: Long) = id == 4L
 
     override suspend fun createTag(body: TagWriteDto) =
         TagDto(5, body.label ?: "Tag", null)
 
-    override suspend fun updateTag(id: Long, body: TagWriteDto) =
-        TagDto(id, body.label ?: "Tag", null)
+    override suspend fun updateTag(id: Long, body: TagWriteDto): TagDto {
+        if (id != 5L) {
+            throw ApiException(HttpStatusCode.NotFound, "tag_not_found", "Tag not found")
+        }
+        return TagDto(id, body.label ?: "Tag", null)
+    }
 
     override suspend fun deleteTag(id: Long) = id == 5L
 
@@ -1319,8 +1416,15 @@ private class FakeDataSource : WebApiDataSource {
             null
         )
 
-    override suspend fun updateCurrency(code: String, body: CurrencyWriteDto) =
-        CurrencyDto(
+    override suspend fun updateCurrency(code: String, body: CurrencyWriteDto): CurrencyDto {
+        if (code.uppercase() !in setOf("EUR", "AAPL")) {
+            throw ApiException(
+                HttpStatusCode.NotFound,
+                "currency_not_found",
+                "Currency not found"
+            )
+        }
+        return CurrencyDto(
             code,
             body.label,
             body.symbol ?: code,
@@ -1328,6 +1432,7 @@ private class FakeDataSource : WebApiDataSource {
             body.commodityType ?: "FIAT",
             null
         )
+    }
 
     override suspend fun deleteCurrency(code: String): Boolean {
         if (code.uppercase() == "EUR") {
@@ -1337,7 +1442,7 @@ private class FakeDataSource : WebApiDataSource {
                 "The currency is still used"
             )
         }
-        return true
+        return code.uppercase() == "AAPL"
     }
 
     override suspend fun prices(commodity: String): List<PriceDto> = listOf(
@@ -1352,10 +1457,17 @@ private class FakeDataSource : WebApiDataSource {
         "USER"
     )
 
-    override suspend fun deletePrice(commodity: String, date: String) = true
+    override suspend fun deletePrice(commodity: String, date: String) =
+        date != "2026-11-20"
 }
 
 private const val PORTFOLIO_ID = 7L
+
+private fun tradeKind(type: String?): String = when (type) {
+    "BUY", "SELL" -> "ASSET"
+    "DEPOSIT", "WITHDRAW" -> "CASH"
+    else -> "TRANSFER"
+}
 
 private fun samplePortfolio() = AccountDto(
     id = PORTFOLIO_ID,

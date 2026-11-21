@@ -8,6 +8,7 @@ import {
   getAccountTypes,
 } from '../api'
 import { useAsync } from '../hooks'
+import { defaultAccountTypeName, validatePortfolioExchangeRate } from '../accountUi'
 import { parseAmountMinor } from '../format'
 import { useFocusTrap } from '../useFocusTrap'
 import { IconX } from './Icons'
@@ -62,10 +63,10 @@ export function AccountEditor({
 
   useEffect(() => {
     if (type || !types.data || types.data.length === 0) return
-    const wanted = isPortfolio ? 'INVESTMENT' : 'BANK'
+    const wanted = defaultAccountTypeName(kind)
     const match = types.data.find((entry) => entry.name === wanted) ?? types.data[0]
     setType(String(match.id))
-  }, [types.data, type, isPortfolio])
+  }, [types.data, type, kind])
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -91,13 +92,15 @@ export function AccountEditor({
       if (openingMinor === null) nextErrors.opening = t`Enter an amount.`
     }
     let rate: number | null = null
-    if (isPortfolio && isForeign && !dynamic) {
-      if (exchangeRate.trim() === '') {
-        nextErrors.exchangeRate = t`Required.`
-      } else {
-        rate = Number(exchangeRate.replace(',', '.'))
-        if (!Number.isFinite(rate) || rate <= 0) nextErrors.exchangeRate = t`Enter a rate above zero.`
-      }
+    if (isPortfolio) {
+      const result = validatePortfolioExchangeRate({
+        isForeign,
+        dynamic,
+        raw: exchangeRate,
+      })
+      if (result.error === 'required') nextErrors.exchangeRate = t`Required.`
+      if (result.error === 'invalid') nextErrors.exchangeRate = t`Enter a rate above zero.`
+      if (result.rate !== undefined) rate = result.rate
     }
     setErrors(nextErrors)
     if (Object.keys(nextErrors).length > 0 || openingMinor === null) return

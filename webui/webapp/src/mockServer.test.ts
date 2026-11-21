@@ -1,0 +1,121 @@
+import { spawn } from 'node:child_process'
+import type { ChildProcess } from 'node:child_process'
+import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+
+/**
+ * Contract tests for the dev mock. They run the real server in a child process
+ * on an ephemeral port and exercise the rules the SPA relies on, so a fixture
+ * edit cannot silently break the QA surface.
+ */
+const port = 4300 + Math.floor(Math.random() * 400)
+const base = `http://127.0.0.1:${port}`
+let server: ChildProcess
+
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+async function api(path: string, init: RequestInit = {}): Promise<Response> {
+  const headers = new Headers(init.headers)
+  headers.set('Cookie', 'myexpenses_session=mock')
+  if (init.body !== undefined) headers.set('Content-Type', 'application/json')
+  return fetch(base + path, { ...init, headers })
+}
+
+beforeAll(async () => {
+  server = spawn(process.execPath, ['dev/mock-server.mjs'], {
+    cwd: process.cwd(),
+    env: { ...process.env, MOCK_PORT: String(port) },
+    stdio: 'ignore',
+  })
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    try {
+      const response = await api('/api/v1/meta')
+      if (response.ok) return
+    } catch {
+      // not listening yet
+    }
+    await delay(100)
+  }
+  throw new Error('the mock did not start')
+}, 20_000)
+
+afterAll(() => {
+  server?.kill('SIGKILL')
+})
+
+describe('mock QA switches', () => {
+  it('stores the portfolio licence limit from the documented switch', async () => {
+    const page = await (await fetch(base + '/app/?portfolioLimit=1')).text()
+    expect(page).toContain('mock_portfolio_limit=1')
+    const response = await fetch(base + '/api/v1/portfolios', {
+      method: 'POST',
+      headers: {
+        Cookie: 'myexpenses_session=mock; mock_portfolio_limit=1',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ label: 'Limited', type: '6', currency: 'EUR' }),
+    })
+    expect(response.status).toBe(409)
+    expect(await response.json()).toMatchObject({ error: 'portfolio_limit_reached' })
+  })
+})
+
+describe('mock portfolio operations', () => {
+  it('creates the cash sub-account on the first cash-funded buy', async () => {
+    const portfolio = await (
+      await api('/api/v1/portfolios', {
+        method: 'POST',
+        body: JSON.stringify({ label: 'Mock QA', type: '6', currency: 'EUR' }),
+      })
+    ).json()
+    const tradeResponse = await api(`/api/v1/portfolios/${portfolio.id}/trades`, {
+      method: 'POST',
+      body: JSON.stringify({
+        type: 'BUY',
+        assetSymbol: 'AAPL',
+        quantity: '10',
+        price: '5',
+        fundingSource: 'PORTFOLIO',
+        date: '2026-11-21',
+      }),
+    })
+    expect(tradeResponse.status).toBe(201)
+    const trade = await tradeResponse.json()
+    expect(trade.peerAccountId).not.toBeNull()
+    expect(trade.peerAccountLabel).toBe('Cash')
+
+    const assets = await (await api(`/api/v1/portfolios/${portfolio.id}/assets`)).json()
+    expect(assets.cashAccountId).toBe(trade.peerAccountId)
+
+    const accounts = await (await api('/api/v1/accounts')).json()
+    const cash = accounts.find((account: { id: number }) => account.id === trade.peerAccountId)
+    expect(cash).toMatchObject({ portfolioRole: 'CASH', parentId: portfolio.id })
+  })
+})
+
+describe('mock category rules', () => {
+  it('refuses to delete a category used only by a split part', async () => {
+    const before = await (await api('/api/v1/transactions/13')).json()
+    const partCategory = before.splitParts.find(
+      (part: { category: { id: number } | null }) => part.category?.id === 9,
+    )
+    expect(partCategory).toBeTruthy()
+
+    const refused = await api('/api/v1/categories/9', { method: 'DELETE' })
+    expect(refused.status).toBe(409)
+    expect(await refused.json()).toMatchObject({ error: 'category_in_use' })
+
+    const remapped = await api('/api/v1/categories/9?remapTo=4', { method: 'DELETE' })
+    expect(remapped.status).toBe(204)
+    const after = await (await api('/api/v1/transactions/13')).json()
+    const moved = after.splitParts.find(
+      (part: { id: number }) => part.id === partCategory.id,
+    )
+    expect(moved.category).toMatchObject({ id: 4, label: 'Transport' })
+  })
+
+  it('rejects moving the movements into the deleted branch', async () => {
+    const response = await api('/api/v1/categories/1?remapTo=2', { method: 'DELETE' })
+    expect(response.status).toBe(422)
+    expect(await response.json()).toMatchObject({ error: 'invalid_remapTo' })
+  })
+})

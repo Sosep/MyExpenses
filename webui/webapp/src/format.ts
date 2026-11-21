@@ -172,6 +172,15 @@ export function amountInputValue(amountMinor: number, fractionDigits: number): s
   return (Math.abs(amountMinor) / 10 ** fractionDigits).toFixed(fractionDigits)
 }
 
+/**
+ * A major-unit value as an input string. `String(0.00000001)` is "1e-8", which
+ * the decimal inputs reject visually; fixed notation keeps every digit.
+ */
+export function decimalInputValue(value: number): string {
+  if (!Number.isFinite(value) || value === 0) return ''
+  return value.toFixed(8).replace(/\.?0+$/, '')
+}
+
 export function currencySymbol(currency: string): string {
   let symbol = currency
   try {
